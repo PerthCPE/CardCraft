@@ -38,6 +38,7 @@ import {
   buildShuffledQuestionsMap,
   ShuffledQuestionWrapper,
 } from '@/utils/question-shuffle.util';
+import { speakEnglish, cancelSpeech } from '@/utils/speech-synthesis.util';
 
 type DrillPart = 1 | 2 | 5 | 7;
 
@@ -119,25 +120,18 @@ export default function PracticeDrillsPage() {
   }, [selectedPart, currentIndex, currentQuestion, selectedAnswers]);
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-      setIsPlayingAudio(false);
-    }
+    cancelSpeech();
+    setIsPlayingAudio(false);
   }, [selectedPart, currentIndex]);
 
   const handlePlayListeningAudio = useCallback(
     (question: QuestionItem) => {
-      if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
-        return;
-      }
-
       if (isPlayingAudio) {
-        window.speechSynthesis.cancel();
+        cancelSpeech();
         setIsPlayingAudio(false);
         return;
       }
 
-      window.speechSynthesis.cancel();
       const wrap = shuffledMap.get(question.id);
       const scriptParts: string[] = [];
 
@@ -145,40 +139,39 @@ export default function PracticeDrillsPage() {
         scriptParts.push('Look at the photograph. Listen to the four statements.');
         if (wrap) {
           wrap.choices.forEach((c) => {
-            scriptParts.push(`Statement ${c.displayKey}: ${c.text}`);
+            scriptParts.push(`Statement ${c.displayKey}. ${c.text}.`);
           });
         } else {
           scriptParts.push(
-            `Statement A: ${question.optionA}`,
-            `Statement B: ${question.optionB}`,
-            `Statement C: ${question.optionC}`,
-            `Statement D: ${question.optionD || ''}`,
+            `Statement A. ${question.optionA}.`,
+            `Statement B. ${question.optionB}.`,
+            `Statement C. ${question.optionC}.`,
+            `Statement D. ${question.optionD || ''}.`,
           );
         }
       } else if (question.part === 2) {
-        scriptParts.push(`Question: ${question.questionText}`);
+        scriptParts.push(`Question. ${question.questionText}`);
         if (wrap) {
           wrap.choices.forEach((c) => {
-            scriptParts.push(`Option ${c.displayKey}: ${c.text}`);
+            scriptParts.push(`Option ${c.displayKey}. ${c.text}.`);
           });
         } else {
           scriptParts.push(
-            `Option A: ${question.optionA}`,
-            `Option B: ${question.optionB}`,
-            `Option C: ${question.optionC}`,
-            `Option D: ${question.optionD || ''}`,
+            `Option A. ${question.optionA}.`,
+            `Option B. ${question.optionB}.`,
+            `Option C. ${question.optionC}.`,
+            `Option D. ${question.optionD || ''}.`,
           );
         }
       }
 
-      const utterance = new SpeechSynthesisUtterance(scriptParts.join(' ... '));
-      utterance.lang = 'en-US';
-      utterance.rate = 0.92;
-      utterance.onend = () => setIsPlayingAudio(false);
-      utterance.onerror = () => setIsPlayingAudio(false);
-
-      setIsPlayingAudio(true);
-      window.speechSynthesis.speak(utterance);
+      const text = scriptParts.join(' ');
+      speakEnglish(text, {
+        rate: 0.82,
+        onStart: () => setIsPlayingAudio(true),
+        onEnd: () => setIsPlayingAudio(false),
+        onError: () => setIsPlayingAudio(false),
+      });
     },
     [isPlayingAudio, shuffledMap],
   );
@@ -747,33 +740,71 @@ export default function PracticeDrillsPage() {
       {/* 2B. PART 7 SPLIT-SCREEN READING VIEW */}
       {selectedPart === 7 && activePart7Group && (
         <section className="space-y-4">
-          <div className="bg-[#fffdf7] border-2 border-slate-900 shadow-arcade p-4 flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h2 className="font-bold text-sm text-slate-900">
-                บทความธุรกิจชุดที่{' '}
-                {(currentIndex % part7PassageGroups.length) + 1} จาก{' '}
-                {part7PassageGroups.length}
-              </h2>
-              <p className="text-xs text-slate-500">
-                อ่านอีเมลหรือบันทึกข้อความทางซ้าย แล้วตอบคำถามทางขวา
-              </p>
+          <div className="bg-[#fffdf7] border-2 border-slate-900 shadow-arcade p-4 space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200/80 pb-3">
+              <div>
+                <h2 className="font-bold text-sm sm:text-base text-slate-900 flex items-center gap-2">
+                  <span>บทความธุรกิจชุดที่ {(currentIndex % part7PassageGroups.length) + 1}</span>
+                  <span className="text-xs font-normal text-slate-500">
+                    / ทั้งหมด {part7PassageGroups.length} ชุด
+                  </span>
+                </h2>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  อ่านอีเมลหรือบันทึกข้อความทางซ้าย แล้วตอบคำถามทางขวา
+                </p>
+              </div>
+
+              {/* Quick Passage Navigation (Prev / Next) */}
+              <div className="flex items-center gap-2 self-start sm:self-auto">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setCurrentIndex((prev) =>
+                      prev > 0 ? prev - 1 : part7PassageGroups.length - 1,
+                    )
+                  }
+                  className="px-2.5 py-1 text-xs font-bold bg-white hover:bg-slate-50 text-slate-900 border-2 border-slate-900 shadow-arcade-sm active:translate-x-[1px] active:translate-y-[1px] inline-flex items-center gap-1 cursor-pointer"
+                  title="บทความก่อนหน้า"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                  ก่อนหน้า
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setCurrentIndex((prev) => (prev + 1) % part7PassageGroups.length)
+                  }
+                  className="px-2.5 py-1 text-xs font-bold bg-amber-400 hover:bg-amber-300 text-slate-950 border-2 border-slate-900 shadow-arcade-sm active:translate-x-[1px] active:translate-y-[1px] inline-flex items-center gap-1 cursor-pointer"
+                  title="บทความถัดไป"
+                >
+                  ถัดไป
+                  <ArrowRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
             </div>
 
-            <div className="flex items-center gap-2">
-              {part7PassageGroups.map((_, idx) => (
-                <button
-                  key={idx}
-                  type="button"
-                  onClick={() => setCurrentIndex(idx)}
-                  className={`px-3 py-1 text-xs font-semibold border-2 border-slate-900 ${
-                    currentIndex % part7PassageGroups.length === idx
-                      ? 'bg-amber-400 text-slate-950 shadow-arcade-sm'
-                      : 'bg-white text-slate-700'
-                  }`}
-                >
-                  ชุดที่ {idx + 1}
-                </button>
-              ))}
+            {/* Set Palette: Fully Responsive Flex-Wrap Grid (Never Overflows) */}
+            <div className="flex flex-wrap items-center gap-1.5 pt-1">
+              <span className="text-xs font-bold text-slate-700 mr-1 hidden sm:inline">
+                เลือกชุด:
+              </span>
+              {part7PassageGroups.map((_, idx) => {
+                const isActive = currentIndex % part7PassageGroups.length === idx;
+                return (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => setCurrentIndex(idx)}
+                    className={`px-2.5 sm:px-3 py-1 text-xs font-bold border-2 border-slate-900 transition-all cursor-pointer ${
+                      isActive
+                        ? 'bg-amber-400 text-slate-950 shadow-arcade-sm'
+                        : 'bg-white text-slate-700 hover:bg-amber-50 hover:text-slate-950'
+                    }`}
+                  >
+                    ชุดที่ {idx + 1}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -868,6 +899,37 @@ export default function PracticeDrillsPage() {
                   </div>
                 );
               })}
+
+              {/* Passage bottom navigation */}
+              <div className="flex items-center justify-between bg-[#fffdf7] border-2 border-slate-900 shadow-arcade p-4">
+                <button
+                  type="button"
+                  onClick={() =>
+                    setCurrentIndex((prev) =>
+                      prev > 0 ? prev - 1 : part7PassageGroups.length - 1,
+                    )
+                  }
+                  className="px-3 py-2 text-xs font-bold bg-white hover:bg-slate-50 text-slate-900 border-2 border-slate-900 shadow-arcade-sm active:translate-x-[1px] active:translate-y-[1px] inline-flex items-center gap-1.5 cursor-pointer"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  บทความก่อนหน้า
+                </button>
+
+                <span className="text-xs font-semibold text-slate-700 hidden sm:inline">
+                  ชุดที่ {(currentIndex % part7PassageGroups.length) + 1} / {part7PassageGroups.length}
+                </span>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setCurrentIndex((prev) => (prev + 1) % part7PassageGroups.length)
+                  }
+                  className="px-3.5 py-2 text-xs font-bold bg-amber-400 hover:bg-amber-300 text-slate-950 border-2 border-slate-900 shadow-arcade-sm active:translate-x-[1px] active:translate-y-[1px] inline-flex items-center gap-1.5 cursor-pointer"
+                >
+                  บทความถัดไป
+                  <ArrowRight className="w-4 h-4" />
+                </button>
+              </div>
             </div>
           </div>
         </section>

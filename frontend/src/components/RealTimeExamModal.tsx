@@ -33,6 +33,7 @@ import {
   buildShuffledQuestionsMap,
   ShuffledQuestionWrapper,
 } from '@/utils/question-shuffle.util';
+import { speakEnglish, cancelSpeech } from '@/utils/speech-synthesis.util';
 
 export type RealTimeExamType =
   | 'PART_5_REALTIME'
@@ -108,7 +109,12 @@ export default function RealTimeExamModal({
       setIsSubmitted(false);
       setIsPlayingAudio(false);
       setIsMobilePaletteOpen(false);
+    } else {
+      cancelSpeech();
     }
+    return () => {
+      cancelSpeech();
+    };
   }, [isOpen, examQuestions, totalDurationSeconds]);
 
   // ตัวจับเวลา Real-Time
@@ -149,13 +155,13 @@ export default function RealTimeExamModal({
 
   // เล่นเสียงสังเคราะห์สำหรับ Listening
   const handlePlayAudio = (q: QuestionItem) => {
-    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
     if (isPlayingAudio) {
-      window.speechSynthesis.cancel();
+      cancelSpeech();
       setIsPlayingAudio(false);
       return;
     }
 
+    cancelSpeech();
     const scripts: string[] = [];
     const wrap = shuffledMap.get(q.id);
 
@@ -189,13 +195,12 @@ export default function RealTimeExamModal({
       }
     }
 
-    const utterance = new SpeechSynthesisUtterance(scripts.join(' ... '));
-    utterance.lang = 'en-US';
-    utterance.rate = 0.92;
-    utterance.onstart = () => setIsPlayingAudio(true);
-    utterance.onend = () => setIsPlayingAudio(false);
-    utterance.onerror = () => setIsPlayingAudio(false);
-    window.speechSynthesis.speak(utterance);
+    setIsPlayingAudio(true);
+    speakEnglish(scripts.join(' ... '), {
+      rate: 0.82,
+      onEnd: () => setIsPlayingAudio(false),
+      onError: () => setIsPlayingAudio(false),
+    });
   };
 
   // คำนวณผลคะแนนเมื่อกดส่งกระดาษคำตอบ

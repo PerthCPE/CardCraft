@@ -41,6 +41,7 @@ import VocabBlitzGame from '@/components/VocabBlitzGame';
 import { CardSet, getStoredActiveSet, saveActiveSet } from '@/utils/card-sets';
 import { useAuth } from '@/context/AuthContext';
 import ThreeDCard from '@/components/ThreeDCard';
+import { speakEnglish } from '@/utils/speech-synthesis.util';
 
 export default function FlashcardsPage() {
   const { user: authUser, requireAuth } = useAuth();
@@ -171,12 +172,7 @@ export default function FlashcardsPage() {
 
   const speakText = useCallback((text: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
-    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'en-US';
-    utterance.rate = 0.92;
-    window.speechSynthesis.speak(utterance);
+    speakEnglish(text, { rate: 0.82 });
   }, []);
 
   const handleSwipe = useCallback(

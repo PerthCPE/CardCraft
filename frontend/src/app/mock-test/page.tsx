@@ -33,6 +33,7 @@ import {
   buildShuffledQuestionsMap,
   ShuffledQuestionWrapper,
 } from '@/utils/question-shuffle.util';
+import { speakEnglish, cancelSpeech } from '@/utils/speech-synthesis.util';
 
 const EXAM_DURATION_SECONDS = 15 * 60;
 
@@ -58,6 +59,9 @@ export default function BossBattleMockTestPage() {
       setQuestions(data);
       setShuffledMap(buildShuffledQuestionsMap(data));
     });
+    return () => {
+      cancelSpeech();
+    };
   }, []);
 
   useEffect(() => {
@@ -119,9 +123,7 @@ export default function BossBattleMockTestPage() {
     if (questions.length === 0 || isSubmitting) return;
     setIsSubmitting(true);
 
-    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-    }
+    cancelSpeech();
 
     const listeningQuestions = questions.filter(
       (q) => q.section === 'LISTENING',
@@ -175,14 +177,13 @@ export default function BossBattleMockTestPage() {
   };
 
   const handlePlayAudio = (q: QuestionItem) => {
-    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
     if (isPlayingAudio) {
-      window.speechSynthesis.cancel();
+      cancelSpeech();
       setIsPlayingAudio(false);
       return;
     }
 
-    window.speechSynthesis.cancel();
+    cancelSpeech();
     const wrap = shuffledMap.get(q.id);
     const lines: string[] = [];
 
@@ -212,13 +213,12 @@ export default function BossBattleMockTestPage() {
       }
     }
 
-    const utter = new SpeechSynthesisUtterance(lines.join(' ... '));
-    utter.lang = 'en-US';
-    utter.rate = 0.92;
-    utter.onend = () => setIsPlayingAudio(false);
-    utter.onerror = () => setIsPlayingAudio(false);
     setIsPlayingAudio(true);
-    window.speechSynthesis.speak(utter);
+    speakEnglish(lines.join(' ... '), {
+      rate: 0.82,
+      onEnd: () => setIsPlayingAudio(false),
+      onError: () => setIsPlayingAudio(false),
+    });
   };
 
   useEffect(() => {

@@ -32,6 +32,7 @@ import {
   getBuiltInPresetSets,
   getSavedCustomSets,
 } from '@/utils/card-sets';
+import { speakEnglish, cancelSpeech } from '@/utils/speech-synthesis.util';
 
 interface VocabBlitzGameProps {
   allCards: FlashcardItem[];
@@ -224,15 +225,16 @@ export default function VocabBlitzGame({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [gameState, handleSelectChoice]);
 
+  useEffect(() => {
+    return () => {
+      cancelSpeech();
+    };
+  }, []);
+
   // สังเคราะห์เสียงอ่านคำศัพท์
   const handlePronounce = (text: string) => {
-    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = 'en-US';
-      utterance.rate = 0.95;
-      window.speechSynthesis.speak(utterance);
-    }
+    cancelSpeech();
+    speakEnglish(text, { rate: 0.82 });
   };
 
   // คำนวณอันดับ RPG Rank จากจำนวนคำที่ตอบถูก

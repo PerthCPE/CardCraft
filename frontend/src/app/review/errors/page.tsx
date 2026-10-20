@@ -40,6 +40,7 @@ import {
   fetchWeaknessAnalytics,
   WeaknessAnalyticsResponse,
 } from '@/lib/api';
+import { speakEnglish, cancelSpeech } from '@/utils/speech-synthesis.util';
 
 const ERROR_TYPE_LABELS: Record<string, { label: string; desc: string; color: string }> = {
   part_of_speech: {
@@ -127,6 +128,12 @@ export default function ErrorReviewPage() {
       });
   }, [user, selectedPart, selectedErrorType]);
 
+  useEffect(() => {
+    return () => {
+      cancelSpeech();
+    };
+  }, []);
+
   const filteredLogs = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     if (!q) return errorLogs;
@@ -140,12 +147,8 @@ export default function ErrorReviewPage() {
   }, [errorLogs, searchQuery]);
 
   const handlePlayAudio = (qText: string) => {
-    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
-    window.speechSynthesis.cancel();
-    const utter = new SpeechSynthesisUtterance(qText);
-    utter.lang = 'en-US';
-    utter.rate = 0.92;
-    window.speechSynthesis.speak(utter);
+    cancelSpeech();
+    speakEnglish(qText, { rate: 0.82 });
   };
 
   if (!user) {

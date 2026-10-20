@@ -167,6 +167,11 @@ test.describe('CardCraft Full E2E Test Suite', () => {
     // Switch to Part 2 and verify 4 choices (A, B, C, D) are available
     await page.getByRole('button', { name: /Part 2/i }).click();
     await expect(page.getByText('D').first()).toBeVisible();
+
+    // Switch to Part 7 and verify passage set selector buttons and navigation exist without overflow
+    await page.getByRole('button', { name: /Part 7/i }).click();
+    await expect(page.getByText(/ชุดที่ 1/).first()).toBeVisible();
+    await expect(page.getByRole('button', { name: /ถัดไป/i }).first()).toBeVisible();
   });
 
   test('5. Mock Test Page renders 4 choices (A, B, C, D) and handles submission', async ({ page }) => {
