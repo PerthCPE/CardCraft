@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" fill="none">
+  <rect width="640" height="360" fill="#F8F5EC"/>
+  <rect x="16" y="16" width="608" height="328" fill="#F1F5F9" stroke="#0F172A" stroke-width="6"/>
+  <!-- Industrial Plant Floor -->
+  <rect x="22" y="270" width="596" height="68" fill="#94A3B8" stroke="#0F172A" stroke-width="4"/>
+  <line x1="22" y1="290" x2="618" y2="290" stroke="#0F172A" stroke-width="2" stroke-dasharray="8 8"/>
+
+  <!-- Factory Heavy Machinery (Center & Left) -->
+  <rect x="60" y="130" width="160" height="140" fill="#64748B" stroke="#0F172A" stroke-width="4"/>
+  <rect x="80" y="150" width="60" height="40" fill="#38BDF8" stroke="#0F172A" stroke-width="3"/>
+  <circle cx="170" cy="170" r="14" fill="#F59E0B" stroke="#0F172A" stroke-width="3"/>
+  <circle cx="170" cy="220" r="14" fill="#10B981" stroke="#0F172A" stroke-width="3"/>
+
+  <!-- Assembly Line Belt -->
+  <rect x="220" y="210" width="220" height="60" fill="#475569" stroke="#0F172A" stroke-width="4"/>
+  <circle cx="250" cy="240" r="18" fill="#CBD5E1" stroke="#0F172A" stroke-width="3"/>
+  <circle cx="330" cy="240" r="18" fill="#CBD5E1" stroke="#0F172A" stroke-width="3"/>
+  <circle cx="410" cy="240" r="18" fill="#CBD5E1" stroke="#0F172A" stroke-width="3"/>
+
+  <!-- Worker / Technician in Safety Gear (Right) -->
+  <!-- Hard Hat -->
+  <path d="M480 135 C480 120 520 120 520 135 Z" fill="#F59E0B" stroke="#0F172A" stroke-width="3"/>
+  <!-- Head -->
+  <circle cx="500" cy="148" r="12" fill="#FED7AA" stroke="#0F172A" stroke-width="3"/>
+  <!-- Safety Goggles -->
+  <rect x="494" y="144" width="16" height="6" fill="#38BDF8" stroke="#0F172A" stroke-width="2"/>
+  <!-- Safety Vest & Torso -->
+  <rect x="484" y="162" width="32" height="48" fill="#F59E0B" stroke="#0F172A" stroke-width="3"/>
+  <rect x="492" y="162" width="16" height="48" fill="#FBBF24" stroke="#0F172A" stroke-width="2"/>
+  <line x1="484" y1="186" x2="516" y2="186" stroke="#FFFFFF" stroke-width="4"/>
+  <!-- Arms operating panel -->
+  <line x1="484" y1="175" x2="455" y2="195" stroke="#0F172A" stroke-width="5" stroke-linecap="round"/>
+  <!-- Legs -->
+  <rect x="486" y="210" width="12" height="60" fill="#1E293B" stroke="#0F172A" stroke-width="3"/>
+  <rect x="502" y="210" width="12" height="60" fill="#1E293B" stroke="#0F172A" stroke-width="3"/>
+  <!-- Safety Boots -->
+  <rect x="482" y="262" width="16" height="10" fill="#78350F" stroke="#0F172A" stroke-width="2"/>
+  <rect x="502" y="262" width="16" height="10" fill="#78350F" stroke="#0F172A" stroke-width="2"/>
+
+  <!-- Control Terminal -->
+  <rect x="430" y="180" width="28" height="90" fill="#334155" stroke="#0F172A" stroke-width="3"/>
+  <rect x="432" y="185" width="24" height="20" fill="#22C55E" stroke="#0F172A" stroke-width="2"/>
+</svg>

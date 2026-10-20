@@ -149,10 +149,11 @@ export function Navbar() {
               <button
                 type="button"
                 onClick={() => openAuthModal('เข้าสู่ระบบหรือสร้างบัญชีใหม่ เพื่อบันทึกผลการเรียนรู้และเลเวลฮีโร่ของคุณ')}
-                className="inline-flex items-center gap-2 px-3.5 py-2 bg-emerald-400 hover:bg-emerald-300 text-slate-950 border-2 border-slate-950 font-display text-xs font-bold shadow-[3px_3px_0px_0px_#020617] active:translate-x-[1px] active:translate-y-[1px] transition-all"
+                className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3.5 py-1.5 sm:py-2 bg-emerald-400 hover:bg-emerald-300 text-slate-950 border-2 border-slate-950 font-display text-xs font-bold shadow-[2px_2px_0px_0px_#020617] sm:shadow-[3px_3px_0px_0px_#020617] active:translate-x-[1px] active:translate-y-[1px] transition-all"
               >
-                <User className="w-4 h-4 text-slate-950" />
-                <span>เข้าสู่ระบบ / สมัคร</span>
+                <User className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-950 shrink-0" />
+                <span className="hidden sm:inline">เข้าสู่ระบบ / สมัคร</span>
+                <span className="sm:hidden">เข้าสู่ระบบ</span>
               </button>
             </div>
           )}
@@ -209,6 +210,22 @@ export function Navbar() {
               </Link>
             );
           })}
+
+          {!user && (
+            <div className="pt-2 border-t border-slate-800">
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  openAuthModal('เข้าสู่ระบบหรือสร้างบัญชีใหม่ เพื่อบันทึกผลการเรียนรู้และเลเวลฮีโร่ของคุณ');
+                }}
+                className="w-full flex items-center justify-center gap-2 py-2.5 bg-emerald-400 text-slate-950 font-display font-bold text-sm border-2 border-slate-900 shadow-pixel-sm active:translate-y-[1px]"
+              >
+                <User className="w-4 h-4 text-slate-950" />
+                เข้าสู่ระบบ / สมัครสมาชิก
+              </button>
+            </div>
+          )}
         </div>
       )}
     </header>

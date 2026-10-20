@@ -234,10 +234,7 @@ export default function BossBattleMockTestPage() {
         handleSelectAnswer(currentQuestion.id, 'B', currentQuestion.part);
       } else if (key === '3' || key === 'C') {
         handleSelectAnswer(currentQuestion.id, 'C', currentQuestion.part);
-      } else if (
-        (key === '4' || key === 'D') &&
-        currentQuestion.part !== 2
-      ) {
+      } else if (key === '4' || key === 'D') {
         handleSelectAnswer(currentQuestion.id, 'D', currentQuestion.part);
       } else if (key === 'F') {
         e.preventDefault();

@@ -427,7 +427,7 @@ export default function PracticeDrillsPage() {
               {
                 part: 2 as DrillPart,
                 title: 'Part 2',
-                sub: 'ถาม-ตอบ 3 ตัวเลือก',
+                sub: 'ถาม-ตอบ 4 ตัวเลือก',
                 icon: '/icons/icon-listening.png',
               },
               {
@@ -579,7 +579,7 @@ export default function PracticeDrillsPage() {
               <div className="flex items-center gap-2.5 text-sm font-medium text-slate-700">
                 <Headphones className="w-4 h-4 text-sky-600 shrink-0" />
                 <span>
-                  ซ่อนโจทย์คำถามของ Part 2 ชั่วคราวเพื่อฝึกการฟังจริง — กดปุ่ม &ldquo;ฟังเสียงโจทย์&rdquo; ด้านบนแล้วเลือกคำตอบ A, B หรือ C
+                  ซ่อนโจทย์คำถามของ Part 2 ชั่วคราวเพื่อฝึกการฟังจริง — กดปุ่ม &ldquo;ฟังเสียงโจทย์&rdquo; ด้านบนแล้วเลือกคำตอบ A, B, C หรือ D
                 </span>
               </div>
             ) : (

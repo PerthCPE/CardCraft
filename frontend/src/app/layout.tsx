@@ -65,9 +65,9 @@ export default function RootLayout({
   return (
     <html
       lang="th"
-      className={`${silkscreen.variable} ${chakraPetch.variable} ${ibmPlexSansThai.variable} ${plusJakartaSans.variable}`}
+      className={`${silkscreen.variable} ${chakraPetch.variable} ${ibmPlexSansThai.variable} ${plusJakartaSans.variable} overflow-x-hidden`}
     >
-      <body className="min-h-screen flex flex-col font-sans antialiased text-slate-900 selection:bg-amber-300 selection:text-slate-950">
+      <body className="min-h-screen flex flex-col font-sans antialiased text-slate-900 selection:bg-amber-300 selection:text-slate-950 overflow-x-hidden">
         <AuthProvider>
           <Navbar />
           <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
