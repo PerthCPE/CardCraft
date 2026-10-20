@@ -120,11 +120,11 @@ export default function FlashcardsPage() {
     Map<string, { isKnown: boolean; swipeCount: number }>
   >(new Map());
 
-  // Framer Motion Drag values
+  // Framer Motion Drag values (จำกัด range การปัด [-180, 180] เพื่อความลื่นไหลและเสถียรทุก Device)
   const dragX = useMotionValue(0);
-  const rotateZ = useTransform(dragX, [-220, 0, 220], [-10, 0, 10]);
-  const rightBadgeOpacity = useTransform(dragX, [20, 80], [0, 1]);
-  const leftBadgeOpacity = useTransform(dragX, [-80, -20], [1, 0]);
+  const rotateZ = useTransform(dragX, [-180, 0, 180], [-8, 0, 8]);
+  const rightBadgeOpacity = useTransform(dragX, [15, 60], [0, 1]);
+  const leftBadgeOpacity = useTransform(dragX, [-60, -15], [1, 0]);
 
   // Ref สำหรับบันทึก timestamp การปัดการ์ด เพื่อป้องกันไม่ให้การปัดกลายเป็นการพลิกการ์ด (Shield synthetic clicks)
   const lastSwipeTimeRef = React.useRef<number>(0);

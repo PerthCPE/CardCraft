@@ -134,6 +134,13 @@ export default function ThreeDCard({
   const mouseX = useMotionValue(0);
   const mouseY = useMotionValue(0);
 
+  // สถานะล็อกการปัดบินออกนอกจอ เพื่อปลด constraints ขณะ fly-out
+  const [internalSwiping, setInternalSwiping] = useState(false);
+
+  useEffect(() => {
+    setInternalSwiping(false);
+  }, [card.id]);
+
   const rotateXSpring = useSpring(useTransform(mouseY, [-0.5, 0.5], [7, -7]), {
     damping: 25,
     stiffness: 280,
@@ -213,15 +220,22 @@ export default function ThreeDCard({
     lastDragEndTimeRef.current = Date.now();
     isDraggingRef.current = true;
 
+    // ตรวจสอบว่าเป็นการปัดผ่านเกณฑ์หรือไม่ เพื่อปลด constraints ให้บินออกนอกจอได้อย่างอิสระ
+    const isSwipeRight = info.offset.x > 65 || info.velocity.x > 260;
+    const isSwipeLeft = info.offset.x < -65 || info.velocity.x < -260;
+    if (isSwipeRight || isSwipeLeft) {
+      setInternalSwiping(true);
+    }
+
     if (onDragEnd) {
       onDragEnd(event, info);
     }
 
-    // Shield ป้องกัน Synthetic Click หรือ Touch Tap หลัง Drag ปล่อยนิ้ว (500ms)
+    // Shield ป้องกัน Synthetic Click หรือ Touch Tap หลัง Drag ปล่อยนิ้ว (400ms)
     setTimeout(() => {
       isDraggingRef.current = false;
       dragDistanceRef.current = 0;
-    }, 500);
+    }, 400);
   };
 
   const handleCardClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -275,15 +289,15 @@ export default function ThreeDCard({
       }}
       onMouseLeave={handleMouseLeave}
     >
-      {/* Background Deck Stack Silhouette (Tactile physical card deck shadow underneath) */}
-      <div className="pointer-events-none absolute inset-x-2 bottom-0 top-3 rounded-2xl bg-amber-400/20 border-2 border-slate-900/40 shadow-[4px_6px_0px_0px_#0f172a] transform translate-y-2 -z-10" />
-
       {/* ===================================================================== */}
       {/* LAYER 1: SWIPE & DRAG CONTAINER (รองรับการปัดซ้าย/ขวา พร้อมหมุนเอียงและบินออกนอกจอ) */}
+      {/* จำกัด Range การลากให้อยู่ในกรอบอย่างมีเสถียรภาพ และปลด constraints ขณะ fly-out */}
       {/* ===================================================================== */}
       <m.div
         drag="x"
-        dragElastic={1}
+        dragDirectionLock={true}
+        dragConstraints={internalSwiping ? false : { left: -180, right: 180 }}
+        dragElastic={0.25}
         onDragStart={handleDragStart}
         onDrag={handleDrag}
         onDragEnd={handleCustomDragEnd}
@@ -293,8 +307,9 @@ export default function ThreeDCard({
           x: dragX,
           rotateZ: rotateZ || 0,
           opacity: cardOpacity,
+          touchAction: 'pan-y',
         }}
-        className="w-full h-full cursor-grab active:cursor-grabbing select-none"
+        className="w-full h-full cursor-grab active:cursor-grabbing select-none touch-pan-y"
       >
         {/* ป้ายแสดง Feedback ขณะปัดขวา: จำแม่นแล้ว */}
         {rightBadgeOpacity && (
