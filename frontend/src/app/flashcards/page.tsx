@@ -12,7 +12,9 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   AnimatePresence,
-  motion,
+  LazyMotion,
+  domAnimation,
+  m,
   PanInfo,
   useMotionValue,
   useTransform,
@@ -31,19 +33,26 @@ import {
   Volume2,
   Zap,
 } from 'lucide-react';
-import {
-  FlashcardItem,
-  TOEIC_CATEGORIES,
-} from '@/data/toeic-dictionary';
+import type { FlashcardItem } from '@/data/toeic-types';
+import { TOEIC_CATEGORIES } from '@/data/toeic-types';
+import dynamic from 'next/dynamic';
 import { recordCardSwipe } from '@/lib/api';
-import { useFlashcards, useCardCraftQueryHelpers } from '@/hooks/useCardCraftQueries';
-import CardSetSelectorModal from '@/components/CardSetSelectorModal';
-import VocabBlitzGame from '@/components/VocabBlitzGame';
+import { useFlashcards } from '@/hooks/useFlashcardsQuery';
+import { useCardCraftQueryHelpers } from '@/hooks/useDashboardQueries';
 import { CardSet, getStoredActiveSet, saveActiveSet } from '@/utils/card-sets';
 import { mergeServerFlashcardsWithLocalSwipes } from '@/utils/flashcard-sync.util';
 import { useAuth } from '@/context/AuthContext';
 import ThreeDCard from '@/components/ThreeDCard';
 import { speakEnglish } from '@/utils/speech-synthesis.util';
+
+const CardSetSelectorModal = dynamic(
+  () => import('@/components/CardSetSelectorModal'),
+  { ssr: false, loading: () => null },
+);
+const VocabBlitzGame = dynamic(
+  () => import('@/components/VocabBlitzGame'),
+  { ssr: false, loading: () => null },
+);
 
 export default function FlashcardsPage() {
   const { user: authUser, requireAuth } = useAuth();
@@ -290,7 +299,8 @@ export default function FlashcardsPage() {
   const masteredTotal = cards.filter((c) => c.progress?.isKnown === true).length;
 
   return (
-    <div className="space-y-6">
+    <LazyMotion features={domAnimation}>
+      <div className="space-y-6">
       {/* 1. PAGE HEADER & VIEW SWITCHER */}
       <section className="bg-slate-900 text-amber-50 border-2 border-slate-950 shadow-arcade p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
@@ -626,7 +636,7 @@ export default function FlashcardsPage() {
 
                   <AnimatePresence mode="wait">
                     {swipeFeedback ? (
-                      <motion.span
+                      <m.span
                         key={swipeFeedback.word + swipeFeedback.type}
                         initial={{ opacity: 0, y: 4 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -641,7 +651,7 @@ export default function FlashcardsPage() {
                         {swipeFeedback.type === 'MASTERED'
                           ? 'บันทึกว่าจำแม่นแล้ว'
                           : 'เก็บไว้ทบทวนซ้ำ'}
-                      </motion.span>
+                      </m.span>
                     ) : (
                       <span className="inline-flex items-center gap-1">
                         <img
@@ -953,6 +963,7 @@ export default function FlashcardsPage() {
           onClose={() => setIsBlitzGameOpen(false)}
         />
       )}
-    </div>
+      </div>
+    </LazyMotion>
   );
 }

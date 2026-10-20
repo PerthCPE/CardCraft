@@ -18,11 +18,16 @@ import {
   Plus_Jakarta_Sans,
   Silkscreen,
 } from 'next/font/google';
+import dynamic from 'next/dynamic';
 import './globals.css';
 import { Navbar } from '@/components/Navbar';
 import { AuthProvider } from '@/context/AuthContext';
-import AuthModal from '@/components/AuthModal';
 import QueryProvider from '@/providers/QueryProvider';
+
+const AuthModal = dynamic(() => import('@/components/AuthModal'), {
+  ssr: false,
+  loading: () => null,
+});
 
 const silkscreen = Silkscreen({
   weight: ['400', '700'],

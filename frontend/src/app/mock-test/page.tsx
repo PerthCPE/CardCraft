@@ -35,20 +35,26 @@ import {
   X,
   Zap,
 } from 'lucide-react';
-import { QuestionItem, TOEIC_INITIAL_QUESTIONS } from '@/data/toeic-dictionary';
+import type { QuestionItem } from '@/data/toeic-types';
+import { TOEIC_INITIAL_QUESTIONS } from '@/data/toeic-questions.data';
 import {
   submitExamAttempt,
   SubmitExamResponse,
   DashboardSummaryResponse,
 } from '@/lib/api';
+import { useQuestions } from '@/hooks/useQuestionsQuery';
 import {
-  useQuestions,
   useDashboardSummary,
   useCardCraftQueryHelpers,
-} from '@/hooks/useCardCraftQueries';
+} from '@/hooks/useDashboardQueries';
+import dynamic from 'next/dynamic';
 import { PixelCharacterAvatar } from '@/components/PixelCharacterAvatar';
-import RealTimeExamModal from '@/components/RealTimeExamModal';
 import { useAuth } from '@/context/AuthContext';
+
+const RealTimeExamModal = dynamic(
+  () => import('@/components/RealTimeExamModal'),
+  { ssr: false, loading: () => null },
+);
 import {
   buildShuffledQuestionsMap,
   generateProportionalMockExam,
@@ -188,6 +194,15 @@ export default function BossBattleMockTestPage() {
   }, [selectedPackage, examResult, activeQuestions.length]);
 
   const currentQuestion = activeQuestions[currentIdx] || null;
+
+  // Prefetch next Part 1 photograph in background for 0ms transition
+  useEffect(() => {
+    const nextQ = activeQuestions[currentIdx + 1];
+    if (nextQ?.imageUrl && typeof window !== 'undefined') {
+      const img = new window.Image();
+      img.src = nextQ.imageUrl;
+    }
+  }, [currentIdx, activeQuestions]);
 
   const formatTime = (secs: number) => {
     const mins = Math.floor(secs / 60);
@@ -1146,7 +1161,9 @@ export default function BossBattleMockTestPage() {
                     <img
                       src={currentQuestion.imageUrl}
                       alt="Part 1 Photograph"
-                      className="w-full h-64 object-contain"
+                      loading="eager"
+                      fetchPriority="high"
+                      className="w-full h-64 object-contain select-none"
                     />
                   </div>
                 )}

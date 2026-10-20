@@ -17,9 +17,9 @@
 // ============================================================================
 
 import React, { useState, useEffect, useRef } from 'react';
-import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion';
+import { m, useMotionValue, useSpring, useTransform } from 'framer-motion';
 import { Volume2, RotateCcw } from 'lucide-react';
-import { FlashcardItem } from '@/data/toeic-dictionary';
+import type { FlashcardItem } from '@/data/toeic-types';
 
 // Mapping 12 Category Illustration Arts
 export const CATEGORY_CARD_ARTS: Record<string, string> = {
@@ -253,7 +253,7 @@ export default function ThreeDCard({
       }}
       onMouseLeave={handleMouseLeave}
     >
-      <motion.div
+      <m.div
         drag="x"
         dragConstraints={{ left: 0, right: 0 }}
         dragElastic={0.8}
@@ -270,7 +270,7 @@ export default function ThreeDCard({
       >
         {/* Swipe Feedback Badges */}
         {rightBadgeOpacity && (
-          <motion.div
+          <m.div
             style={{ opacity: rightBadgeOpacity }}
             className="pointer-events-none absolute top-4 right-4 z-30 px-3 py-1 bg-emerald-400 text-slate-950 font-display font-bold text-xs border-2 border-slate-900 shadow-arcade-sm flex items-center gap-1.5"
           >
@@ -280,11 +280,11 @@ export default function ThreeDCard({
               className="w-4 h-4 [image-rendering:pixelated]"
             />
             จำแม่นแล้ว
-          </motion.div>
+          </m.div>
         )}
 
         {leftBadgeOpacity && (
-          <motion.div
+          <m.div
             style={{ opacity: leftBadgeOpacity }}
             className="pointer-events-none absolute top-4 left-4 z-30 px-3 py-1 bg-rose-500 text-white font-display font-bold text-xs border-2 border-slate-900 shadow-arcade-sm flex items-center gap-1.5"
           >
@@ -294,11 +294,11 @@ export default function ThreeDCard({
               className="w-4 h-4 [image-rendering:pixelated]"
             />
             ทบทวนซ้ำ
-          </motion.div>
+          </m.div>
         )}
 
         {/* 3D Flipping Card Container */}
-        <motion.div
+        <m.div
           animate={{ rotateY: isFlipped ? 180 : 0 }}
           transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1] }}
           style={{
@@ -476,8 +476,8 @@ export default function ThreeDCard({
               </kbd>
             </div>
           </div>
-        </motion.div>
-      </motion.div>
+        </m.div>
+      </m.div>
     </div>
   );
 }

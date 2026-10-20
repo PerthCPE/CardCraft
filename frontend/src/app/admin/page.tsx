@@ -20,11 +20,8 @@ import {
   Wrench,
   X,
 } from 'lucide-react';
-import {
-  FlashcardItem,
-  QuestionItem,
-  TOEIC_CATEGORIES,
-} from '@/data/toeic-dictionary';
+import type { FlashcardItem, QuestionItem } from '@/data/toeic-types';
+import { TOEIC_CATEGORIES } from '@/data/toeic-types';
 import {
   createFlashcard,
   createQuestion,
@@ -36,7 +33,7 @@ import {
   updateQuestion,
 } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
-import { useCardCraftQueryHelpers } from '@/hooks/useCardCraftQueries';
+import { useCardCraftQueryHelpers } from '@/hooks/useDashboardQueries';
 
 type AdminTab = 'FLASHCARDS' | 'QUESTIONS';
 

@@ -42,7 +42,7 @@ import {
   usePartSkillEstimates,
   useCardCraftQueryHelpers,
   getInitialGuestDashboard,
-} from '@/hooks/useCardCraftQueries';
+} from '@/hooks/useDashboardQueries';
 import { PixelCharacterAvatar } from '@/components/PixelCharacterAvatar';
 import {
   getCharacterEvolution,
@@ -159,6 +159,7 @@ export default function DashboardPage() {
                 tier={evolution.unlockedTier}
                 size="xl"
                 isLocked={false}
+                priority={true}
               />
             </div>
 

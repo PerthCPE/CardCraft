@@ -8,14 +8,15 @@
 // - รองรับการระบุ userId ในทุก Request เพื่อแยกสถิติ, Tier และผลการปัดการ์ด
 // ============================================================================
 
-import {
+import type {
   ExamAttemptItem,
   FlashcardItem,
   QuestionItem,
-  TOEIC_DICTIONARY_CARDS,
-  TOEIC_INITIAL_ATTEMPTS,
-  TOEIC_INITIAL_QUESTIONS,
-} from '@/data/toeic-dictionary';
+} from '@/data/toeic-types';
+import {
+  TOTAL_STATIC_FLASHCARDS,
+  TOTAL_STATIC_QUESTIONS,
+} from '@/data/toeic-types';
 import {
   calculateEstimatedPartScore,
   calculateScaledToeicScore,
@@ -245,11 +246,11 @@ export async function fetchDashboardSummary(
       isGuest: true,
       evolution: guestEvolution,
       stats: {
-        totalFlashcards: TOEIC_DICTIONARY_CARDS.length,
+        totalFlashcards: TOTAL_STATIC_FLASHCARDS,
         masteredCards: 0,
         learningCards: 0,
-        unseenCards: TOEIC_DICTIONARY_CARDS.length,
-        totalQuestions: TOEIC_INITIAL_QUESTIONS.length,
+        unseenCards: TOTAL_STATIC_FLASHCARDS,
+        totalQuestions: TOTAL_STATIC_QUESTIONS,
         totalExamsCompleted: 0,
       },
       recentAttempts: [],
@@ -305,7 +306,8 @@ export async function fetchFlashcards(
     const data: FlashcardItem[] = await res.json();
     return data;
   } catch {
-    // Fallback to local dictionary if backend is booting
+    // Fallback to local dictionary if backend is booting (Dynamic import to avoid shared bundle bloat)
+    const { TOEIC_DICTIONARY_CARDS } = await import('@/data/toeic-cards.data');
     if (category && category !== 'ALL') {
       return TOEIC_DICTIONARY_CARDS.filter((c) => c.category === category);
     }
@@ -385,19 +387,9 @@ export async function fetchQuestions(
     if (!res.ok) throw new Error('Backend fetchQuestions failed');
     const backendData: QuestionItem[] = await res.json();
     if (Array.isArray(backendData) && backendData.length > 0) {
-      // ผสานคลังข้อสอบ 484 ข้อเต็มเสมอ โดยอิง ID เป็นหลัก ป้องกันข้อสอบขาดหรือวนซ้ำ
-      const questionMap = new Map<string, QuestionItem>();
-      TOEIC_INITIAL_QUESTIONS.forEach((q) => questionMap.set(q.id, q));
-      backendData.forEach((q) => questionMap.set(q.id, q));
-      let merged = Array.from(questionMap.values());
-      if (section && section !== 'ALL') {
-        merged = merged.filter((q) => q.section === section);
-      }
-      if (part) {
-        merged = merged.filter((q) => q.part === part);
-      }
-      return merged;
+      return backendData;
     }
+    const { TOEIC_INITIAL_QUESTIONS } = await import('@/data/toeic-questions.data');
     let fallback = TOEIC_INITIAL_QUESTIONS;
     if (section && section !== 'ALL') {
       fallback = fallback.filter((q) => q.section === section);
@@ -407,6 +399,7 @@ export async function fetchQuestions(
     }
     return fallback;
   } catch {
+    const { TOEIC_INITIAL_QUESTIONS } = await import('@/data/toeic-questions.data');
     let list = TOEIC_INITIAL_QUESTIONS;
     if (section && section !== 'ALL') {
       list = list.filter((q) => q.section === section);

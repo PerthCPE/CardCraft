@@ -26,6 +26,7 @@ import { FlashcardsService } from './flashcards.service';
 import { CreateFlashcardDto } from './dto/create-flashcard.dto';
 import { UpdateFlashcardDto } from './dto/update-flashcard.dto';
 import { SwipeFlashcardDto } from './dto/swipe-flashcard.dto';
+import { QueryFlashcardDto } from './dto/query-flashcard.dto';
 
 @ApiTags('Flashcards (Spell Deck & CRUD)')
 @Controller('flashcards')
@@ -36,17 +37,12 @@ export class FlashcardsController {
   @ApiOperation({
     summary: 'ดึงการ์ดคำศัพท์ทั้งหมด พร้อมสถานะ Mastered/Learning และ Spaced Repetition',
   })
-  @ApiQuery({ name: 'category', required: false, example: 'Contracts' })
-  @ApiQuery({ name: 'userId', required: false })
-  @ApiQuery({ name: 'filter', required: false, example: 'DUE', description: 'DUE | EXAM_WRONG | MASTERED | LEARNING | ALL' })
   findAll(
     @Res({ passthrough: true }) res: Response,
-    @Query('category') category?: string,
-    @Query('userId') userId?: string,
-    @Query('filter') filter?: string,
+    @Query() query: QueryFlashcardDto,
   ) {
     res.setHeader('Vary', 'Origin');
-    if (!userId || userId === 'guest') {
+    if (!query.userId || query.userId === 'guest') {
       res.setHeader(
         'Cache-Control',
         'public, max-age=300, stale-while-revalidate=600',
@@ -57,7 +53,7 @@ export class FlashcardsController {
         'private, no-cache, no-store, must-revalidate',
       );
     }
-    return this.flashcardsService.findAll(category, userId, filter);
+    return this.flashcardsService.findAll(query.category, query.userId, query.filter);
   }
 
   @Get(':id')

@@ -10,12 +10,14 @@
 // ============================================================================
 
 import React, { useState } from 'react';
+import Image from 'next/image';
 import { CHARACTER_TIERS } from '@/utils/character-evolution.util';
 
 interface PixelCharacterAvatarProps {
   tier: number;
   size?: 'sm' | 'md' | 'lg' | 'xl';
   isLocked?: boolean;
+  priority?: boolean;
   className?: string;
 }
 
@@ -24,6 +26,13 @@ const SIZE_CLASSES: Record<NonNullable<PixelCharacterAvatarProps['size']>, strin
   md: 'w-20 h-20',
   lg: 'w-28 h-28',
   xl: 'w-36 h-36',
+};
+
+const SIZE_DIMENSIONS: Record<NonNullable<PixelCharacterAvatarProps['size']>, number> = {
+  sm: 56,
+  md: 80,
+  lg: 112,
+  xl: 144,
 };
 
 const TIER_PALETTES: Record<
@@ -43,6 +52,7 @@ export function PixelCharacterAvatar({
   tier,
   size = 'md',
   isLocked = false,
+  priority = false,
   className = '',
 }: PixelCharacterAvatarProps) {
   const safeTier = Math.min(7, Math.max(1, tier));
@@ -61,9 +71,13 @@ export function PixelCharacterAvatar({
       className={`relative inline-flex items-center justify-center select-none ${SIZE_CLASSES[size]} ${className}`}
     >
       {!imgError ? (
-        <img
+        <Image
           src={currentSrc}
           alt={`Tier ${safeTier} - ${tierMeta.title}`}
+          width={SIZE_DIMENSIONS[size]}
+          height={SIZE_DIMENSIONS[size]}
+          priority={priority}
+          unoptimized
           onError={() => {
             if (!triedAltPath) {
               setTriedAltPath(true);

@@ -36,15 +36,12 @@ import {
   XCircle,
   Zap,
 } from 'lucide-react';
-import {
-  FlashcardItem,
-  QuestionItem,
-  TOEIC_CATEGORIES,
-  TOEIC_INITIAL_QUESTIONS,
-  TOEIC_DICTIONARY_CARDS,
-} from '@/data/toeic-dictionary';
+import type { FlashcardItem, QuestionItem } from '@/data/toeic-types';
+import { TOEIC_CATEGORIES } from '@/data/toeic-types';
 import { submitPracticePart } from '@/lib/api';
-import { useQuestions, useFlashcards, useCardCraftQueryHelpers } from '@/hooks/useCardCraftQueries';
+import { useQuestions } from '@/hooks/useQuestionsQuery';
+import { useFlashcards } from '@/hooks/useFlashcardsQuery';
+import { useCardCraftQueryHelpers } from '@/hooks/useDashboardQueries';
 import { useAuth } from '@/context/AuthContext';
 import {
   buildShuffledQuestionsMap,
@@ -57,13 +54,42 @@ import {
 } from '@/utils/character-evolution.util';
 import { speakEnglish, cancelSpeech } from '@/utils/speech-synthesis.util';
 
-// 6 Brand-New Vocab Arcade Mini-Games
-import RuneMatchGame from '@/components/vocab-arcade/RuneMatchGame';
-import BardsEchoGame from '@/components/vocab-arcade/BardsEchoGame';
-import WordAlchemistGame from '@/components/vocab-arcade/WordAlchemistGame';
-import TwinBladesGame from '@/components/vocab-arcade/TwinBladesGame';
-import ContextClozeGame from '@/components/vocab-arcade/ContextClozeGame';
-import AnagramForgeGame from '@/components/vocab-arcade/AnagramForgeGame';
+import dynamic from 'next/dynamic';
+
+const ArcadeGameSkeleton = () => (
+  <div className="min-h-[500px] w-full bg-slate-900 border-2 border-slate-950 p-8 flex flex-col items-center justify-center text-center space-y-4">
+    <div className="w-12 h-12 border-4 border-amber-400 border-t-transparent rounded-full animate-spin" />
+    <p className="font-pixel text-amber-300 text-sm animate-pulse">
+      กำลังเชื่อมต่อลานประลองอาร์เคด...
+    </p>
+  </div>
+);
+
+// 6 Brand-New Vocab Arcade Mini-Games (Dynamic Code-Splitting)
+const RuneMatchGame = dynamic(
+  () => import('@/components/vocab-arcade/RuneMatchGame'),
+  { ssr: false, loading: () => <ArcadeGameSkeleton /> },
+);
+const BardsEchoGame = dynamic(
+  () => import('@/components/vocab-arcade/BardsEchoGame'),
+  { ssr: false, loading: () => <ArcadeGameSkeleton /> },
+);
+const WordAlchemistGame = dynamic(
+  () => import('@/components/vocab-arcade/WordAlchemistGame'),
+  { ssr: false, loading: () => <ArcadeGameSkeleton /> },
+);
+const TwinBladesGame = dynamic(
+  () => import('@/components/vocab-arcade/TwinBladesGame'),
+  { ssr: false, loading: () => <ArcadeGameSkeleton /> },
+);
+const ContextClozeGame = dynamic(
+  () => import('@/components/vocab-arcade/ContextClozeGame'),
+  { ssr: false, loading: () => <ArcadeGameSkeleton /> },
+);
+const AnagramForgeGame = dynamic(
+  () => import('@/components/vocab-arcade/AnagramForgeGame'),
+  { ssr: false, loading: () => <ArcadeGameSkeleton /> },
+);
 
 type HubTab = 'PARTS' | 'VOCAB_ARCADE';
 type VocabGameMode =
@@ -284,7 +310,18 @@ export default function PracticeHubPage() {
     { enabled: isVocabGameActive },
   );
 
-  const allCards = flashcardsData || TOEIC_DICTIONARY_CARDS;
+  const allCards = flashcardsData || [];
+
+  // Prefetch next Part 1 photograph in background for 0ms transition
+  useEffect(() => {
+    if (viewState === 'DRILL_ACTIVE') {
+      const nextQ = drillQuestions[currentQuestionIndex + 1];
+      if (nextQ?.imageUrl && typeof window !== 'undefined') {
+        const img = new window.Image();
+        img.src = nextQ.imageUrl;
+      }
+    }
+  }, [viewState, currentQuestionIndex, drillQuestions]);
 
   // --------------------------------------------------------------------------
   // Pre-Game Configuration Handlers
@@ -305,15 +342,8 @@ export default function PracticeHubPage() {
   };
 
   const startPartDrill = () => {
-    // ดึงคลังข้อสอบเฉพาะ Part ที่เลือก (On-Demand) พร้อม Fallback อัตโนมัติ
-    let pool =
-      partQuestionsData && partQuestionsData.length > 0
-        ? partQuestionsData.filter((q) => q.part === configuredPart)
-        : TOEIC_INITIAL_QUESTIONS.filter((q) => q.part === configuredPart);
-
-    if (pool.length === 0) {
-      pool = TOEIC_INITIAL_QUESTIONS.filter((q) => q.part === configuredPart);
-    }
+    // ดึงคลังข้อสอบเฉพาะ Part ที่เลือก (On-Demand) พร้อม Fallback อัตโนมัติจาก TanStack Query
+    const pool = (partQuestionsData || []).filter((q) => q.part === configuredPart);
     if (pool.length === 0) return;
 
     // Shuffle pool and slice unique questions for the drill
@@ -1042,6 +1072,8 @@ export default function PracticeHubPage() {
                 <img
                   src={currentQ.imageUrl}
                   alt="Part 1 Photograph"
+                  loading="eager"
+                  fetchPriority="high"
                   className="w-full h-auto aspect-video object-contain [image-rendering:pixelated] select-none"
                 />
               </div>

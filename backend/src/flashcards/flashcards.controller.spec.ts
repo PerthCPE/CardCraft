@@ -23,7 +23,7 @@ describe('FlashcardsController Cache-Control', () => {
       setHeader: jest.fn(),
     } as unknown as Response;
 
-    await controller.findAll(mockRes, undefined, undefined, undefined);
+    await controller.findAll(mockRes, {});
 
     expect(mockRes.setHeader).toHaveBeenCalledWith(
       'Cache-Control',
@@ -37,7 +37,7 @@ describe('FlashcardsController Cache-Control', () => {
       setHeader: jest.fn(),
     } as unknown as Response;
 
-    await controller.findAll(mockRes, undefined, 'guest', undefined);
+    await controller.findAll(mockRes, { userId: 'guest' });
 
     expect(mockRes.setHeader).toHaveBeenCalledWith(
       'Cache-Control',
@@ -51,11 +51,24 @@ describe('FlashcardsController Cache-Control', () => {
       setHeader: jest.fn(),
     } as unknown as Response;
 
-    await controller.findAll(mockRes, undefined, 'user-uuid-123', undefined);
+    await controller.findAll(mockRes, { userId: 'user-uuid-123' });
 
     expect(mockRes.setHeader).toHaveBeenCalledWith(
       'Cache-Control',
       'private, no-cache, no-store, must-revalidate',
+    );
+  });
+
+  it('ควรผ่านการตรวจสอบและตอบ 200 เมื่อส่ง _t สำหรับ cache-busting (เช่น /flashcards?_t=123)', async () => {
+    const mockRes = {
+      setHeader: jest.fn(),
+    } as unknown as Response;
+
+    const result = await controller.findAll(mockRes, { _t: '123' });
+    expect(result).toBeDefined();
+    expect(mockRes.setHeader).toHaveBeenCalledWith(
+      'Cache-Control',
+      'public, max-age=300, stale-while-revalidate=600',
     );
   });
 });
