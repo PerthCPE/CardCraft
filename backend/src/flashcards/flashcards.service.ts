@@ -22,11 +22,12 @@ export class FlashcardsService {
   ) {}
 
   /**
-   * ดึงรายการการ์ดคำศัพท์ทั้งหมด พร้อมสถานะความจำ (CardProgress) ของผู้เล่นปัจจุบัน
-   * หากเป็น Guest (ไม่มี userId) จะคืนค่า progress เป็น null
+   * ดึงรายการการ์ดคำศัพท์ทั้งหมด พร้อมสถานะความจำ (CardProgress) และ Spaced Repetition (Task B)
+   * รองรับตัวกรอง: 'DUE' (ถึงเวลาทบทวน), 'EXAM_WRONG' (เคยผิดจากข้อสอบ), 'MASTERED', 'LEARNING'
    */
-  async findAll(category?: string, userId?: string) {
+  async findAll(category?: string, userId?: string, filter?: string) {
     const isGuest = !userId || userId === 'guest';
+    const now = new Date();
 
     const cards = (await this.prisma.flashcard.findMany({
       where: category && category !== 'ALL' ? { category } : undefined,
@@ -40,11 +41,13 @@ export class FlashcardsService {
       orderBy: [{ manaCost: 'asc' }, { word: 'asc' }],
     })) as any[];
 
-    return cards.map((card) => {
+    const mapped = cards.map((card) => {
       const progress =
         !isGuest && card.cardProgresses && card.cardProgresses.length > 0
           ? card.cardProgresses[0]
           : null;
+
+      const isDue = progress ? new Date(progress.dueAt) <= now : false;
 
       return {
         id: card.id,
@@ -58,10 +61,41 @@ export class FlashcardsService {
           ? {
               isKnown: progress.isKnown,
               swipeCount: progress.swipeCount,
+              dueAt: progress.dueAt,
+              intervalDays: progress.intervalDays,
+              easeFactor: progress.easeFactor,
+              correctCount: progress.correctCount,
+              wrongCount: progress.wrongCount,
+              lastWrongAt: progress.lastWrongAt,
+              isDue,
             }
           : null,
       };
     });
+
+    if (!filter || filter === 'ALL') {
+      return mapped;
+    }
+
+    if (filter === 'DUE') {
+      // คำที่ถึงเวลาทบทวน (dueAt <= now)
+      return mapped.filter((c) => c.progress && c.progress.isDue);
+    }
+
+    if (filter === 'EXAM_WRONG') {
+      // คำที่เคยทำผิดจากข้อสอบหรือปัดผิด (wrongCount > 0)
+      return mapped.filter((c) => c.progress && c.progress.wrongCount > 0);
+    }
+
+    if (filter === 'MASTERED') {
+      return mapped.filter((c) => c.progress && c.progress.isKnown);
+    }
+
+    if (filter === 'LEARNING') {
+      return mapped.filter((c) => c.progress && !c.progress.isKnown);
+    }
+
+    return mapped;
   }
 
   async findOne(id: string) {
@@ -105,8 +139,10 @@ export class FlashcardsService {
   }
 
   /**
-   * บันทึกผลการปัดการ์ดซ้าย/ขวา (Upsert CardProgress)
-   * ต้องเข้าสู่ระบบก่อนเสมอ
+   * บันทึกผลการปัดการ์ดซ้าย/ขวา พร้อมคำนวณรอบทบทวน Spaced Repetition (Task B)
+   * - ปัดขวา (isKnown=true): ขยาย intervalDays ตาม easeFactor, dueAt = วันนี้ + intervalDays
+   * - ปัดซ้าย (isKnown=false): รีเซ็ต intervalDays = 1, dueAt = ตอนนี้, wrongCount + 1, lastWrongAt = ตอนนี้
+   * ไม่กระทบ swipeCount, EXP, Combo เดิม
    */
   async recordSwipe(cardId: string, dto: SwipeFlashcardDto) {
     if (!dto.userId || dto.userId === 'guest') {
@@ -116,6 +152,42 @@ export class FlashcardsService {
     const userId = dto.userId;
     await this.findOne(cardId);
     await this.usersService.getOrCreateUser(userId);
+
+    const existing = await this.prisma.cardProgress.findUnique({
+      where: {
+        userId_cardId: {
+          userId,
+          cardId,
+        },
+      },
+    });
+
+    const now = new Date();
+    let nextInterval = 1.0;
+    let nextEase = existing?.easeFactor ?? 2.5;
+    let dueAt = now;
+
+    if (dto.isKnown) {
+      // ปัดขวา: ขยายระยะเวลาตาม Spaced Repetition (SuperMemo-2 / Leitner)
+      const currentInterval = existing?.intervalDays ?? 1.0;
+      const currentCorrect = existing?.correctCount ?? 0;
+
+      if (currentCorrect === 0) {
+        nextInterval = 1.0;
+      } else if (currentCorrect === 1) {
+        nextInterval = 3.0;
+      } else {
+        nextInterval = Math.max(1.0, Math.round(currentInterval * nextEase));
+      }
+
+      nextEase = Math.min(3.0, nextEase + 0.1);
+      dueAt = new Date(now.getTime() + nextInterval * 24 * 60 * 60 * 1000);
+    } else {
+      // ปัดซ้าย: รีเซ็ต interval เป็น 1 วัน และกำหนด dueAt = ตอนนี้เพื่อให้ทบทวนทันที
+      nextInterval = 1.0;
+      nextEase = Math.max(1.3, nextEase - 0.2);
+      dueAt = now;
+    }
 
     const progress = await this.prisma.cardProgress.upsert({
       where: {
@@ -129,19 +201,31 @@ export class FlashcardsService {
         cardId,
         isKnown: dto.isKnown,
         swipeCount: 1,
+        intervalDays: nextInterval,
+        easeFactor: nextEase,
+        dueAt,
+        correctCount: dto.isKnown ? 1 : 0,
+        wrongCount: dto.isKnown ? 0 : 1,
+        lastWrongAt: dto.isKnown ? null : now,
       },
       update: {
         isKnown: dto.isKnown,
         swipeCount: {
           increment: 1,
         },
+        intervalDays: nextInterval,
+        easeFactor: nextEase,
+        dueAt,
+        correctCount: dto.isKnown ? { increment: 1 } : undefined,
+        wrongCount: !dto.isKnown ? { increment: 1 } : undefined,
+        lastWrongAt: !dto.isKnown ? now : undefined,
       },
     });
 
     return {
       message: dto.isKnown
-        ? 'บันทึกการ์ดคำศัพท์เป็น "จำแม่นแล้ว" สำเร็จ!'
-        : 'บันทึกการ์ดคำศัพท์เป็น "ยังจำไม่ได้" สำเร็จ!',
+        ? `บันทึกการ์ดคำศัพท์สำเร็จ! ทบทวนรอบถัดไปอีก ${Math.round(nextInterval)} วัน`
+        : 'บันทึกการ์ดคำศัพท์เป็น "ต้องทบทวนทันที" สำเร็จ!',
       progress,
     };
   }

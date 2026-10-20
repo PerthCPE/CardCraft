@@ -26,6 +26,18 @@ describe('ExamsService & 7-Tier Character Evolution Unit Tests', () => {
     user: {
       update: jest.fn(),
     },
+    question: {
+      findMany: jest.fn(),
+      findUnique: jest.fn(),
+    },
+    answerLog: {
+      create: jest.fn(),
+      createMany: jest.fn(),
+      findMany: jest.fn(),
+    },
+    cardProgress: {
+      upsert: jest.fn(),
+    },
   };
 
   const mockUsersService = {
@@ -328,6 +340,209 @@ describe('ExamsService & 7-Tier Character Evolution Unit Tests', () => {
         where: { id: 'demo-hero-1' },
         data: { currentEstimatedScore: response.scoreBreakdown.estimatedScore },
       });
+    });
+
+    it('should evaluate answers server-side from questions in DB and record AnswerLog (Task A)', async () => {
+      mockUsersService.getOrCreateUser.mockResolvedValue({
+        id: 'hero-task-a',
+        email: 'hero.a@cardcraft.dev',
+        name: 'Vanguard Hero',
+        targetScore: 700,
+        currentEstimatedScore: 500,
+      });
+
+      mockPrismaService.question.findMany.mockResolvedValue([
+        {
+          id: 'q-list-p1-01',
+          section: 'LISTENING',
+          part: 1,
+          correctOption: 'B',
+          errorTag: 'listening_trap',
+          vocabId: 'fc-01',
+        },
+        {
+          id: 'q-read-p5-01',
+          section: 'READING',
+          part: 5,
+          correctOption: 'C',
+          errorTag: 'part_of_speech',
+          vocabId: 'fc-02',
+        },
+      ]);
+
+      mockPrismaService.examAttempt.create.mockImplementation(({ data }) =>
+        Promise.resolve({
+          id: 'attempt-task-a-01',
+          ...data,
+          createdAt: new Date(),
+        }),
+      );
+
+      mockPrismaService.answerLog.createMany.mockResolvedValue({ count: 2 });
+      mockPrismaService.user.update.mockResolvedValue({
+        id: 'hero-task-a',
+        currentEstimatedScore: 550,
+      });
+
+      const response = await service.submitExam({
+        userId: 'hero-task-a',
+        mode: 'MINI_MOCK',
+        timeSpentSeconds: 120,
+        answers: [
+          {
+            questionId: 'q-list-p1-01',
+            part: 1,
+            selectedOption: 'B', // Correct!
+            timeSpentMs: 4500,
+          },
+          {
+            questionId: 'q-read-p5-01',
+            part: 5,
+            selectedOption: 'A', // Wrong!
+            timeSpentMs: 6200,
+          },
+        ],
+      });
+
+      expect(response).toBeDefined();
+      expect(mockPrismaService.examAttempt.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            userId: 'hero-task-a',
+            listeningCorrect: 1,
+            readingCorrect: 0,
+          }),
+        }),
+      );
+      expect(mockPrismaService.answerLog.createMany).toHaveBeenCalledWith({
+        data: expect.arrayContaining([
+          expect.objectContaining({
+            userId: 'hero-task-a',
+            attemptId: 'attempt-task-a-01',
+            questionId: 'q-list-p1-01',
+            selectedOption: 'B',
+            correctOption: 'B',
+            isCorrect: true,
+            errorType: null,
+          }),
+          expect.objectContaining({
+            userId: 'hero-task-a',
+            attemptId: 'attempt-task-a-01',
+            questionId: 'q-read-p5-01',
+            selectedOption: 'A',
+            correctOption: 'C',
+            isCorrect: false,
+            errorType: 'part_of_speech',
+            vocabId: 'fc-02',
+          }),
+        ]),
+      });
+    });
+  });
+
+  describe('logAnswer (Practice Drill & Rush Answer Logging)', () => {
+    it('should log a single practice answer and identify errorType and vocabId', async () => {
+      mockPrismaService.question.findUnique.mockResolvedValue({
+        id: 'q-drill-01',
+        section: 'READING',
+        part: 5,
+        correctOption: 'D',
+        explanationTh: 'ข้อนี้ต้องใช้ Adverb',
+        errorTag: 'part_of_speech',
+        vocabId: 'vocab-drill-01',
+      });
+
+      mockPrismaService.answerLog.create.mockResolvedValue({
+        id: 'log-drill-01',
+        userId: 'drill-hero-1',
+        questionId: 'q-drill-01',
+        part: 5,
+        mode: 'P5_DRILL',
+        selectedOption: 'A',
+        correctOption: 'D',
+        isCorrect: false,
+        errorType: 'part_of_speech',
+        vocabId: 'vocab-drill-01',
+      });
+
+      const result = await service.logAnswer({
+        userId: 'drill-hero-1',
+        questionId: 'q-drill-01',
+        part: 5,
+        mode: 'P5_DRILL',
+        selectedOption: 'A',
+        timeSpentMs: 3500,
+      });
+
+      expect(result.logged).toBe(true);
+      expect(result.isCorrect).toBe(false);
+      expect(result.errorType).toBe('part_of_speech');
+      expect(result.vocabId).toBe('vocab-drill-01');
+      expect(mockPrismaService.answerLog.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          userId: 'drill-hero-1',
+          questionId: 'q-drill-01',
+          selectedOption: 'A',
+          correctOption: 'D',
+          isCorrect: false,
+          errorType: 'part_of_speech',
+          vocabId: 'vocab-drill-01',
+        }),
+      });
+      expect(mockPrismaService.cardProgress.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            userId_cardId: {
+              userId: 'drill-hero-1',
+              cardId: 'vocab-drill-01',
+            },
+          },
+        }),
+      );
+    });
+  });
+
+  describe('Weakness Analytics & Error Review (Task C)', () => {
+    it('should calculate weakness distribution and top 5 weaknesses correctly', async () => {
+      mockPrismaService.answerLog.findMany.mockResolvedValue([
+        { isCorrect: true, part: 5, errorType: null },
+        { isCorrect: false, part: 5, errorType: 'part_of_speech' },
+        { isCorrect: false, part: 5, errorType: 'part_of_speech' },
+        { isCorrect: false, part: 1, errorType: 'listening_trap' },
+        { isCorrect: false, part: 7, errorType: 'detail_miss' },
+      ]);
+
+      const analytics = await service.getWeaknessAnalytics('hero-analytics');
+
+      expect(analytics.totalAnswers).toBe(5);
+      expect(analytics.totalCorrect).toBe(1);
+      expect(analytics.totalWrong).toBe(4);
+      expect(analytics.accuracyRate).toBe(20);
+      expect(analytics.topWeaknesses[0].errorType).toBe('part_of_speech');
+      expect(analytics.topWeaknesses[0].count).toBe(2);
+      expect(analytics.topWeaknesses[0].percentage).toBe(50);
+    });
+
+    it('should retrieve error logs filtered by part and errorType', async () => {
+      mockPrismaService.answerLog.findMany.mockResolvedValue([
+        {
+          id: 'log-err-01',
+          userId: 'hero-review',
+          part: 5,
+          errorType: 'part_of_speech',
+          selectedOption: 'A',
+          correctOption: 'C',
+          question: {
+            id: 'q-5-01',
+            questionText: 'Test question',
+            explanationTh: 'Test explanation',
+          },
+        },
+      ]);
+
+      const logs = await service.getErrorLogs('hero-review', 5, 'part_of_speech');
+      expect(logs).toHaveLength(1);
+      expect(logs[0].id).toBe('log-err-01');
     });
   });
 });

@@ -19,6 +19,12 @@ coverage/
 backend/.env
 frontend/.env.local
 
+# Playwright
+test-results/
+**/test-results/
+playwright-report/
+**/playwright-report/
+
 # Logs & OS files
 npm-debug.log*
 yarn-debug.log*

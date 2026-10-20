@@ -68,7 +68,12 @@ export default function CardSetSelectorModal({
   const [customSizeInput, setCustomSizeInput] = useState<string>('25');
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
   const [selectedFilter, setSelectedFilter] = useState<
-    'ALL' | 'UNLEARNED' | 'NEED_REVIEW' | 'MASTERED'
+    | 'ALL'
+    | 'UNLEARNED'
+    | 'NEED_REVIEW'
+    | 'MASTERED'
+    | 'DUE'
+    | 'EXAM_WRONG'
   >('ALL');
   const [customName, setCustomName] = useState<string>('');
   const [saveSuccessMsg, setSaveSuccessMsg] = useState<string | null>(null);
@@ -295,9 +300,11 @@ export default function CardSetSelectorModal({
                 <label className="block text-xs font-bold text-slate-900 uppercase tracking-wide mb-2">
                   3. กรองตามสถานะความจำในบัญชีของคุณ:
                 </label>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
                   {[
                     { key: 'ALL', label: 'ทั้งหมด (คละ)' },
+                    { key: 'DUE', label: 'ถึงเวลาทบทวน (Due)' },
+                    { key: 'EXAM_WRONG', label: 'ที่เคยผิดจากข้อสอบ' },
                     { key: 'UNLEARNED', label: 'ยังไม่เคยท่อง' },
                     { key: 'NEED_REVIEW', label: 'ยังจำไม่ได้' },
                     { key: 'MASTERED', label: 'จำแม่นแล้ว' },
@@ -311,7 +318,9 @@ export default function CardSetSelectorModal({
                             | 'ALL'
                             | 'UNLEARNED'
                             | 'NEED_REVIEW'
-                            | 'MASTERED',
+                            | 'MASTERED'
+                            | 'DUE'
+                            | 'EXAM_WRONG',
                         )
                       }
                       className={`py-2 px-2 text-center border-2 font-medium transition-all ${

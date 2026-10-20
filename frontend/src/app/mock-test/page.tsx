@@ -134,6 +134,16 @@ export default function BossBattleMockTestPage() {
       EXAM_DURATION_SECONDS - timeLeft,
     );
 
+    const formattedAnswers = questions
+      .filter((q) => answers[q.id])
+      .map((q) => ({
+        questionId: q.id,
+        part: q.part,
+        selectedOption: answers[q.id],
+        flagged: Boolean(flaggedIds[q.id]),
+        timeSpentMs: 0,
+      }));
+
     const response = await submitExamAttempt({
       userId: authUser?.id,
       mode: 'MINI_MOCK',
@@ -142,6 +152,7 @@ export default function BossBattleMockTestPage() {
       readingCorrect,
       readingTotal: readingQuestions.length,
       timeSpentSeconds,
+      answers: formattedAnswers,
     });
 
     setExamResult(response);

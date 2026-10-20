@@ -13,7 +13,13 @@ export interface CardSet {
   description: string;
   size: number;
   category: string;
-  filterMode: 'ALL' | 'UNLEARNED' | 'NEED_REVIEW' | 'MASTERED';
+  filterMode:
+    | 'ALL'
+    | 'UNLEARNED'
+    | 'NEED_REVIEW'
+    | 'MASTERED'
+    | 'DUE'
+    | 'EXAM_WRONG';
   cardIds: string[];
   createdAt: string;
   isPreset?: boolean;
@@ -37,18 +43,34 @@ export function shuffleArray<T>(array: T[]): T[] {
 }
 
 /**
- * ดึงคำศัพท์ที่ตรงกับเงื่อนไขหมวดหมู่และสถานะความจำ
+ * ดึงคำศัพท์ที่ตรงกับเงื่อนไขหมวดหมู่และสถานะความจำ (รวม Spaced Repetition DUE และ EXAM_WRONG)
  */
 export function getMatchingPool(
   allCards: FlashcardItem[],
   category: string = 'ALL',
-  filterMode: 'ALL' | 'UNLEARNED' | 'NEED_REVIEW' | 'MASTERED' = 'ALL',
+  filterMode:
+    | 'ALL'
+    | 'UNLEARNED'
+    | 'NEED_REVIEW'
+    | 'MASTERED'
+    | 'DUE'
+    | 'EXAM_WRONG' = 'ALL',
 ): FlashcardItem[] {
+  const now = new Date();
   return allCards.filter((c) => {
     if (category !== 'ALL' && c.category !== category) return false;
     if (filterMode === 'UNLEARNED' && c.progress !== null) return false;
     if (filterMode === 'NEED_REVIEW' && c.progress?.isKnown !== false) return false;
     if (filterMode === 'MASTERED' && c.progress?.isKnown !== true) return false;
+    if (filterMode === 'DUE') {
+      return (
+        c.progress?.isDue === true ||
+        (c.progress?.dueAt && new Date(c.progress.dueAt) <= now)
+      );
+    }
+    if (filterMode === 'EXAM_WRONG') {
+      return (c.progress?.wrongCount ?? 0) > 0;
+    }
     return true;
   });
 }
@@ -61,7 +83,13 @@ export function createRandomSet(
   options: {
     size: number;
     category?: string;
-    filterMode?: 'ALL' | 'UNLEARNED' | 'NEED_REVIEW' | 'MASTERED';
+    filterMode?:
+      | 'ALL'
+      | 'UNLEARNED'
+      | 'NEED_REVIEW'
+      | 'MASTERED'
+      | 'DUE'
+      | 'EXAM_WRONG';
     customName?: string;
     customDescription?: string;
   },

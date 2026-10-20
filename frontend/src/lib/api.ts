@@ -52,14 +52,32 @@ export interface DashboardSummaryResponse {
   isBackendConnected: boolean;
 }
 
+export interface ExamAnswerItemPayload {
+  questionId: string;
+  part?: number;
+  selectedOption: string;
+  flagged?: boolean;
+  timeSpentMs?: number;
+}
+
 export interface SubmitExamPayload {
   userId?: string;
-  mode: 'MINI_MOCK' | 'LISTENING_DRILL' | 'READING_DRILL';
-  listeningCorrect: number;
+  mode: string;
+  listeningCorrect?: number;
   listeningTotal?: number;
-  readingCorrect: number;
+  readingCorrect?: number;
   readingTotal?: number;
   timeSpentSeconds: number;
+  answers?: ExamAnswerItemPayload[];
+}
+
+export interface LogAnswerPayload {
+  userId: string;
+  questionId: string;
+  part: number;
+  mode: string;
+  selectedOption: string;
+  timeSpentMs?: number;
 }
 
 export interface SubmitExamResponse {
@@ -203,11 +221,13 @@ export async function updateHeroProfile(
 export async function fetchFlashcards(
   category?: string,
   userId?: string,
+  filter?: string,
 ): Promise<FlashcardItem[]> {
   try {
     const params = new URLSearchParams();
     if (category && category !== 'ALL') params.set('category', category);
     if (userId) params.set('userId', userId);
+    if (filter && filter !== 'ALL') params.set('filter', filter);
     const qs = params.toString() ? `?${params.toString()}` : '';
 
     const res = await fetch(`${API_BASE_URL}/flashcards${qs}`, {
@@ -354,21 +374,23 @@ export async function submitExamAttempt(
     return await res.json();
   } catch {
     // Fallback scoring logic if backend is unreachable
+    const listeningCorrect = payload.listeningCorrect ?? 0;
+    const readingCorrect = payload.readingCorrect ?? 0;
     const listeningTotal =
       payload.listeningTotal ??
       (payload.mode === 'READING_DRILL'
         ? 0
-        : Math.max(7, payload.listeningCorrect));
+        : Math.max(7, listeningCorrect));
     const readingTotal =
       payload.readingTotal ??
       (payload.mode === 'LISTENING_DRILL'
         ? 0
-        : Math.max(8, payload.readingCorrect));
+        : Math.max(8, readingCorrect));
 
     const scoreBreakdown = calculateScaledToeicScore(
-      payload.listeningCorrect,
+      listeningCorrect,
       listeningTotal,
-      payload.readingCorrect,
+      readingCorrect,
       readingTotal,
     );
 
@@ -381,9 +403,9 @@ export async function submitExamAttempt(
     const attempt: ExamAttemptItem = {
       id: `attempt-${Date.now()}`,
       userId: payload.userId || '',
-      mode: payload.mode,
-      listeningCorrect: payload.listeningCorrect,
-      readingCorrect: payload.readingCorrect,
+      mode: (payload.mode as 'MINI_MOCK' | 'LISTENING_DRILL' | 'READING_DRILL') || 'MINI_MOCK',
+      listeningCorrect,
+      readingCorrect,
       estimatedScore: scoreBreakdown.estimatedScore,
       unlockedTier: evolution.unlockedTier,
       isPassedTarget: evolution.isPassedTarget,
@@ -417,6 +439,121 @@ export async function submitExamAttempt(
           ? 'ภารกิจสำเร็จ! คุณทะลุเป้าหมาย TOEIC 700+ และปลดล็อกคลาสระดับสูงแล้ว!'
           : `อีกเพียง ${evolution.pointsToTarget700} คะแนน จะทะลุเป้าหมาย 700+ (High Paladin)!`,
       },
+    };
+  }
+}
+
+// ----------------------------------------------------------------------------
+// 5. Log Single Answer API (POST /exams/log-answer) for Practice & Drills
+// ----------------------------------------------------------------------------
+export async function logSingleAnswer(
+  payload: LogAnswerPayload,
+): Promise<{
+  logged: boolean;
+  isCorrect?: boolean;
+  correctOption?: string;
+  explanationTh?: string;
+  errorType?: string | null;
+  vocabId?: string | null;
+} | null> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/exams/log-answer`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error('logSingleAnswer failed');
+    return await res.json();
+  } catch {
+    return null;
+  }
+}
+
+// ----------------------------------------------------------------------------
+// 6. Error Review & Weakness Analytics API (Task C)
+// ----------------------------------------------------------------------------
+export interface ErrorLogItem {
+  id: string;
+  userId: string;
+  attemptId?: string | null;
+  questionId: string;
+  part: number;
+  mode: string;
+  selectedOption: string;
+  correctOption: string;
+  isCorrect: boolean;
+  errorType: string | null;
+  vocabId?: string | null;
+  timeSpentMs: number;
+  createdAt: string;
+  question?: QuestionItem;
+  vocab?: FlashcardItem | null;
+}
+
+export interface WeaknessAnalyticsResponse {
+  totalAnswers: number;
+  totalCorrect: number;
+  totalWrong: number;
+  accuracyRate: number;
+  byErrorType: Array<{
+    errorType: string;
+    count: number;
+    percentage: number;
+  }>;
+  byPart: Array<{
+    part: number;
+    total: number;
+    correct: number;
+    wrong: number;
+    errorRate: number;
+  }>;
+  topWeaknesses: Array<{
+    errorType: string;
+    count: number;
+    percentage: number;
+  }>;
+}
+
+export async function fetchErrorLogs(
+  userId: string,
+  part?: number,
+  errorType?: string,
+  limit = 50,
+): Promise<ErrorLogItem[]> {
+  try {
+    const params = new URLSearchParams({ userId, limit: String(limit) });
+    if (part) params.set('part', String(part));
+    if (errorType && errorType !== 'ALL') params.set('errorType', errorType);
+
+    const res = await fetch(`${API_BASE_URL}/exams/error-logs?${params.toString()}`, {
+      cache: 'no-store',
+    });
+    if (!res.ok) throw new Error('fetchErrorLogs failed');
+    return await res.json();
+  } catch {
+    return [];
+  }
+}
+
+export async function fetchWeaknessAnalytics(
+  userId: string,
+): Promise<WeaknessAnalyticsResponse> {
+  try {
+    const res = await fetch(
+      `${API_BASE_URL}/exams/weakness-analytics?userId=${encodeURIComponent(userId)}`,
+      { cache: 'no-store' },
+    );
+    if (!res.ok) throw new Error('fetchWeaknessAnalytics failed');
+    return await res.json();
+  } catch {
+    return {
+      totalAnswers: 0,
+      totalCorrect: 0,
+      totalWrong: 0,
+      accuracyRate: 0,
+      byErrorType: [],
+      byPart: [],
+      topWeaknesses: [],
     };
   }
 }

@@ -1,9 +1,5 @@
 // ============================================================================
-// CardCraft Prisma Schema (เปรียบเทียบกับ Go: GORM Structs + sqlc Codegen)
-// ============================================================================
-// ใน Go (Gin + GORM): เรามักประกาศ struct พร้อม struct tags เช่น `gorm:"primaryKey;type:uuid"`
-// ใน Prisma: เราเขียน Declarative Schema ในไฟล์นี้ แล้วรัน `npx prisma generate`
-// เพื่อสร้าง Type-safe Client (`@prisma/client`) ที่เหมือนการรวมข้อดีของ GORM + sqlc เข้าด้วยกัน!
+// CardCraft Prisma Schema
 // ============================================================================
 
 generator client {
@@ -15,21 +11,36 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// Enum ประเภทข้อผิดพลาด (Error Classification)
+enum ErrorType {
+  part_of_speech
+  tense
+  preposition
+  vocabulary
+  connector
+  subject_verb_agreement
+  pronoun
+  listening_trap
+  detail_miss
+  other
+}
+
 // 1. User Model — ข้อมูลผู้เล่น (Hero Profile) และคะแนนประเมิน TOEIC ปัจจุบัน
 model User {
-  id                     String         @id @default(uuid())
-  username               String         @unique @default(uuid())
-  password               String         @default("8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918") // sha256 of '123456'
-  email                  String?        @unique
-  name                   String
-  targetScore            Int            @default(700) // เป้าหมายหลักของโปรเจกต์คือ TOEIC 700+
-  currentEstimatedScore  Int            @default(350) // คะแนนประเมินเริ่มต้น (0-990)
-  createdAt              DateTime       @default(now())
-  updatedAt              DateTime       @updatedAt
+  id                    String         @id @default(uuid())
+  username              String         @unique @default(uuid())
+  password              String         @default("8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918") // sha256 of '123456'
+  email                 String?        @unique
+  name                  String
+  targetScore           Int            @default(700) // เป้าหมายหลักของโปรเจกต์คือ TOEIC 700+
+  currentEstimatedScore Int            @default(0)   // คะแนนประเมินเริ่มต้น (0-990)
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
 
-  // Relations (เทียบเท่า HasMany ใน GORM)
-  cardProgresses         CardProgress[]
-  examAttempts           ExamAttempt[]
+  // Relations
+  cardProgresses        CardProgress[]
+  examAttempts          ExamAttempt[]
+  answerLogs            AnswerLog[]
 }
 
 // 2. Flashcard Model — การ์ดคำศัพท์ RPG (Spell Cards) สำหรับฝึกศัพท์ TOEIC 700+
@@ -45,56 +56,106 @@ model Flashcard {
   updatedAt      DateTime       @updatedAt
 
   cardProgresses CardProgress[]
+  questions      Question[]
+  answerLogs     AnswerLog[]
 }
 
-// 3. CardProgress Model — บันทึกผลการปัดการ์ดซ้าย/ขวา (Tinder-style Swipe Tracking)
+// 3. CardProgress Model — บันทึกผลการปัดการ์ดและระบบ Spaced Repetition (Task B)
 model CardProgress {
-  id         String    @id @default(uuid())
-  userId     String
-  cardId     String
-  isKnown    Boolean   @default(false) // ปัดขวา = true (Mastered), ปัดซ้าย = false (Still Learning)
-  swipeCount Int       @default(1)     // จำนวนครั้งที่ปัดการ์ดใบนี้แล้ว
-  updatedAt  DateTime  @updatedAt
+  id           String    @id @default(uuid())
+  userId       String
+  cardId       String
+  isKnown      Boolean   @default(false) // ปัดขวา = true (Mastered), ปัดซ้าย = false (Still Learning)
+  swipeCount   Int       @default(1)     // จำนวนครั้งที่ปัดการ์ดใบนี้แล้ว
+  dueAt        DateTime  @default(now()) // วันเวลาที่ครบกำหนดทบทวน (Spaced Repetition)
+  intervalDays Float     @default(1.0)   // ระยะห่างวันในการทบทวนรอบถัดไป
+  easeFactor   Float     @default(2.5)   // สัมประสิทธิ์ความยากง่าย (SM-2 Default: 2.5)
+  correctCount Int       @default(0)     // จำนวนครั้งที่ปัดขวา/จำได้
+  wrongCount   Int       @default(0)     // จำนวนครั้งที่ปัดซ้าย/ตอบผิด
+  lastWrongAt  DateTime?                 // วันเวลาล่าสุดที่ตอบผิดหรือปัดซ้าย
+  updatedAt    DateTime  @updatedAt
 
-  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  card       Flashcard @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  card         Flashcard @relation(fields: [cardId], references: [id], onDelete: Cascade)
 
-  // Composite Unique Index: ผู้ใช้ 1 คน มีสถานะความจำต่อการ์ด 1 ใบ (ใช้กับ prisma.cardProgress.upsert)
   @@unique([userId, cardId])
+  @@index([userId, dueAt])
+  @@index([userId, isKnown])
+  @@index([userId, wrongCount])
 }
 
-// 4. Question Model — คลังข้อสอบ TOEIC ทั้ง Listening (Part 1, 2) และ Reading (Part 5, 7)
+// 4. Question Model — คลังข้อสอบ TOEIC ทั้ง Listening และ Reading
 model Question {
-  id            String   @id @default(uuid())
-  section       String   // "LISTENING" | "READING"
-  part          Int      // 1, 2, 5, หรือ 7
-  audioUrl      String?  // Nullable: ใช้สำหรับพาร์ท Listening (Part 1, 2)
-  imageUrl      String?  // Nullable: ใช้สำหรับรูปภาพใน Part 1 Photographs
-  passageText   String?  // Nullable: ใช้สำหรับบทความ/อีเมลธุรกิจใน Part 7 Reading Comprehension
-  questionText  String   // โจทย์คำถาม (หรือ Audio Transcript สำหรับเฉลย Part 1/2)
+  id            String      @id @default(uuid())
+  section       String      // "LISTENING" | "READING"
+  part          Int         // 1, 2, 5, หรือ 7
+  audioUrl      String?     // Nullable: ใช้สำหรับพาร์ท Listening (Part 1, 2)
+  imageUrl      String?     // Nullable: ใช้สำหรับรูปภาพใน Part 1 Photographs
+  passageText   String?     // Nullable: ใช้สำหรับบทความ/อีเมลธุรกิจใน Part 7 Reading Comprehension
+  questionText  String      // โจทย์คำถาม (หรือ Audio Transcript สำหรับเฉลย Part 1/2)
   optionA       String
   optionB       String
   optionC       String
-  optionD       String?  // Nullable: เพราะ TOEIC Part 2 (Question-Response) มีแค่ตัวเลือก A, B, C
-  correctOption String   // "A" | "B" | "C" | "D"
-  explanationTh String   // เฉลยและคำอธิบายไวยากรณ์/เทคนิคการตัดช้อยส์ภาษาไทยอย่างละเอียด
-  tag           String   // เช่น "Part 5 - Word Family", "Part 7 - Business Email"
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  optionD       String?     // Nullable: เพราะ TOEIC Part 2 มีแค่ตัวเลือก A, B, C
+  correctOption String      // "A" | "B" | "C" | "D"
+  explanationTh String      // เฉลยและคำอธิบายไวยากรณ์/เทคนิคการตัดช้อยส์ภาษาไทยอย่างละเอียด
+  tag           String      // เช่น "Part 5 - Word Family", "Part 7 - Business Email"
+  errorTag      ErrorType?  // จัดหมวดหมู่จุดผิดพลาดสำหรับการวิเคราะห์ Weakness Analytics
+  vocabId       String?     // เชื่อมโยงคำศัพท์กับตาราง Flashcard เพื่อส่งเข้าคิวทบทวนเมื่อทำผิด
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  vocab         Flashcard?  @relation(fields: [vocabId], references: [id], onDelete: SetNull)
+  answerLogs    AnswerLog[]
+
+  @@index([errorTag])
+  @@index([vocabId])
 }
 
-// 5. ExamAttempt Model — ประวัติการทำข้อสอบ Boss Battle (Mini Mock) และ Practice Drills
+// 5. ExamAttempt Model — ประวัติการทำข้อสอบ Boss Battle (Mini Mock) และ Full Mock
 model ExamAttempt {
-  id               String   @id @default(uuid())
+  id               String      @id @default(uuid())
   userId           String
-  mode             String   // "MINI_MOCK" | "LISTENING_DRILL" | "READING_DRILL"
+  mode             String      // "MINI_MOCK" | "FULL_MOCK" | "FULL_LISTENING" | "FULL_READING" | "READING_DRILL" | "LISTENING_DRILL"
   listeningCorrect Int
   readingCorrect   Int
-  estimatedScore   Int      // คะแนนเทียบสเกล TOEIC (10 - 990)
-  unlockedTier     Int      // ระดับคลาสตัวละครที่ปลดล็อกได้ (Tier 1 - 7)
-  isPassedTarget   Boolean  // true เมื่อ estimatedScore >= 700 (บรรลุเป้าหมาย High Paladin!)
-  timeSpentSeconds Int      // เวลาที่ใช้ทำข้อสอบ (วินาที)
-  createdAt        DateTime @default(now())
+  estimatedScore   Int         // คะแนนเทียบสเกล TOEIC (10 - 990)
+  scoreMin         Int?        // ช่วงคะแนนต่ำสุด เช่น 700
+  scoreMax         Int?        // ช่วงคะแนนสูงสุด เช่น 750
+  listeningScore   Int?        // คะแนนส่วน Listening (5 - 495)
+  readingScore     Int?        // คะแนนส่วน Reading (5 - 495)
+  unlockedTier     Int         // ระดับคลาสตัวละครที่ปลดล็อกได้ (Tier 1 - 7)
+  isPassedTarget   Boolean     // true เมื่อ estimatedScore >= targetScore
+  timeSpentSeconds Int         // เวลาที่ใช้ทำข้อสอบ (วินาที)
+  createdAt        DateTime    @default(now())
 
-  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user             User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  answerLogs       AnswerLog[]
+}
+
+// 6. AnswerLog Model — บันทึกประวัติการตอบคำถามรายข้อแบบละเอียด
+model AnswerLog {
+  id             String       @id @default(uuid())
+  userId         String
+  attemptId      String?      // เชื่อมโยงกับ ExamAttempt (Nullable หากตอบใน Practice Drill รายข้อ)
+  questionId     String
+  part           Int
+  mode           String       // โหมดที่ตอบคำถาม
+  selectedOption String       // ตัวเลือกที่ผู้ใช้ตอบ "A" | "B" | "C" | "D"
+  correctOption  String       // เฉลยที่ถูกต้อง "A" | "B" | "C" | "D"
+  isCorrect      Boolean      // true เมื่อตอบถูก
+  errorType      ErrorType?   // ประเภทจุดบกพร่องกรณีตอบผิด
+  vocabId        String?      // คำศัพท์ที่เกี่ยวข้อง (ถ้ามี)
+  timeSpentMs    Int          @default(0) // เวลาที่ใช้ตอบข้อนี้ (มิลลิวินาที)
+  createdAt      DateTime     @default(now())
+
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  attempt        ExamAttempt? @relation(fields: [attemptId], references: [id], onDelete: SetNull)
+  question       Question     @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  vocab          Flashcard?   @relation(fields: [vocabId], references: [id], onDelete: SetNull)
+
+  @@index([userId, isCorrect])
+  @@index([userId, errorType])
+  @@index([userId, part])
+  @@index([userId, createdAt])
 }

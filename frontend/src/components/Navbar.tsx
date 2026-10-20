@@ -44,6 +44,11 @@ const NAV_ITEMS: NavItem[] = [
     label: 'จำลองสอบ',
     pixelIcon: '/icons/icon-boss-gate.png',
   },
+  {
+    href: '/review/errors',
+    label: 'คลังจุดอ่อน',
+    pixelIcon: '/icons/icon-reading.png',
+  },
 ];
 
 export function Navbar() {

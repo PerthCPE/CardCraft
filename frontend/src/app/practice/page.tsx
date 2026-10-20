@@ -27,7 +27,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { FlashcardItem, QuestionItem } from '@/data/toeic-dictionary';
-import { fetchFlashcards, fetchQuestions } from '@/lib/api';
+import { fetchFlashcards, fetchQuestions, logSingleAnswer } from '@/lib/api';
 import RealTimeExamModal, { RealTimeExamType } from '@/components/RealTimeExamModal';
 import VocabBlitzGame from '@/components/VocabBlitzGame';
 import BossSurvivalModal from '@/components/BossSurvivalModal';
@@ -161,6 +161,17 @@ export default function PracticeDrillsPage() {
         ...prev,
         [question.id]: optionKey,
       }));
+
+      // บันทึก AnswerLog สำหรับ Single Drill (Task A)
+      if (authUser?.id) {
+        logSingleAnswer({
+          userId: authUser.id,
+          questionId: question.id,
+          part: question.part,
+          mode: `P${question.part}_DRILL`,
+          selectedOption: optionKey,
+        });
+      }
     },
     [authUser, requireAuth],
   );
@@ -843,6 +854,7 @@ export default function PracticeDrillsPage() {
           isOpen={isBossOpen}
           onClose={() => setIsBossOpen(false)}
           questions={questions}
+          userId={authUser?.id}
         />
       )}
 

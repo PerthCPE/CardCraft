@@ -32,15 +32,17 @@ export class FlashcardsController {
 
   @Get()
   @ApiOperation({
-    summary: 'ดึงการ์ดคำศัพท์ทั้งหมด พร้อมสถานะ Mastered/Learning ของผู้เล่น',
+    summary: 'ดึงการ์ดคำศัพท์ทั้งหมด พร้อมสถานะ Mastered/Learning และ Spaced Repetition',
   })
   @ApiQuery({ name: 'category', required: false, example: 'Contracts' })
   @ApiQuery({ name: 'userId', required: false })
+  @ApiQuery({ name: 'filter', required: false, example: 'DUE', description: 'DUE | EXAM_WRONG | MASTERED | LEARNING | ALL' })
   findAll(
     @Query('category') category?: string,
     @Query('userId') userId?: string,
+    @Query('filter') filter?: string,
   ) {
-    return this.flashcardsService.findAll(category, userId);
+    return this.flashcardsService.findAll(category, userId, filter);
   }
 
   @Get(':id')

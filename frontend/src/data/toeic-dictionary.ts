@@ -18,6 +18,13 @@ export interface FlashcardItem {
   progress?: {
     isKnown: boolean;
     swipeCount: number;
+    dueAt?: string;
+    intervalDays?: number;
+    easeFactor?: number;
+    correctCount?: number;
+    wrongCount?: number;
+    lastWrongAt?: string;
+    isDue?: boolean;
     updatedAt?: string;
   } | null;
 }
@@ -42,7 +49,14 @@ export interface QuestionItem {
 export interface ExamAttemptItem {
   id: string;
   userId: string;
-  mode: 'MINI_MOCK' | 'LISTENING_DRILL' | 'READING_DRILL';
+  mode:
+    | 'MINI_MOCK'
+    | 'FULL_MOCK'
+    | 'FULL_LISTENING'
+    | 'FULL_READING'
+    | 'LISTENING_DRILL'
+    | 'READING_DRILL'
+    | string;
   listeningCorrect: number;
   readingCorrect: number;
   estimatedScore: number;

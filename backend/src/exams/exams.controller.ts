@@ -6,7 +6,7 @@
 import { Body, Controller, Get, Post, Query } from '@nestjs/common';
 import { ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { ExamsService } from './exams.service';
-import { SubmitExamDto } from './dto/submit-exam.dto';
+import { LogAnswerDto, SubmitExamDto } from './dto/submit-exam.dto';
 
 @ApiTags('Exams (Boss Battle & Score Evaluation)')
 @Controller('exams')
@@ -22,10 +22,46 @@ export class ExamsController {
     return this.examsService.submitExam(dto);
   }
 
+  @Post('log-answer')
+  @ApiOperation({
+    summary:
+      'บันทึกคำตอบรายข้อจาก Practice Drill, Boss Gauntlet, Collocation Rush เข้า AnswerLog',
+  })
+  logAnswer(@Body() dto: LogAnswerDto) {
+    return this.examsService.logAnswer(dto);
+  }
+
   @Get('history')
   @ApiOperation({ summary: 'ดึงประวัติการทำข้อสอบทั้งหมดของผู้เล่น' })
   @ApiQuery({ name: 'userId', required: false })
   getHistory(@Query('userId') userId?: string) {
     return this.examsService.getExamHistory(userId);
+  }
+
+  @Get('error-logs')
+  @ApiOperation({ summary: 'ดึงประวัติข้อสอบที่ผู้เล่นเคยทำผิดสำหรับหน้า /review/errors' })
+  @ApiQuery({ name: 'userId', required: true })
+  @ApiQuery({ name: 'part', required: false, type: Number })
+  @ApiQuery({ name: 'errorType', required: false, type: String })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  getErrorLogs(
+    @Query('userId') userId?: string,
+    @Query('part') part?: string,
+    @Query('errorType') errorType?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.examsService.getErrorLogs(
+      userId,
+      part ? parseInt(part, 10) : undefined,
+      errorType,
+      limit ? parseInt(limit, 10) : 50,
+    );
+  }
+
+  @Get('weakness-analytics')
+  @ApiOperation({ summary: 'ดึงสถิติภาพรวมจุดอ่อน Weakness Dashboard (% ผิดแยกตามประเภทและพาร์ท, Top 5 จุดอ่อน)' })
+  @ApiQuery({ name: 'userId', required: true })
+  getWeaknessAnalytics(@Query('userId') userId?: string) {
+    return this.examsService.getWeaknessAnalytics(userId);
   }
 }

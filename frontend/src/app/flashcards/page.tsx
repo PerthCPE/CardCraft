@@ -40,6 +40,7 @@ import CardSetSelectorModal from '@/components/CardSetSelectorModal';
 import VocabBlitzGame from '@/components/VocabBlitzGame';
 import { CardSet, getStoredActiveSet } from '@/utils/card-sets';
 import { useAuth } from '@/context/AuthContext';
+import ThreeDCard from '@/components/ThreeDCard';
 
 export default function FlashcardsPage() {
   const { user: authUser, requireAuth } = useAuth();
@@ -51,7 +52,7 @@ export default function FlashcardsPage() {
 
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
   const [statusFilter, setStatusFilter] = useState<
-    'ALL' | 'LEARNING' | 'MASTERED'
+    'ALL' | 'DUE' | 'EXAM_WRONG' | 'LEARNING' | 'MASTERED'
   >('ALL');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [viewMode, setViewMode] = useState<'SWIPE_DECK' | 'DICTIONARY'>(
@@ -97,7 +98,11 @@ export default function FlashcardsPage() {
               ? true
               : statusFilter === 'MASTERED'
                 ? c.progress?.isKnown === true
-                : c.progress?.isKnown !== true;
+                : statusFilter === 'DUE'
+                  ? c.progress?.isDue === true || (c.progress?.dueAt && new Date(c.progress.dueAt) <= new Date())
+                  : statusFilter === 'EXAM_WRONG'
+                    ? (c.progress?.wrongCount ?? 0) > 0
+                    : c.progress?.isKnown !== true;
           if (matchStatus) {
             list.push(c);
           }
@@ -106,6 +111,7 @@ export default function FlashcardsPage() {
       return list;
     }
 
+    const now = new Date();
     return cards.filter((card) => {
       const matchCategory =
         selectedCategory === 'ALL' || card.category === selectedCategory;
@@ -115,7 +121,11 @@ export default function FlashcardsPage() {
           ? true
           : statusFilter === 'MASTERED'
             ? card.progress?.isKnown === true
-            : card.progress?.isKnown !== true;
+            : statusFilter === 'DUE'
+              ? card.progress?.isDue === true || (card.progress?.dueAt && new Date(card.progress.dueAt) <= now)
+              : statusFilter === 'EXAM_WRONG'
+                ? (card.progress?.wrongCount ?? 0) > 0
+                : card.progress?.isKnown !== true;
 
       const q = searchQuery.trim().toLowerCase();
       const matchSearch =
@@ -408,10 +418,18 @@ export default function FlashcardsPage() {
             />
           </div>
 
-          <div className="flex items-center gap-1.5">
+          <div className="flex flex-wrap items-center gap-1.5">
             {(
               [
                 { id: 'ALL', label: `ทั้งหมด (${cards.length})` },
+                {
+                  id: 'DUE',
+                  label: `ถึงเวลาทบทวน (${cards.filter((c) => c.progress?.isDue || (c.progress?.dueAt && new Date(c.progress.dueAt) <= new Date())).length})`,
+                },
+                {
+                  id: 'EXAM_WRONG',
+                  label: `เคยผิดจากข้อสอบ (${cards.filter((c) => (c.progress?.wrongCount ?? 0) > 0).length})`,
+                },
                 {
                   id: 'LEARNING',
                   label: `กำลังฝึก (${cards.length - masteredTotal})`,
@@ -593,150 +611,18 @@ export default function FlashcardsPage() {
                 </div>
 
                 {/* Draggable 3D Spell Card */}
-                <div className="relative perspective-1000 w-full h-[380px]">
-                  <motion.div
-                    key={activeCard.id + '-' + currentIndex}
-                    drag="x"
-                    dragConstraints={{ left: 0, right: 0 }}
-                    style={{ x: dragX, rotate: rotateZ }}
-                    onDragEnd={handleDragEnd}
-                    onClick={() => setIsFlipped((prev) => !prev)}
-                    className="w-full h-full cursor-grab active:cursor-grabbing select-none"
-                  >
-                    <motion.div
-                      style={{ opacity: rightBadgeOpacity }}
-                      className="pointer-events-none absolute top-4 right-4 z-20 px-3 py-1 bg-emerald-400 text-slate-950 font-display font-bold text-xs border-2 border-slate-900 shadow-arcade-sm flex items-center gap-1.5"
-                    >
-                      <img
-                        src="/icons/icon-swipe-known.png"
-                        alt=""
-                        className="w-4 h-4 [image-rendering:pixelated]"
-                      />
-                      จำแม่นแล้ว
-                    </motion.div>
-
-                    <motion.div
-                      style={{ opacity: leftBadgeOpacity }}
-                      className="pointer-events-none absolute top-4 left-4 z-20 px-3 py-1 bg-rose-500 text-white font-display font-bold text-xs border-2 border-slate-900 shadow-arcade-sm flex items-center gap-1.5"
-                    >
-                      <img
-                        src="/icons/icon-swipe-learning.png"
-                        alt=""
-                        className="w-4 h-4 [image-rendering:pixelated]"
-                      />
-                      ทบทวนซ้ำ
-                    </motion.div>
-
-                    {!isFlipped ? (
-                      /* FRONT OF CARD */
-                      <div className="w-full h-full bg-[#fffdf7] border-2 border-slate-900 shadow-arcade-lg p-6 flex flex-col justify-between">
-                        <div className="flex items-center justify-between border-b border-slate-200 pb-3">
-                          <span className="px-2.5 py-0.5 bg-amber-300 text-slate-950 text-xs font-semibold border border-slate-900">
-                            {activeCard.category}
-                          </span>
-                          <div className="flex items-center gap-1">
-                            {Array.from({ length: activeCard.manaCost }).map(
-                              (_, i) => (
-                                <img
-                                  key={i}
-                                  src="/icons/icon-hud-mana.png"
-                                  alt=""
-                                  className="w-4 h-4 [image-rendering:pixelated]"
-                                />
-                              ),
-                            )}
-                          </div>
-                        </div>
-
-                        <div className="my-auto text-center space-y-3 py-4">
-                          <div className="inline-flex items-center justify-center w-12 h-12 bg-slate-900 border-2 border-slate-950 shadow-arcade-sm mx-auto">
-                            <img
-                              src="/icons/card-back.png"
-                              alt=""
-                              className="w-8 h-8 object-contain [image-rendering:pixelated]"
-                            />
-                          </div>
-                          <div className="flex items-baseline justify-center gap-2.5">
-                            <h2 className="font-sans text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
-                              {activeCard.word}
-                            </h2>
-                            <span className="text-sm font-mono font-semibold text-slate-500">
-                              {activeCard.partOfSpeech}
-                            </span>
-                          </div>
-                          <div>
-                            <button
-                              type="button"
-                              onClick={(e) => speakText(activeCard.word, e)}
-                              className="inline-flex items-center gap-1.5 px-3 py-1 bg-sky-400 text-slate-950 text-xs font-semibold border border-slate-900 shadow-arcade-sm hover:bg-sky-300"
-                            >
-                              <Volume2 className="w-3.5 h-3.5" />
-                              ฟังเสียงอ่าน
-                            </button>
-                          </div>
-                        </div>
-
-                        <div className="border-t border-slate-200 pt-3 flex items-center justify-between text-xs text-slate-500">
-                          <span className="inline-flex items-center gap-1.5">
-                            <img
-                              src="/icons/icon-action-flip.png"
-                              alt=""
-                              className="w-4 h-4 [image-rendering:pixelated]"
-                            />
-                            คลิกที่การ์ดเพื่อดูความหมายและตัวอย่างประโยค
-                          </span>
-                          <kbd className="px-1.5 py-0.5 text-[10px] font-mono font-bold bg-slate-100 text-slate-800 border border-slate-900">
-                            SPACE
-                          </kbd>
-                        </div>
-                      </div>
-                    ) : (
-                      /* BACK OF CARD */
-                      <div className="w-full h-full bg-slate-900 text-amber-50 border-2 border-slate-950 shadow-arcade-lg p-6 flex flex-col justify-between">
-                        <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-                          <div className="flex items-baseline gap-2">
-                            <span className="font-sans text-xl font-bold text-amber-400">
-                              {activeCard.word}
-                            </span>
-                            <span className="text-xs font-mono text-slate-400">
-                              {activeCard.partOfSpeech}
-                            </span>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={(e) =>
-                              speakText(
-                                `${activeCard.word}. ${activeCard.exampleEn}`,
-                                e,
-                              )
-                            }
-                            className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-800 text-amber-300 text-xs border border-slate-700 hover:bg-slate-700"
-                          >
-                            <Volume2 className="w-3.5 h-3.5" />
-                            ฟังประโยค
-                          </button>
-                        </div>
-
-                        <div className="my-auto space-y-5 py-2">
-                          <p className="text-xl sm:text-2xl font-bold text-white leading-snug">
-                            {activeCard.meaningTh}
-                          </p>
-
-                          <blockquote className="border-l-4 border-amber-400 pl-4 py-1 text-sm sm:text-base text-slate-200 leading-relaxed">
-                            &ldquo;{activeCard.exampleEn}&rdquo;
-                          </blockquote>
-                        </div>
-
-                        <div className="border-t border-slate-800 pt-3 flex items-center justify-between text-xs text-slate-400">
-                          <span>ปัดขวาเมื่อจำได้แล้ว หรือปัดซ้ายเพื่อทบทวนซ้ำ</span>
-                          <kbd className="px-1.5 py-0.5 text-[10px] font-mono bg-slate-800 text-amber-300 border border-slate-700">
-                            SPACE
-                          </kbd>
-                        </div>
-                      </div>
-                    )}
-                  </motion.div>
-                </div>
+                <ThreeDCard
+                  key={activeCard.id + '-' + currentIndex}
+                  card={activeCard}
+                  isFlipped={isFlipped}
+                  onFlip={() => setIsFlipped((prev) => !prev)}
+                  onSpeak={speakText}
+                  dragX={dragX}
+                  rotateZ={rotateZ}
+                  onDragEnd={handleDragEnd}
+                  rightBadgeOpacity={rightBadgeOpacity}
+                  leftBadgeOpacity={leftBadgeOpacity}
+                />
 
                 {/* Tactile Controls */}
                 <div className="grid grid-cols-3 gap-3">

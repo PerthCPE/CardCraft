@@ -21,17 +21,20 @@ import {
   Zap,
 } from 'lucide-react';
 import { QuestionItem } from '@/data/toeic-dictionary';
+import { logSingleAnswer } from '@/lib/api';
 
 interface BossSurvivalModalProps {
   isOpen: boolean;
   onClose: () => void;
   questions: QuestionItem[];
+  userId?: string;
 }
 
 export default function BossSurvivalModal({
   isOpen,
   onClose,
   questions,
+  userId,
 }: BossSurvivalModalProps) {
   const [bossHp, setBossHp] = useState<number>(1000);
   const [playerHp, setPlayerHp] = useState<number>(3);
@@ -66,6 +69,16 @@ export default function BossSurvivalModal({
   const handleAnswer = (chosen: 'A' | 'B' | 'C' | 'D') => {
     if (isGameOver || isVictory || !currentQ) return;
 
+    if (userId) {
+      logSingleAnswer({
+        userId,
+        questionId: currentQ.id,
+        part: currentQ.part,
+        mode: 'BOSS_GAUNTLET',
+        selectedOption: chosen,
+      });
+    }
+
     const isCorrect = chosen === currentQ.correctOption;
 
     if (isCorrect) {
@@ -78,7 +91,7 @@ export default function BossSurvivalModal({
       const newBossHp = Math.max(0, bossHp - damage);
       setBossHp(newBossHp);
       setDamageDealtTotal((prev) => prev + damage);
-      setLastAction(`⚔️ โจมตีสำเร็จ! ${isCrit ? '💥 CRITICAL HIT!' : ''} ทำดาเมจ -${damage} HP`);
+      setLastAction(`โจมตีสำเร็จ! ${isCrit ? '[CRITICAL HIT] ' : ''}ทำดาเมจ -${damage} HP`);
 
       if (newBossHp <= 0) {
         setIsVictory(true);
@@ -89,7 +102,7 @@ export default function BossSurvivalModal({
       const nextHp = playerHp - 1;
       setPlayerHp(nextHp);
       setStreak(0);
-      setLastAction(`💥 บอสโจมตีสวนกลับ! เสีย 1 ดวงใจ (เหลือ ${nextHp} HP)`);
+      setLastAction(`บอสโจมตีสวนกลับ! เสีย 1 ดวงใจ (เหลือ ${nextHp} HP)`);
 
       if (nextHp <= 0) {
         setIsGameOver(true);
