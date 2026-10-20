@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" fill="none">
+  <rect width="640" height="360" fill="#F8F5EC"/>
+  <rect x="16" y="16" width="608" height="328" fill="#E0F2FE" stroke="#0F172A" stroke-width="6"/>
+  <!-- Bakery Storefront -->
+  <rect x="55" y="55" width="530" height="225" fill="#FFFDF7" stroke="#0F172A" stroke-width="4"/>
+  <rect x="45" y="45" width="550" height="36" fill="#F43F5E" stroke="#0F172A" stroke-width="4"/>
+  <rect x="110" y="110" width="180" height="110" fill="#BAE6FD" stroke="#0F172A" stroke-width="4"/>
+  <!-- Patio Railing & Potted Plants -->
+  <rect x="55" y="250" width="530" height="12" fill="#334155" stroke="#0F172A" stroke-width="3"/>
+  <!-- Potted Plants along Railing -->
+  <rect x="95" y="242" width="44" height="38" fill="#D97706" stroke="#0F172A" stroke-width="4"/>
+  <circle cx="117" cy="222" r="24" fill="#10B981" stroke="#0F172A" stroke-width="4"/>
+  <rect x="295" y="242" width="44" height="38" fill="#D97706" stroke="#0F172A" stroke-width="4"/>
+  <circle cx="317" cy="222" r="24" fill="#10B981" stroke="#0F172A" stroke-width="4"/>
+  <rect x="495" y="242" width="44" height="38" fill="#D97706" stroke="#0F172A" stroke-width="4"/>
+  <circle cx="517" cy="222" r="24" fill="#10B981" stroke="#0F172A" stroke-width="4"/>
+  <!-- Folded Patio Umbrella & Empty Table -->
+  <rect x="412" y="105" width="8" height="175" fill="#475569" stroke="#0F172A" stroke-width="3"/>
+  <polygon points="400,200 432,200 416,105" fill="#FBBF24" stroke="#0F172A" stroke-width="4"/>
+  <rect x="370" y="232" width="92" height="12" fill="#FFFFFF" stroke="#0F172A" stroke-width="4"/>
+</svg>

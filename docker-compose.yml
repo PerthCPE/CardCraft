@@ -1,0 +1,27 @@
+# ============================================================================
+# CardCraft — Docker Compose สำหรับ Local Development (PostgreSQL 16)
+# เปรียบเทียบกับ Go: เหมือนการรัน Postgres container คู่กับ GORM/sqlx
+# แต่ในโปรเจกต์นี้ Prisma ORM จะอ่านค่า DATABASE_URL จากไฟล์ backend/.env
+# ============================================================================
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: cardcraft_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: cardcraft
+      POSTGRES_PASSWORD: cardcraft_password
+      POSTGRES_DB: cardcraft_db
+    ports:
+      - '5432:5432'
+    volumes:
+      - cardcraft_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U cardcraft -d cardcraft_db']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  cardcraft_pgdata:

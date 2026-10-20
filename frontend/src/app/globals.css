@@ -1,0 +1,51 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body {
+    background-color: #f8f5ec;
+    color: #0f172a;
+    background-image: radial-gradient(#d6d0c4 1px, transparent 1px);
+    background-size: 24px 24px;
+    line-height: 1.65;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display), var(--font-ibm-thai), sans-serif;
+    letter-spacing: -0.015em;
+    line-height: 1.25;
+  }
+}
+
+/* Reading measure helper (< 75 characters per line per The Elements of Typographic Style) */
+.reading-measure {
+  max-width: 66ch;
+}
+
+/* 3D Spell Card Flip Utilities */
+.perspective-1000 {
+  perspective: 1000px;
+}
+
+.preserve-3d {
+  transform-style: preserve-3d;
+}
+
+.backface-hidden {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+.rotate-y-180 {
+  transform: rotateY(180deg);
+}
