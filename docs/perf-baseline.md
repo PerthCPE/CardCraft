@@ -82,7 +82,32 @@ node scripts/measure-perf.js
 
 ---
 
-## 3. บันทึกข้อสังเกตเพิ่มเติม (Engineering Notes)
+## 3. คำสั่งทดสอบ HTTP Cache Headers & Cold Start (Verification)
+
+```bash
+# 1. ทดสอบ Headers ข้อสอบ (ต้องได้ public, max-age=300, stale-while-revalidate=600 และ Vary: Origin)
+curl -I "http://localhost:4000/questions?part=5"
+
+# 2. ทดสอบ Headers คำศัพท์โหมด Guest (ต้องได้ public, max-age=300 และ Vary: Origin)
+curl -I "http://localhost:4000/flashcards"
+
+# 3. ทดสอบ Headers ข้อมูลผู้ใช้จริง (ต้องได้ private, no-cache, no-store, must-revalidate)
+curl -I "http://localhost:4000/flashcards?userId=user-demo-123"
+
+# 4. ทดสอบ Cache Busting ของ Admin (ต้องได้ HTTP 200 ไม่ใช่ 400)
+curl "http://localhost:4000/questions?part=5&_t=123"
+
+# 5. ทดสอบ Health Check น้ำหนักเบา
+curl "http://localhost:4000/health"
+```
+
+> **คำแนะนำสำหรับ Cold Start ใน Production**:
+> - Frontend มี In-App Warm-up Ping ไปยัง `/health` แบบ Fire-and-forget เมื่อเปิดเว็บ
+> - สำหรับป้องกัน Cold Start ถาวรสำหรับผู้ใช้คนแรก แนะนำตั้งค่า External Cron เช่น [UptimeRobot](https://uptimerobot.com) หรือ [Cron-Job.org](https://cron-job.org) ให้ยิง `GET https://<backend>/health` ทุก 10 นาที (เซิร์ฟเวอร์ Render Free Tier จะไม่เข้าสู่ Sleep Mode)
+
+---
+
+## 4. บันทึกข้อสังเกตเพิ่มเติม (Engineering Notes)
 *(สามารถจดบันทึกปัญหาที่พบ หรือพฤติกรรมเฉพาะของเบราว์เซอร์ได้ที่นี่)*
 
 - วันที่เริ่มวัด: 

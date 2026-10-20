@@ -36,11 +36,13 @@ import {
   updateQuestion,
 } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
+import { useCardCraftQueryHelpers } from '@/hooks/useCardCraftQueries';
 
 type AdminTab = 'FLASHCARDS' | 'QUESTIONS';
 
 export default function AdminGuildCrudPage() {
   const { user, openAuthModal } = useAuth();
+  const { invalidateFlashcards, invalidateQuestions } = useCardCraftQueryHelpers();
   const [activeTab, setActiveTab] = useState<AdminTab>('FLASHCARDS');
   const [flashcards, setFlashcards] = useState<FlashcardItem[]>([]);
   const [questions, setQuestions] = useState<QuestionItem[]>([]);
@@ -80,8 +82,9 @@ export default function AdminGuildCrudPage() {
   });
 
   useEffect(() => {
-    fetchFlashcards().then(setFlashcards);
-    fetchQuestions().then(setQuestions);
+    // Admin โหลดข้อมูลสดตรงจากเซิร์ฟเวอร์โดยข้าม HTTP Cache
+    fetchFlashcards(undefined, undefined, undefined, { bypassHttpCache: true }).then(setFlashcards);
+    fetchQuestions(undefined, undefined, { bypassHttpCache: true }).then(setQuestions);
   }, []);
 
   const showToast = (msg: string) => {
@@ -128,12 +131,14 @@ export default function AdminGuildCrudPage() {
       setFlashcards((prev) => [created, ...prev]);
       showToast(`เพิ่มคำศัพท์ "${created.word}" เข้าสู่คลังแล้ว`);
     }
+    invalidateFlashcards();
     setIsCardModalOpen(false);
   };
 
   const handleDeleteCard = async (card: FlashcardItem) => {
     await deleteFlashcard(card.id);
     setFlashcards((prev) => prev.filter((c) => c.id !== card.id));
+    invalidateFlashcards();
     showToast(`ลบคำศัพท์ "${card.word}" ออกจากคลังแล้ว`);
   };
 
@@ -209,12 +214,14 @@ export default function AdminGuildCrudPage() {
       setQuestions((prev) => [created, ...prev]);
       showToast(`เพิ่มข้อสอบใหม่เข้าสู่คลังแล้ว`);
     }
+    invalidateQuestions();
     setIsQuestionModalOpen(false);
   };
 
   const handleDeleteQuestion = async (q: QuestionItem) => {
     await deleteQuestion(q.id);
     setQuestions((prev) => prev.filter((item) => item.id !== q.id));
+    invalidateQuestions();
     showToast(`ลบข้อสอบออกจากคลังแล้ว`);
   };
 

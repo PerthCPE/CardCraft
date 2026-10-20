@@ -288,15 +288,19 @@ export async function fetchFlashcards(
   category?: string,
   userId?: string,
   filter?: string,
+  options?: { bypassHttpCache?: boolean },
 ): Promise<FlashcardItem[]> {
   try {
     const params = new URLSearchParams();
     if (category && category !== 'ALL') params.set('category', category);
     if (userId) params.set('userId', userId);
     if (filter && filter !== 'ALL') params.set('filter', filter);
+    if (options?.bypassHttpCache) params.set('_t', String(Date.now()));
     const qs = params.toString() ? `?${params.toString()}` : '';
 
-    const res = await fetchWithTimeout(`${API_BASE_URL}/flashcards${qs}`);
+    const res = await fetchWithTimeout(`${API_BASE_URL}/flashcards${qs}`, {
+      cache: options?.bypassHttpCache ? 'reload' : 'default',
+    });
     if (!res.ok) throw new Error('Backend fetchFlashcards failed');
     const data: FlashcardItem[] = await res.json();
     return data;
@@ -366,14 +370,18 @@ export async function deleteFlashcard(id: string): Promise<void> {
 export async function fetchQuestions(
   section?: string,
   part?: number,
+  options?: { bypassHttpCache?: boolean },
 ): Promise<QuestionItem[]> {
   try {
     const params = new URLSearchParams();
     if (section && section !== 'ALL') params.set('section', section);
     if (part) params.set('part', String(part));
+    if (options?.bypassHttpCache) params.set('_t', String(Date.now()));
     const qs = params.toString() ? `?${params.toString()}` : '';
 
-    const res = await fetchWithTimeout(`${API_BASE_URL}/questions${qs}`);
+    const res = await fetchWithTimeout(`${API_BASE_URL}/questions${qs}`, {
+      cache: options?.bypassHttpCache ? 'reload' : 'default',
+    });
     if (!res.ok) throw new Error('Backend fetchQuestions failed');
     const backendData: QuestionItem[] = await res.json();
     if (Array.isArray(backendData) && backendData.length > 0) {

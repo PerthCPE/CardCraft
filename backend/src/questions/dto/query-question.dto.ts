@@ -5,9 +5,16 @@
 
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsEnum, IsInt, IsOptional, Max, Min } from 'class-validator';
+import { IsEnum, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
 
 export class QueryQuestionDto {
+  @ApiPropertyOptional({
+    description: 'Timestamp สำหรับ Cache-Busting (เฉพาะ Admin หรือการดึงข้อมูลสด)',
+  })
+  @IsOptional()
+  @IsString()
+  _t?: string;
+
   @ApiPropertyOptional({
     description: 'กรองตาม Section ของข้อสอบ (LISTENING หรือ READING)',
     enum: ['LISTENING', 'READING', 'ALL'],

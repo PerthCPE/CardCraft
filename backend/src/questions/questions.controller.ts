@@ -8,6 +8,7 @@ import {
   Controller,
   Delete,
   Get,
+  Header,
   Param,
   Patch,
   Post,
@@ -25,6 +26,8 @@ export class QuestionsController {
   constructor(private readonly questionsService: QuestionsService) {}
 
   @Get()
+  @Header('Cache-Control', 'public, max-age=300, stale-while-revalidate=600')
+  @Header('Vary', 'Origin')
   @ApiOperation({
     summary:
       'ดึงคลังข้อสอบ TOEIC ทั้งหมด หรือกรองตาม section (LISTENING/READING) และ part (1 ถึง 7)',

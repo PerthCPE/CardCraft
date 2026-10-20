@@ -8,7 +8,7 @@
 // - รองรับ Fast Fallback แสดงข้อมูล Local Data ทันที
 // ============================================================================
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 export default function QueryProvider({
@@ -31,6 +31,14 @@ export default function QueryProvider({
         },
       }),
   );
+
+  // Warm-up ping ครั้งเดียวตอนเปิดเว็บแบบ fire-and-forget เพื่อปลุก Backend บน Free Tier โดยไม่บล็อก UI
+  useEffect(() => {
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
+    fetch(`${apiUrl}/health`, { mode: 'cors' }).catch(() => {
+      // ไม่ต้องทำอะไรหาก Backend กำลังสตาร์ตหรือออฟไลน์
+    });
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>

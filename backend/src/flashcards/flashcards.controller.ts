@@ -18,7 +18,9 @@ import {
   Patch,
   Post,
   Query,
+  Res,
 } from '@nestjs/common';
+import { Response } from 'express';
 import { ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { FlashcardsService } from './flashcards.service';
 import { CreateFlashcardDto } from './dto/create-flashcard.dto';
@@ -38,10 +40,23 @@ export class FlashcardsController {
   @ApiQuery({ name: 'userId', required: false })
   @ApiQuery({ name: 'filter', required: false, example: 'DUE', description: 'DUE | EXAM_WRONG | MASTERED | LEARNING | ALL' })
   findAll(
+    @Res({ passthrough: true }) res: Response,
     @Query('category') category?: string,
     @Query('userId') userId?: string,
     @Query('filter') filter?: string,
   ) {
+    res.setHeader('Vary', 'Origin');
+    if (!userId || userId === 'guest') {
+      res.setHeader(
+        'Cache-Control',
+        'public, max-age=300, stale-while-revalidate=600',
+      );
+    } else {
+      res.setHeader(
+        'Cache-Control',
+        'private, no-cache, no-store, must-revalidate',
+      );
+    }
     return this.flashcardsService.findAll(category, userId, filter);
   }
 

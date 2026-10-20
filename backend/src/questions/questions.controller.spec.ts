@@ -38,6 +38,14 @@ describe('QueryQuestionDto Validation', () => {
     expect(errors[0].constraints).toHaveProperty('isInt');
   });
 
+  it('ควรผ่านการตรวจสอบเมื่อมี _t สำหรับ cache busting (เช่น ?part=5&_t=123)', async () => {
+    const dto = plainToInstance(QueryQuestionDto, { part: '5', _t: '123' });
+    const errors = await validate(dto);
+    expect(errors.length).toBe(0);
+    expect(dto.part).toBe(5);
+    expect(dto._t).toBe('123');
+  });
+
   it('ควรล้มเหลวเมื่อ section ไม่ใช่ LISTENING, READING หรือ ALL', async () => {
     const dto = plainToInstance(QueryQuestionDto, { section: 'SPEAKING' });
     const errors = await validate(dto);
