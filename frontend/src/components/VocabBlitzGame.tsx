@@ -33,6 +33,7 @@ import {
   getSavedCustomSets,
 } from '@/utils/card-sets';
 import { speakEnglish, cancelSpeech } from '@/utils/speech-synthesis.util';
+import { formatDecimal } from '@/utils/number-format.util';
 
 interface VocabBlitzGameProps {
   allCards: FlashcardItem[];
@@ -573,7 +574,7 @@ export default function VocabBlitzGame({
               </div>
               <div className="p-3 bg-slate-50 border-2 border-slate-900 text-center">
                 <div className="text-2xl font-bold font-pixel text-slate-900">
-                  {accuracy}%
+                  {formatDecimal(accuracy)}%
                 </div>
                 <div className="text-xs text-slate-600 font-medium">
                   ความแม่นยำ (Accuracy)
@@ -589,7 +590,7 @@ export default function VocabBlitzGame({
               </div>
               <div className="p-3 bg-slate-50 border-2 border-slate-900 text-center">
                 <div className="text-2xl font-bold font-pixel text-indigo-600">
-                  {wpm}
+                  {formatDecimal(wpm)}
                 </div>
                 <div className="text-xs text-slate-600 font-medium">
                   คำต่อนาที (WPM)

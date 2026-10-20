@@ -53,6 +53,11 @@ import {
   getSupportivePerformanceTier,
   TOEIC_PART_WEIGHTS,
 } from '@/utils/character-evolution.util';
+import {
+  formatDecimal,
+  formatAccuracyPercent,
+  formatPercent,
+} from '@/utils/number-format.util';
 import { useAuth } from '@/context/AuthContext';
 
 const TARGET_GOAL_OPTIONS = [600, 700, 800, 900];
@@ -251,7 +256,7 @@ export default function DashboardPage() {
 
             <div className="flex items-baseline justify-between pt-1">
               <span className="font-pixel text-4xl sm:text-5xl text-amber-300 tracking-tight">
-                {evolution.estimatedScore}
+                {formatDecimal(evolution.estimatedScore)}
               </span>
               <span className="font-pixel text-xs sm:text-sm text-slate-400">
                 / 990 คะแนน
@@ -285,7 +290,7 @@ export default function DashboardPage() {
                 <span className="font-sans">
                   {isTargetAchieved
                     ? `ผ่านเกณฑ์เป้าหมาย ${currentTargetScore}+ แล้ว`
-                    : `ห่างจากเป้าหมาย ${currentTargetScore} คะแนนอีก ${pointsToTarget} คะแนน`}
+                    : `ห่างจากเป้าหมาย ${currentTargetScore} คะแนนอีก ${formatDecimal(pointsToTarget)} คะแนน`}
                 </span>
               </div>
               <span className="font-pixel text-[11px] text-amber-300">
@@ -509,7 +514,7 @@ export default function DashboardPage() {
                         {weight.section}
                       </span>
                       <span className="font-pixel text-[10px] text-slate-500">
-                        เต็ม {weight.maxScore} คะแนน ({weight.ratioPercent}%)
+                        เต็ม {formatDecimal(weight.maxScore)} คะแนน ({formatDecimal(weight.ratioPercent)}%)
                       </span>
                     </div>
 
@@ -525,14 +530,14 @@ export default function DashboardPage() {
                           <div>
                             <span className="text-xs text-slate-500">คาดการณ์: </span>
                             <span className="font-pixel text-base font-bold text-slate-900">
-                              {est.estimatedScore}
+                              {formatDecimal(est.estimatedScore)}
                             </span>
                             <span className="font-pixel text-xs text-slate-500">
-                              {' '}/ {weight.maxScore}
+                              {' '}/ {formatDecimal(weight.maxScore)}
                             </span>
                           </div>
                           <span className="font-pixel text-xs text-emerald-700 font-bold">
-                            {est.accuracy}% แม่นยำ
+                            {formatAccuracyPercent(est.accuracy)}% แม่นยำ
                           </span>
                         </div>
 
@@ -610,7 +615,7 @@ export default function DashboardPage() {
                         {weight.section}
                       </span>
                       <span className="font-pixel text-[10px] text-slate-500">
-                        เต็ม {weight.maxScore} คะแนน ({weight.ratioPercent}%)
+                        เต็ม {formatDecimal(weight.maxScore)} คะแนน ({formatDecimal(weight.ratioPercent)}%)
                       </span>
                     </div>
 
@@ -626,14 +631,14 @@ export default function DashboardPage() {
                           <div>
                             <span className="text-xs text-slate-500">คาดการณ์: </span>
                             <span className="font-pixel text-base font-bold text-slate-900">
-                              {est.estimatedScore}
+                              {formatDecimal(est.estimatedScore)}
                             </span>
                             <span className="font-pixel text-xs text-slate-500">
-                              {' '}/ {weight.maxScore}
+                              {' '}/ {formatDecimal(weight.maxScore)}
                             </span>
                           </div>
                           <span className="font-pixel text-xs text-emerald-700 font-bold">
-                            {est.accuracy}% แม่นยำ
+                            {formatAccuracyPercent(est.accuracy)}% แม่นยำ
                           </span>
                         </div>
 
@@ -706,7 +711,7 @@ export default function DashboardPage() {
                       สำรับการ์ดคำศัพท์ 3D Flip
                     </h3>
                     <span className="font-pixel text-[10px] px-1.5 py-0.5 bg-emerald-100 text-emerald-800 border border-emerald-300">
-                      {masteryPercent}% จำได้
+                      {formatDecimal(masteryPercent)}% จำได้
                     </span>
                   </div>
                   <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-sans max-w-md">
@@ -838,7 +843,7 @@ export default function DashboardPage() {
 
                     <div className="text-right">
                       <span className="font-pixel text-sm text-slate-900 font-bold">
-                        {attempt.estimatedScore}
+                        {formatDecimal(attempt.estimatedScore)}
                       </span>
                       <div className="mt-0.5">
                         <span

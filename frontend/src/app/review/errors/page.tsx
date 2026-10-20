@@ -41,6 +41,7 @@ import {
   WeaknessAnalyticsResponse,
 } from '@/lib/api';
 import { speakEnglish, cancelSpeech } from '@/utils/speech-synthesis.util';
+import { formatDecimal } from '@/utils/number-format.util';
 
 const ERROR_TYPE_LABELS: Record<string, { label: string; desc: string; color: string }> = {
   part_of_speech: {
@@ -230,7 +231,7 @@ export default function ErrorReviewPage() {
               <div className="font-pixel text-2xl sm:text-3xl text-emerald-600">
                 {analytics.totalCorrect}
               </div>
-              <span className="text-[11px] text-slate-500">ความแม่นยำ {analytics.accuracyRate}%</span>
+              <span className="text-[11px] text-slate-500">ความแม่นยำ {formatDecimal(analytics.accuracyRate)}%</span>
             </div>
 
             <div className="bg-white border-2 border-slate-900 p-4 shadow-arcade-sm space-y-1">
@@ -297,7 +298,7 @@ export default function ErrorReviewPage() {
                             <span className="font-normal text-slate-500">({meta.desc})</span>
                           </span>
                           <span className="text-red-600 font-pixel">
-                            {item.count} ข้อ ({item.percentage}%)
+                            {item.count} ข้อ ({formatDecimal(item.percentage)}%)
                           </span>
                         </div>
                         {/* Progress Bar */}
@@ -339,7 +340,7 @@ export default function ErrorReviewPage() {
                             Part {p.part} {p.part <= 4 ? '(Listening)' : '(Reading)'}
                           </span>
                           <span className={isHigh ? 'text-red-600 font-pixel' : 'text-slate-700 font-pixel'}>
-                            ผิด {p.wrong} / {p.total} ข้อ (อัตราผิด {p.errorRate}%)
+                            ผิด {p.wrong} / {p.total} ข้อ (อัตราผิด {formatDecimal(p.errorRate)}%)
                           </span>
                         </div>
                         <div className="w-full h-2.5 bg-slate-100 border border-slate-300 overflow-hidden">

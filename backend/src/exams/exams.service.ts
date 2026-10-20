@@ -568,7 +568,9 @@ export class ExamsService {
     const totalCorrect = logs.filter((l) => l.isCorrect).length;
     const totalWrong = totalAnswers - totalCorrect;
     const accuracyRate =
-      totalAnswers > 0 ? Math.round((totalCorrect / totalAnswers) * 100) : 0;
+      totalAnswers > 0
+        ? Number(((totalCorrect / totalAnswers) * 100).toFixed(3))
+        : 0;
 
     // คำนวณ % ผิดแยกตาม errorType
     const errorTypeCounts: Record<string, number> = {};
@@ -589,7 +591,9 @@ export class ExamsService {
         errorType: type,
         count,
         percentage:
-          totalWrong > 0 ? Math.round((count / totalWrong) * 100) : 0,
+          totalWrong > 0
+            ? Number(((count / totalWrong) * 100).toFixed(3))
+            : 0,
       }))
       .sort((a, b) => b.count - a.count);
 
@@ -604,7 +608,8 @@ export class ExamsService {
           total,
           correct,
           wrong,
-          errorRate: total > 0 ? Math.round((wrong / total) * 100) : 0,
+          errorRate:
+            total > 0 ? Number(((wrong / total) * 100).toFixed(3)) : 0,
         };
       })
       .sort((a, b) => a.part - b.part);

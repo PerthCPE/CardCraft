@@ -34,6 +34,7 @@ import {
   ShuffledQuestionWrapper,
 } from '@/utils/question-shuffle.util';
 import { speakEnglish, cancelSpeech } from '@/utils/speech-synthesis.util';
+import { formatDecimal } from '@/utils/number-format.util';
 
 export type RealTimeExamType =
   | 'PART_5_REALTIME'
@@ -650,20 +651,20 @@ export default function RealTimeExamModal({
                 ESTIMATED TOEIC SCALED SCORE
               </div>
               <div className="text-4xl sm:text-5xl font-extrabold font-pixel text-amber-300">
-                {results.scaled.estimatedScore} / 990
+                {formatDecimal(results.scaled.estimatedScore)} / 990
               </div>
               <div className="flex items-center justify-center gap-4 sm:gap-6 text-xs text-slate-300 pt-2 border-t border-slate-800">
                 <div>
                   Listening:{' '}
                   <span className="font-bold text-sky-400">
-                    {results.scaled.listeningScaled}
+                    {formatDecimal(results.scaled.listeningScaled)}
                   </span>{' '}
                   / 495 ({results.listeningCorrect}/{results.listeningTotal})
                 </div>
                 <div>
                   Reading:{' '}
                   <span className="font-bold text-emerald-400">
-                    {results.scaled.readingScaled}
+                    {formatDecimal(results.scaled.readingScaled)}
                   </span>{' '}
                   / 495 ({results.readingCorrect}/{results.readingTotal})
                 </div>
@@ -682,7 +683,7 @@ export default function RealTimeExamModal({
                 <div className="text-xs text-slate-600 mt-0.5">
                   {results.evolution.isPassedTarget
                     ? '🎯 บรรลุเป้าหมาย TOEIC 700+ เรียบร้อยแล้ว!'
-                    : `ขาดอีก ${results.evolution.pointsToTarget700} คะแนนเพื่อบรรลุเป้าหมาย 700+`}
+                    : `ขาดอีก ${formatDecimal(results.evolution.pointsToTarget700)} คะแนนเพื่อบรรลุเป้าหมาย 700+`}
                 </div>
               </div>
               <span className="px-2.5 sm:px-3 py-1 bg-amber-400 border border-slate-900 font-pixel text-[11px] sm:text-xs text-slate-900 rounded font-bold shrink-0">

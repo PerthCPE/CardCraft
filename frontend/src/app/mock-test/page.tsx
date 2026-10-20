@@ -64,6 +64,7 @@ import {
 } from '@/utils/question-shuffle.util';
 import { speakEnglish, cancelSpeech } from '@/utils/speech-synthesis.util';
 import { getCharacterEvolution } from '@/utils/character-evolution.util';
+import { formatDecimal } from '@/utils/number-format.util';
 
 // RPG Boss Trial Rank Meta for 7 packages
 const PACKAGE_DIFFICULTY_META: Record<
@@ -507,7 +508,7 @@ export default function BossBattleMockTestPage() {
                 <p className="text-sm font-semibold text-slate-900">
                   {evolution.classTitleTh} — คะแนนอย่างเป็นทางการของคุณเพิ่มขึ้น{' '}
                   <span className="font-pixel text-emerald-800">
-                    +{scoreDelta}
+                    +{formatDecimal(scoreDelta)}
                   </span>{' '}
                   คะแนน!
                 </p>
@@ -529,7 +530,7 @@ export default function BossBattleMockTestPage() {
 
               <div className="flex items-baseline justify-center lg:justify-start gap-3">
                 <span className="font-pixel text-4xl sm:text-5xl text-amber-400">
-                  {scoreBreakdown.estimatedScore}
+                  {formatDecimal(scoreBreakdown.estimatedScore)}
                 </span>
                 <span className="font-pixel text-sm text-slate-400">
                   / 990 คะแนน
@@ -544,14 +545,14 @@ export default function BossBattleMockTestPage() {
                 <span className="px-3 py-1.5 bg-slate-800 border border-slate-700 text-sky-300">
                   Listening (การฟัง):{' '}
                   <strong className="font-pixel">
-                    {scoreBreakdown.listeningScaled}
+                    {formatDecimal(scoreBreakdown.listeningScaled)}
                   </strong>{' '}
                   / 495
                 </span>
                 <span className="px-3 py-1.5 bg-slate-800 border border-slate-700 text-emerald-300">
                   Reading (การอ่าน):{' '}
                   <strong className="font-pixel">
-                    {scoreBreakdown.readingScaled}
+                    {formatDecimal(scoreBreakdown.readingScaled)}
                   </strong>{' '}
                   / 495
                 </span>
@@ -562,8 +563,8 @@ export default function BossBattleMockTestPage() {
                       : 'bg-rose-500 text-white'
                   }`}
                 >
-                  {scoreDelta >= 0 ? `+${scoreDelta}` : scoreDelta} จากคะแนนเดิม{' '}
-                  {previousScore}
+                  {scoreDelta >= 0 ? `+${formatDecimal(scoreDelta)}` : formatDecimal(scoreDelta)} จากคะแนนเดิม{' '}
+                  {formatDecimal(previousScore)}
                 </span>
               </div>
             </div>
@@ -744,7 +745,7 @@ export default function BossBattleMockTestPage() {
               </p>
               <div className="flex items-center justify-center gap-2 mt-1 text-xs">
                 <span className="font-pixel text-amber-400 text-sm">
-                  {heroScore}
+                  {formatDecimal(heroScore)}
                 </span>
                 <span className="text-slate-400 font-pixel">/ 990</span>
                 <span className="px-1.5 py-0.5 bg-slate-900 text-emerald-400 font-pixel text-[10px] border border-slate-700">
@@ -853,7 +854,7 @@ export default function BossBattleMockTestPage() {
                           {pkg.timeLimitMinutes} นาที
                         </span>
                         <span className="text-slate-500 ml-1.5 text-[11px]">
-                          (~{paceSeconds}s / ข้อ)
+                          (~{formatDecimal(paceSeconds)}s / ข้อ)
                         </span>
                       </div>
                     </div>

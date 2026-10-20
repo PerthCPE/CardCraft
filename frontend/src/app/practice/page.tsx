@@ -52,6 +52,7 @@ import {
   SupportivePerformanceTier,
   TOEIC_PART_WEIGHTS,
 } from '@/utils/character-evolution.util';
+import { formatDecimal, formatAccuracyPercent } from '@/utils/number-format.util';
 import { speakEnglish, cancelSpeech } from '@/utils/speech-synthesis.util';
 
 import dynamic from 'next/dynamic';
@@ -554,7 +555,7 @@ export default function PracticeHubPage() {
                           {meta.section}
                         </span>
                         <span className="text-xs font-bold font-mono text-slate-500">
-                          เต็ม {meta.maxScore} คะแนน
+                          เต็ม {formatDecimal(meta.maxScore)} คะแนน
                         </span>
                       </div>
 
@@ -1255,15 +1256,15 @@ export default function PracticeHubPage() {
           </span>
           <div className="flex items-baseline justify-center gap-2">
             <span className="text-5xl font-bold font-pixel text-amber-400">
-              {drillResult.estimatedPartScore}
+              {formatDecimal(drillResult.estimatedPartScore)}
             </span>
             <span className="text-slate-400 font-pixel text-lg">
-              / {drillResult.maxPartScore} คะแนน
+              / {formatDecimal(drillResult.maxPartScore)} คะแนน
             </span>
           </div>
 
           <div className="text-xs text-slate-300 font-sans">
-            ความแม่นยำในการทำโจทย์: {drillResult.correct} จาก {drillResult.total} ข้อ ({drillResult.accuracyPercent}%)
+            ความแม่นยำในการทำโจทย์: {drillResult.correct} จาก {drillResult.total} ข้อ ({formatAccuracyPercent(drillResult.accuracyPercent)}%)
           </div>
         </div>
 

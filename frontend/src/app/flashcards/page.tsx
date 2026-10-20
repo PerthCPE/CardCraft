@@ -48,6 +48,7 @@ import type { FlashcardItem } from '@/data/toeic-types';
 import { TOEIC_CATEGORIES } from '@/data/toeic-types';
 import dynamic from 'next/dynamic';
 import { recordCardSwipe } from '@/lib/api';
+import { formatDecimal } from '@/utils/number-format.util';
 import { useFlashcards } from '@/hooks/useFlashcardsQuery';
 import { useCardCraftQueryHelpers } from '@/hooks/useDashboardQueries';
 import { CardSet, getStoredActiveSet, saveActiveSet } from '@/utils/card-sets';
@@ -476,7 +477,7 @@ export default function FlashcardsPage() {
                   <strong className="text-emerald-700 font-bold">
                     {masteredTotal.toLocaleString()}
                   </strong>{' '}
-                  คำ ({masteryPercentage}%)
+                  คำ ({formatDecimal(masteryPercentage)}%)
                 </p>
               </div>
             </div>

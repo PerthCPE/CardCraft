@@ -351,8 +351,9 @@ export function calculateEstimatedPartScore(
 } {
   const safeTotal = Math.max(1, total);
   const safeCorrect = Math.min(safeTotal, Math.max(0, correct));
-  const accuracy = safeCorrect / safeTotal;
-  const accuracyPercent = Math.round(accuracy * 100);
+  const rawAccuracy = safeCorrect / safeTotal;
+  const accuracy = Number(rawAccuracy.toFixed(3));
+  const accuracyPercent = Number((rawAccuracy * 100).toFixed(3));
 
   const weightInfo = TOEIC_PART_WEIGHTS[part] || { maxScore: 100 };
   const maxPartScore = weightInfo.maxScore;
