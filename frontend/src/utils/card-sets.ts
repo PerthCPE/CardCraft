@@ -1,7 +1,7 @@
 // ============================================================================
 // frontend/src/utils/card-sets.ts
 // ระบบจัดการชุดคำศัพท์ (Card Sets & Random Deck Generator)
-// รองรับการสุ่มการ์ดตามขนาด 30, 50, 70, 100, 200 คำ หรือทั้งหมด (1,230+ คำ)
+// รองรับการสุ่มการ์ดตามขนาด 15, 30, 50, 70, 100, 200 คำ หรือทั้งหมด (3,093 คำ)
 // พร้อมกรองตามหมวดหมู่และสถานะความจำ (Unlearned, Need Review, Mastered)
 // ============================================================================
 
@@ -199,7 +199,7 @@ export function getBuiltInPresetSets(allCards: FlashcardItem[]): CardSet[] {
     {
       id: 'preset-all-archive',
       name: 'คลังศัพท์ทั้งหมด (Grand Deity Archive)',
-      description: 'คำศัพท์ทั้งหมดในระบบ 1,230+ คำ แบ่งตาม 12 หมวดธุรกิจ',
+      description: 'คำศัพท์ทั้งหมดในระบบ 3,093 คำ แบ่งตาม 12 หมวดธุรกิจ',
       size: allCards.length,
       category: 'ALL',
       filterMode: 'ALL',

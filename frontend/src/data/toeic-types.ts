@@ -82,5 +82,5 @@ export const TOEIC_CATEGORIES = [
 export type ToeicCategory = (typeof TOEIC_CATEGORIES)[number];
 
 // Lightweight Static Constants for Instant Dashboards without Bundling Huge JSON Files
-export const TOTAL_STATIC_FLASHCARDS = 1000;
+export const TOTAL_STATIC_FLASHCARDS = 3093;
 export const TOTAL_STATIC_QUESTIONS = 484;

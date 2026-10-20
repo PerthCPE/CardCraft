@@ -13,7 +13,7 @@
 //    - สลับใช้งานเป็น Active Deck ได้ทันที
 //    - ลบชุดคำศัพท์ที่ไม่ต้องการออกได้
 // 3. ชุดมาตรฐาน (Presets):
-//    - ชุด 15, 30, 50, 70, 100, 200 คำ หรือคลังศัพท์ทั้งหมด 1,230+ คำ
+//    - ชุด 15, 30, 50, 70, 100, 200 คำ หรือคลังศัพท์ทั้งหมด 3,093 คำ
 // ============================================================================
 
 import React, { useMemo, useState } from 'react';
@@ -147,10 +147,10 @@ export default function CardSetSelectorModal({
             </div>
             <div className="min-w-0">
               <h2 className="text-base sm:text-xl font-bold font-display text-slate-950 truncate">
-                จัดการและสร้างชุดคำศัพท์ (Deck Manager)
+                สร้างสำรับคำศัพท์เฉพาะคุณ (Custom Deck Manager)
               </h2>
               <p className="text-[11px] sm:text-xs text-slate-800 font-medium truncate hidden sm:block">
-                สร้างชุดการ์ดใหม่ กำหนดจำนวนการ์ดอิสระ และบันทึก/สลับชุดสำหรับปัดการ์ด
+                สร้างสำรับคำศัพท์เฉพาะคุณ กำหนดจำนวนการ์ดอิสระ และบันทึก/สลับชุดสำหรับปัดการ์ด
               </p>
             </div>
           </div>

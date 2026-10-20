@@ -2,11 +2,17 @@
 
 // ============================================================================
 // frontend/src/app/flashcards/page.tsx
-// โมดูลการ์ดคำศัพท์ 3D Flip & พจนานุกรมคำศัพท์ออกสอบบ่อย TOEIC 700+ (60 คำ)
-// ปรับปรุงด้วยหลักการของ frontend-design + cardcraft-pixel-ui:
-// - ตัดป้ายกำกับ ALL-CAPS เหนือหัวข้อ (เช่น "THAI MEANING:", "TOEIC BUSINESS CONTEXT:")
-//   ใช้ขนาดฟอนต์ น้ำหนักตัวอักษร และเส้นขอบซ้าย (Blockquote) แยกความหมายกับประโยคตัวอย่างอย่างเป็นธรรมชาติ
-// - รองรับปุ่มลัดคีย์บอร์ด: Space (พลิกการ์ด), ArrowLeft (ยังจำไม่ได้), ArrowRight (จำแม่นแล้ว)
+// คลังการ์ดคำศัพท์ 3D Flip & พจนานุกรมคำศัพท์ธุรกิจ TOEIC 700+ (3,093 คำ)
+// ปรับปรุงใหม่ตามหลัก frontend-design & cardcraft-pixel-ui:
+// 1. ตรวจสอบและแสดงจำนวนคำที่แท้จริง: 3,093 คำ ใน 12 หมวดธุรกิจ TOEIC
+// 2. จัดระเบียบหน้าจอ ขจัดความรก (Anti-Clutter):
+//    - ยุบรวมแถบคำสั่งและหัวข้อหน้าเป็น Unified Command Hub หน้าตาคมชัด
+//    - ลดจำนวนแถวปุ่มตัวกรองที่ทับซ้อน ปรับเป็นแถบค้นหาและตัวกรองชิปสัมผัสแนวนอน
+//    - โหมดปัดการ์ด (Swipe Deck): วางการ์ด 3D เป็นพระเอกตรงกลาง เด่นชัด สบายตา
+//    - แสดงคิวการ์ดถัดไปแบบจัดสรรหน้า (Pagination) ไม่โหลด DOM 3,000 ชิ้นให้หน่วง
+//    - โหมดพจนานุกรม (Dictionary): จัดหน้า 24 คำต่อหน้า ค้นหาแบบเรียลไทม์ ฟังเสียงอ่านได้
+// 3. รองรับปุ่มลัดคีย์บอร์ด: Space (พลิกการ์ด), ArrowLeft (ทบทวนซ้ำ), ArrowRight (จำแม่นแล้ว)
+// 4. รองรับ Mobile Touch & Swipe โดยไม่มี Overflow
 // ============================================================================
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -24,13 +30,17 @@ import {
   ArrowRight,
   BookOpen,
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
   Dices,
+  Filter,
   Layers,
   Plus,
   RotateCcw,
   Search,
   Sparkles,
   Volume2,
+  X,
   Zap,
 } from 'lucide-react';
 import type { FlashcardItem } from '@/data/toeic-types';
@@ -54,6 +64,26 @@ const VocabBlitzGame = dynamic(
   { ssr: false, loading: () => null },
 );
 
+// ข้อมูลเมทาดาทาและคำแปลภาษาไทยของ 12 หมวดธุรกิจ TOEIC
+const CATEGORY_LABELS_TH: Record<string, string> = {
+  ALL: 'ทุกหมวดหมู่',
+  Corporate: 'องค์กรและการบริหาร',
+  Finance: 'การเงินและธนาคาร',
+  Marketing: 'การตลาดและโฆษณา',
+  'Human Resources': 'ทรัพยากรบุคคล',
+  Technology: 'เทคโนโลยีและไอที',
+  Contracts: 'สัญญาและข้อตกลง',
+  Manufacturing: 'การผลิตและโรงงาน',
+  Logistics: 'โลจิสติกส์และคลังสินค้า',
+  Facilities: 'อาคารและสถานที่',
+  'Safety & Health': 'ความปลอดภัยและสุขอนามัย',
+  Hospitality: 'การบริการและการท่องเที่ยว',
+  'Customer Relations': 'ลูกค้าสัมพันธ์',
+};
+
+const DICTIONARY_PAGE_SIZE = 24;
+const QUEUE_PAGE_SIZE = 10;
+
 export default function FlashcardsPage() {
   const { user: authUser, requireAuth } = useAuth();
   const [cards, setCards] = useState<FlashcardItem[]>([]);
@@ -62,15 +92,16 @@ export default function FlashcardsPage() {
   const [modalTab, setModalTab] = useState<'CREATE' | 'SAVED' | 'PRESETS'>('CREATE');
   const [isBlitzGameOpen, setIsBlitzGameOpen] = useState<boolean>(false);
 
+  // ตัวเลือกมุมมองและตัวกรอง
+  const [viewMode, setViewMode] = useState<'SWIPE_DECK' | 'DICTIONARY'>('SWIPE_DECK');
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
   const [statusFilter, setStatusFilter] = useState<
     'ALL' | 'DUE' | 'EXAM_WRONG' | 'LEARNING' | 'MASTERED'
   >('ALL');
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [viewMode, setViewMode] = useState<'SWIPE_DECK' | 'DICTIONARY'>(
-    'SWIPE_DECK',
-  );
+  const [useActiveDeckOnly, setUseActiveDeckOnly] = useState<boolean>(true);
 
+  // ตัวแปรลำดับการ์ดและการพลิก
   const [currentIndex, setCurrentIndex] = useState<number>(0);
   const [isFlipped, setIsFlipped] = useState<boolean>(false);
   const [swipeFeedback, setSwipeFeedback] = useState<{
@@ -78,11 +109,16 @@ export default function FlashcardsPage() {
     word: string;
   } | null>(null);
 
-  // บันทึกการ์ดที่ถูกปัดในเซสชันนี้ เพื่อป้องกัน race condition ข้อมูลช้าจาก Backend เขียนทับ
+  // การแบ่งหน้าสำหรับพจนานุกรมและคิวการ์ด
+  const [dictPage, setDictPage] = useState<number>(1);
+  const [queuePage, setQueuePage] = useState<number>(1);
+
+  // บันทึกการ์ดที่ถูกปัดในเซสชันนี้ เพื่อป้องกัน race condition จากเซิร์ฟเวอร์
   const locallySwipedCardsRef = React.useRef<
     Map<string, { isKnown: boolean; swipeCount: number }>
   >(new Map());
 
+  // Framer Motion Drag values
   const dragX = useMotionValue(0);
   const rotateZ = useTransform(dragX, [-240, 0, 240], [-10, 0, 10]);
   const rightBadgeOpacity = useTransform(dragX, [25, 110], [0, 1]);
@@ -108,7 +144,7 @@ export default function FlashcardsPage() {
     }
   }, [flashcardsData]);
 
-  // Real-time synchronization for active card set updates across components & tabs
+  // ซิงค์ Active Set เมื่อมีการเปลี่ยนชุดจากโมดัลหรือแท็บอื่น
   useEffect(() => {
     const handleActiveSetChanged = (e: Event) => {
       const customEvent = e as CustomEvent<CardSet>;
@@ -116,9 +152,7 @@ export default function FlashcardsPage() {
         setActiveSet(customEvent.detail);
         setCurrentIndex(0);
         setIsFlipped(false);
-        setSelectedCategory('ALL');
-        setStatusFilter('ALL');
-        setSearchQuery('');
+        setQueuePage(1);
       }
     };
 
@@ -128,38 +162,72 @@ export default function FlashcardsPage() {
     };
   }, []);
 
+  // คำนวณจำนวนคำตามหมวดหมู่แบบไดนามิก (ตรวจสอบ 3,093 คำ)
+  const categoryCounts = useMemo(() => {
+    const map: Record<string, number> = { ALL: cards.length };
+    for (const c of cards) {
+      map[c.category] = (map[c.category] || 0) + 1;
+    }
+    return map;
+  }, [cards]);
+
+  // คำนวณจำนวนคำตามสถานะ
+  const statusCounts = useMemo(() => {
+    const now = new Date();
+    let mastered = 0;
+    let due = 0;
+    let examWrong = 0;
+    let learning = 0;
+
+    for (const c of cards) {
+      if (c.progress?.isKnown === true) {
+        mastered++;
+      } else {
+        learning++;
+      }
+      if (
+        c.progress?.isDue === true ||
+        (c.progress?.dueAt && new Date(c.progress.dueAt) <= now)
+      ) {
+        due++;
+      }
+      if ((c.progress?.wrongCount ?? 0) > 0) {
+        examWrong++;
+      }
+    }
+
+    return {
+      all: cards.length,
+      mastered,
+      learning,
+      due,
+      examWrong,
+    };
+  }, [cards]);
+
+  // กรองการ์ดคำศัพท์ตามชุดปัจจุบัน หมวดหมู่ สถานะ และคำค้นหา
   const filteredCards = useMemo(() => {
-    // หากอยู่ในโหมด SWIPE_DECK และมี activeSet ให้คงลำดับการ์ดตาม cardIds ของชุดนั้น
+    // โหมดปัดการ์ด: ถ้าเลือกใช้เฉพาะ Active Set และไม่มีการค้นหา/เลือกหมวดเฉพาะ
     if (
       viewMode === 'SWIPE_DECK' &&
+      useActiveDeckOnly &&
       activeSet &&
       selectedCategory === 'ALL' &&
-      !searchQuery
+      statusFilter === 'ALL' &&
+      !searchQuery.trim()
     ) {
       const cardMap = new Map(cards.map((c) => [c.id, c]));
       const list: FlashcardItem[] = [];
       for (const id of activeSet.cardIds) {
         const c = cardMap.get(id);
-        if (c) {
-          const matchStatus =
-            statusFilter === 'ALL'
-              ? true
-              : statusFilter === 'MASTERED'
-                ? c.progress?.isKnown === true
-                : statusFilter === 'DUE'
-                  ? c.progress?.isDue === true || (c.progress?.dueAt && new Date(c.progress.dueAt) <= new Date())
-                  : statusFilter === 'EXAM_WRONG'
-                    ? (c.progress?.wrongCount ?? 0) > 0
-                    : c.progress?.isKnown !== true;
-          if (matchStatus) {
-            list.push(c);
-          }
-        }
+        if (c) list.push(c);
       }
       return list;
     }
 
     const now = new Date();
+    const q = searchQuery.trim().toLowerCase();
+
     return cards.filter((card) => {
       const matchCategory =
         selectedCategory === 'ALL' || card.category === selectedCategory;
@@ -170,12 +238,12 @@ export default function FlashcardsPage() {
           : statusFilter === 'MASTERED'
             ? card.progress?.isKnown === true
             : statusFilter === 'DUE'
-              ? card.progress?.isDue === true || (card.progress?.dueAt && new Date(card.progress.dueAt) <= now)
+              ? card.progress?.isDue === true ||
+                (card.progress?.dueAt && new Date(card.progress.dueAt) <= now)
               : statusFilter === 'EXAM_WRONG'
                 ? (card.progress?.wrongCount ?? 0) > 0
                 : card.progress?.isKnown !== true;
 
-      const q = searchQuery.trim().toLowerCase();
       const matchSearch =
         !q ||
         card.word.toLowerCase().includes(q) ||
@@ -185,7 +253,21 @@ export default function FlashcardsPage() {
 
       return matchCategory && matchStatus && matchSearch;
     });
-  }, [cards, activeSet, viewMode, selectedCategory, statusFilter, searchQuery]);
+  }, [
+    cards,
+    activeSet,
+    viewMode,
+    useActiveDeckOnly,
+    selectedCategory,
+    statusFilter,
+    searchQuery,
+  ]);
+
+  // รีเซ็ตหน้าพจนานุกรมเมื่อเงื่อนไขกรองเปลี่ยน
+  useEffect(() => {
+    setDictPage(1);
+    setQueuePage(1);
+  }, [selectedCategory, statusFilter, searchQuery, viewMode]);
 
   const isDeckCompleted =
     viewMode === 'SWIPE_DECK' &&
@@ -197,11 +279,13 @@ export default function FlashcardsPage() {
       ? filteredCards[currentIndex]
       : null;
 
+  // อ่านออกเสียงภาษาอังกฤษ
   const speakText = useCallback((text: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
-    speakEnglish(text, { rate: 0.82 });
+    speakEnglish(text, { rate: 0.85 });
   }, []);
 
+  // ฟังก์ชันการปัดการ์ด (ซ้าย = ทบทวนซ้ำ, ขวา = จำแม่นแล้ว)
   const handleSwipe = useCallback(
     async (isKnown: boolean) => {
       if (!authUser) {
@@ -234,6 +318,7 @@ export default function FlashcardsPage() {
             ? {
                 ...c,
                 progress: {
+                  ...c.progress,
                   isKnown,
                   swipeCount: nextSwipeCount,
                 },
@@ -250,7 +335,7 @@ export default function FlashcardsPage() {
         setSwipeFeedback(null);
       }, 1000);
     },
-    [activeCard, dragX, authUser, requireAuth],
+    [activeCard, dragX, authUser, requireAuth, invalidateDashboard],
   );
 
   const handleDragEnd = (
@@ -274,6 +359,7 @@ export default function FlashcardsPage() {
     }
   };
 
+  // Keyboard Shortcuts: Space (พลิกการ์ด), ArrowLeft (ทบทวน), ArrowRight (จำได้)
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (viewMode !== 'SWIPE_DECK') return;
@@ -296,120 +382,154 @@ export default function FlashcardsPage() {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [viewMode, handleSwipe]);
 
-  const masteredTotal = cards.filter((c) => c.progress?.isKnown === true).length;
+  // การคำนวณ Pagination สำหรับพจนานุกรม
+  const totalDictPages = Math.max(
+    1,
+    Math.ceil(filteredCards.length / DICTIONARY_PAGE_SIZE),
+  );
+  const paginatedDictCards = useMemo(() => {
+    const start = (dictPage - 1) * DICTIONARY_PAGE_SIZE;
+    return filteredCards.slice(start, start + DICTIONARY_PAGE_SIZE);
+  }, [filteredCards, dictPage]);
+
+  // การคำนวณ Pagination สำหรับคิวการ์ดในโหมดปัด
+  const totalQueuePages = Math.max(
+    1,
+    Math.ceil(filteredCards.length / QUEUE_PAGE_SIZE),
+  );
+  const paginatedQueueCards = useMemo(() => {
+    const start = (queuePage - 1) * QUEUE_PAGE_SIZE;
+    return filteredCards.slice(start, start + QUEUE_PAGE_SIZE);
+  }, [filteredCards, queuePage]);
+
+  // อัปเดต queuePage อัตโนมัติเมื่อ currentIndex เปลี่ยน เพื่อให้การ์ดที่กำลังดูอยู่ในหน้าจอคิวเสมอ
+  useEffect(() => {
+    if (viewMode === 'SWIPE_DECK') {
+      const targetPage = Math.floor(currentIndex / QUEUE_PAGE_SIZE) + 1;
+      if (targetPage !== queuePage && targetPage <= totalQueuePages) {
+        setQueuePage(targetPage);
+      }
+    }
+  }, [currentIndex, viewMode, totalQueuePages, queuePage]);
+
+  const masteredTotal = statusCounts.mastered;
+  const masteryPercentage =
+    cards.length > 0 ? Math.round((masteredTotal / cards.length) * 100) : 0;
 
   return (
     <LazyMotion features={domAnimation}>
-      <div className="space-y-6">
-      {/* 1. PAGE HEADER & VIEW SWITCHER */}
-      <section className="bg-slate-900 text-amber-50 border-2 border-slate-950 shadow-arcade p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 bg-amber-400 border-2 border-slate-950 shadow-[2px_2px_0px_0px_#020617] flex items-center justify-center shrink-0">
-            <img
-              src="/icons/icon-deck.png"
-              alt=""
-              className="w-8 h-8 object-contain [image-rendering:pixelated]"
-            />
-          </div>
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold text-white">
-              คลังการ์ดคำศัพท์และพจนานุกรมธุรกิจ ({cards.length} คำ)
-            </h1>
-            <p className="text-sm text-slate-300 mt-0.5">
-              จำแม่นแล้ว {masteredTotal} คำ จากทั้งหมด {cards.length} คำ ใน 8 หมวดข้อสอบ TOEIC 700+
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setViewMode('SWIPE_DECK')}
-            className={`inline-flex items-center gap-2 px-4 py-2 font-display font-bold text-sm border-2 border-slate-950 transition-all ${
-              viewMode === 'SWIPE_DECK'
-                ? 'bg-amber-400 text-slate-950 shadow-[2px_2px_0px_0px_#020617]'
-                : 'bg-slate-800 text-slate-200 hover:bg-slate-700'
-            }`}
-          >
-            <Layers className="w-4 h-4" />
-            โหมดปัดการ์ด
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setViewMode('DICTIONARY')}
-            className={`inline-flex items-center gap-2 px-4 py-2 font-display font-bold text-sm border-2 border-slate-950 transition-all ${
-              viewMode === 'DICTIONARY'
-                ? 'bg-emerald-400 text-slate-950 shadow-[2px_2px_0px_0px_#020617]'
-                : 'bg-slate-800 text-slate-200 hover:bg-slate-700'
-            }`}
-          >
-            <BookOpen className="w-4 h-4" />
-            ตารางพจนานุกรม
-          </button>
-        </div>
-      </section>
-
-      {/* 1.5 ACTIVE DECK & RANDOM SET MANAGER BANNER */}
-      {activeSet && (
-        <section className="bg-amber-300 border-2 border-slate-900 shadow-arcade p-4 space-y-3">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded border-2 border-slate-900 bg-white flex items-center justify-center shadow-pixel-sm shrink-0">
-                <Dices className="w-5 h-5 text-slate-900" />
+      <div className="space-y-6 max-w-7xl mx-auto pb-12">
+        {/* ==================================================================== */}
+        {/* 1. UNIFIED COMMAND HUB: สะอาด ชัดเจน และตัดความรกออกทั้งหมด */}
+        {/* ==================================================================== */}
+        <header className="bg-[#FFFDF7] border-2 border-slate-900 shadow-arcade p-4 sm:p-6 space-y-4">
+          {/* Top Row: Title, Total Word Count & Mode Switcher */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200 pb-4">
+            <div className="flex items-start sm:items-center gap-3.5">
+              <div className="w-12 h-12 bg-amber-400 border-2 border-slate-900 shadow-[2px_2px_0px_0px_#0f172a] flex items-center justify-center shrink-0">
+                <img
+                  src="/icons/icon-deck.png"
+                  alt=""
+                  className="w-7 h-7 object-contain [image-rendering:pixelated]"
+                />
               </div>
               <div>
-                <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-pixel font-bold bg-slate-900 text-amber-300 px-1.5 py-0.5 rounded">
-                    ชุดคำศัพท์ปัจจุบัน ({activeSet.cardIds.length} คำ)
-                  </span>
-                  <span className="text-xs text-slate-800 font-medium hidden sm:inline">
-                    หมวด: {activeSet.category === 'ALL' ? 'คละ 12 หมวด' : activeSet.category}
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h1 className="text-xl sm:text-2xl font-bold font-thai text-slate-950 tracking-tight">
+                    คลังการ์ดคำศัพท์และพจนานุกรมธุรกิจ
+                  </h1>
+                  <span className="font-pixel text-[11px] px-2 py-0.5 bg-slate-900 text-amber-300 border border-slate-900">
+                    {cards.length.toLocaleString()} คำ
                   </span>
                 </div>
-                <h2 className="text-base sm:text-lg font-bold font-display text-slate-950 mt-0.5">
-                  {activeSet.name}
-                </h2>
+                <p className="text-xs sm:text-sm text-slate-600 mt-1">
+                  ฐานข้อมูลคำศัพท์ออกสอบบ่อยใน 12 หมวดธุรกิจ TOEIC 700+ • จำแม่นแล้ว{' '}
+                  <strong className="text-emerald-700 font-bold">
+                    {masteredTotal.toLocaleString()}
+                  </strong>{' '}
+                  คำ ({masteryPercentage}%)
+                </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-2 flex-wrap">
+            {/* View Mode Switcher */}
+            <div className="flex items-center gap-2 self-start md:self-auto shrink-0">
               <button
                 type="button"
-                onClick={() => {
-                  if (!authUser) {
-                    requireAuth(
-                      undefined,
-                      'กรุณาเข้าสู่ระบบก่อน เพื่อสร้างและบันทึกชุดคำศัพท์เฉพาะตัวของคุณ',
-                    );
-                    return;
-                  }
-                  setModalTab('CREATE');
-                  setIsSetModalOpen(true);
-                }}
-                className="px-3.5 py-2 bg-emerald-400 hover:bg-emerald-300 text-slate-950 border-2 border-slate-900 font-display font-bold text-xs shadow-pixel-sm active:translate-x-[1px] active:translate-y-[1px] inline-flex items-center gap-1.5"
+                onClick={() => setViewMode('SWIPE_DECK')}
+                className={`inline-flex items-center gap-1.5 px-4 py-2 font-display font-bold text-xs sm:text-sm border-2 border-slate-900 transition-all ${
+                  viewMode === 'SWIPE_DECK'
+                    ? 'bg-amber-400 text-slate-950 shadow-[2px_2px_0px_0px_#0f172a]'
+                    : 'bg-white text-slate-700 hover:bg-slate-100'
+                }`}
               >
-                <Plus className="w-4 h-4 text-slate-950" />
-                สร้างชุดใหม่ (เลือกจำนวนคำ)
+                <Layers className="w-4 h-4 text-slate-950" />
+                โหมดปัดการ์ด (Swipe Deck)
               </button>
 
               <button
                 type="button"
+                onClick={() => setViewMode('DICTIONARY')}
+                className={`inline-flex items-center gap-1.5 px-4 py-2 font-display font-bold text-xs sm:text-sm border-2 border-slate-900 transition-all ${
+                  viewMode === 'DICTIONARY'
+                    ? 'bg-emerald-400 text-slate-950 shadow-[2px_2px_0px_0px_#0f172a]'
+                    : 'bg-white text-slate-700 hover:bg-slate-100'
+                }`}
+              >
+                <BookOpen className="w-4 h-4 text-slate-950" />
+                ตารางพจนานุกรม ({cards.length})
+              </button>
+            </div>
+          </div>
+
+          {/* Sub Row: Active Deck Pill, Mastery Progress & Action Shortcuts */}
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 text-xs">
+            <div className="flex items-center gap-2 flex-wrap">
+              {activeSet && (
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-amber-100/90 border border-slate-900 rounded-none text-slate-900">
+                  <Dices className="w-3.5 h-3.5 text-slate-800" />
+                  <span className="font-semibold">ชุดที่กำลังฝึก:</span>
+                  <span className="font-bold text-slate-950">{activeSet.name}</span>
+                  <span className="text-[11px] font-pixel text-slate-700">
+                    ({activeSet.cardIds.length} คำ)
+                  </span>
+                </div>
+              )}
+
+              {/* Deck Scope Switcher: Switch between active set and all 3,093 words */}
+              {viewMode === 'SWIPE_DECK' && activeSet && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setUseActiveDeckOnly((prev) => !prev);
+                    setCurrentIndex(0);
+                    setIsFlipped(false);
+                  }}
+                  className={`px-2.5 py-1.5 border border-slate-900 text-xs font-semibold transition-colors ${
+                    useActiveDeckOnly
+                      ? 'bg-white text-slate-800 hover:bg-slate-100'
+                      : 'bg-slate-900 text-amber-300'
+                  }`}
+                >
+                  {useActiveDeckOnly
+                    ? `สลับไปปัดคำศัพท์ทั้งหมด (${cards.length} คำ)`
+                    : `กลับมาปัดเฉพาะชุด ${activeSet.name} (${activeSet.cardIds.length} คำ)`}
+                </button>
+              )}
+            </div>
+
+            {/* Quick Actions (Deck Builder & Vocab Blitz) */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                type="button"
                 onClick={() => {
-                  if (!authUser) {
-                    requireAuth(
-                      undefined,
-                      'กรุณาเข้าสู่ระบบก่อน เพื่อจัดการและโหลดชุดการ์ดคำศัพท์ที่คุณบันทึกไว้',
-                    );
-                    return;
-                  }
-                  setModalTab('SAVED');
+                  setModalTab('CREATE');
                   setIsSetModalOpen(true);
                 }}
-                className="px-3.5 py-2 bg-white hover:bg-slate-50 text-slate-900 border-2 border-slate-900 font-display font-bold text-xs shadow-pixel-sm active:translate-x-[1px] active:translate-y-[1px] inline-flex items-center gap-1.5"
+                className="px-3 py-1.5 bg-emerald-400 hover:bg-emerald-300 text-slate-950 border-2 border-slate-900 font-display font-bold text-xs shadow-pixel-sm active:translate-x-[1px] active:translate-y-[1px] inline-flex items-center gap-1.5 cursor-pointer"
               >
-                <Layers className="w-4 h-4 text-indigo-600" />
-                จัดการชุดการ์ด / ชุดที่บันทึก
+                <Plus className="w-3.5 h-3.5" />
+                จัดชุดการ์ดคำศัพท์ / สร้างสำรับ
               </button>
 
               <button
@@ -424,545 +544,741 @@ export default function FlashcardsPage() {
                   }
                   setIsBlitzGameOpen(true);
                 }}
-                className="px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-amber-300 border-2 border-slate-900 font-display font-bold text-xs shadow-pixel-sm active:translate-x-[1px] active:translate-y-[1px] inline-flex items-center gap-1.5"
+                className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-amber-300 border-2 border-slate-900 font-display font-bold text-xs shadow-pixel-sm active:translate-x-[1px] active:translate-y-[1px] inline-flex items-center gap-1.5 cursor-pointer"
               >
-                <Zap className="w-4 h-4 fill-amber-300 text-amber-300" />
-                ทดสอบจำศัพท์ 5 นาที (Vocab Blitz)
+                <Zap className="w-3.5 h-3.5 fill-amber-300 text-amber-300" />
+                Vocab Blitz 5 นาที
               </button>
             </div>
           </div>
+        </header>
 
-          {/* Progress bar inside the active deck */}
-          {viewMode === 'SWIPE_DECK' && filteredCards.length > 0 && (
-            <div className="pt-2 border-t border-slate-900/20 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
-              <div className="flex items-center gap-2 text-slate-800 font-medium">
-                <span>ความคืบหน้าการปัดการ์ด:</span>
-                <span className="font-mono font-bold text-slate-950">
-                  {Math.min(currentIndex, filteredCards.length)} / {filteredCards.length} คำ
-                </span>
-                <span className="text-[11px] text-slate-600">
-                  ({Math.round((Math.min(currentIndex, filteredCards.length) / filteredCards.length) * 100)}%)
-                </span>
-              </div>
-              <div className="w-full sm:w-48 h-2.5 bg-white/70 border border-slate-900 rounded-none overflow-hidden">
-                <div
-                  className="h-full bg-slate-900 transition-all duration-300"
-                  style={{
-                    width: `${Math.round(
-                      (Math.min(currentIndex, filteredCards.length) / filteredCards.length) * 100,
-                    )}%`,
-                  }}
-                />
-              </div>
-            </div>
-          )}
-        </section>
-      )}
-
-      {/* 2. SEARCH & CATEGORY BAR */}
-      <section className="bg-[#fffdf7] border-2 border-slate-900 shadow-arcade p-4 space-y-3">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-          <div className="relative flex-1">
-            <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                setCurrentIndex(0);
-              }}
-              placeholder="ค้นหาคำศัพท์ภาษาอังกฤษ, ความหมายไทย หรือตัวอย่างประโยค..."
-              className="w-full pl-9 pr-4 py-2 bg-white border-2 border-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
-            />
-          </div>
-
-          <div className="flex flex-wrap items-center gap-1.5">
-            {(
-              [
-                { id: 'ALL', label: `ทั้งหมด (${cards.length})` },
-                {
-                  id: 'DUE',
-                  label: `ถึงเวลาทบทวน (${cards.filter((c) => c.progress?.isDue || (c.progress?.dueAt && new Date(c.progress.dueAt) <= new Date())).length})`,
-                },
-                {
-                  id: 'EXAM_WRONG',
-                  label: `เคยผิดจากข้อสอบ (${cards.filter((c) => (c.progress?.wrongCount ?? 0) > 0).length})`,
-                },
-                {
-                  id: 'LEARNING',
-                  label: `กำลังฝึก (${cards.length - masteredTotal})`,
-                },
-                { id: 'MASTERED', label: `จำแม่นแล้ว (${masteredTotal})` },
-              ] as const
-            ).map((st) => (
-              <button
-                key={st.id}
-                type="button"
-                onClick={() => {
-                  setStatusFilter(st.id);
-                  setCurrentIndex(0);
-                }}
-                className={`px-3 py-1.5 text-xs font-semibold border-2 border-slate-900 transition-colors ${
-                  statusFilter === st.id
-                    ? 'bg-slate-900 text-amber-300'
-                    : 'bg-white text-slate-700 hover:bg-slate-100'
-                }`}
-              >
-                {st.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="flex flex-wrap gap-1.5">
-          {TOEIC_CATEGORIES.map((category) => {
-            const isSelected = selectedCategory === category;
-            return (
-              <button
-                key={category}
-                type="button"
-                onClick={() => {
-                  setSelectedCategory(category);
+        {/* ==================================================================== */}
+        {/* 2. STREAMLINED SEARCH & FILTER TOOLBAR: แถบค้นหาและตัวกรองที่สบายตา */}
+        {/* ==================================================================== */}
+        <section className="bg-[#FFFDF7] border-2 border-slate-900 shadow-arcade p-4 space-y-3.5">
+          {/* Row 1: Search Input + Status Pills */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+            {/* Search Input with Clear Button */}
+            <div className="relative flex-1">
+              <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
                   setCurrentIndex(0);
                   setIsFlipped(false);
                 }}
-                className={`px-2.5 py-1 text-xs font-medium border border-slate-900 transition-colors ${
-                  isSelected
-                    ? 'bg-amber-400 text-slate-950 font-bold shadow-[2px_2px_0px_0px_#0f172a]'
-                    : 'bg-slate-100 text-slate-700 hover:bg-amber-100'
-                }`}
-              >
-                {category === 'ALL' ? 'ทุกหมวดหมู่' : category}
-              </button>
-            );
-          })}
-        </div>
-      </section>
+                placeholder="ค้นหาคำศัพท์ภาษาอังกฤษ, ความหมายไทย หรือตัวอย่างประโยค..."
+                className="w-full pl-9 pr-9 py-2 bg-white border-2 border-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 font-sans"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 p-1"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
 
-      {/* 3A. SWIPE SPELL CARD DECK */}
-      {viewMode === 'SWIPE_DECK' && (
-        <section className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          <div className="lg:col-span-7 flex flex-col items-center">
-            {isDeckCompleted ? (
-              <div className="w-full max-w-md bg-white border-2 border-slate-900 shadow-arcade-lg p-6 text-center space-y-5 animate-fade-in">
-                <div className="w-16 h-16 mx-auto rounded-full bg-amber-300 border-2 border-slate-900 flex items-center justify-center shadow-pixel">
-                  <CheckCircle2 className="w-8 h-8 text-slate-950" />
-                </div>
-
-                <div className="space-y-1">
-                  <h3 className="text-2xl font-bold font-display text-slate-950">
-                    จบชุดคำศัพท์แล้ว!
-                  </h3>
-                  <p className="text-xs text-slate-600 font-medium">
-                    คุณปัดการ์ดครบทั้ง {filteredCards.length} คำ ในชุด &quot;{activeSet?.name}&quot; เรียบร้อยแล้ว
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3 p-3 bg-slate-50 border-2 border-slate-900 text-center">
-                  <div className="p-2 bg-emerald-50 border border-emerald-300">
-                    <div className="text-[11px] font-bold text-emerald-800">คำศัพท์ในชุด</div>
-                    <div className="text-xl font-bold font-pixel text-emerald-700">{filteredCards.length}</div>
-                  </div>
-                  <div className="p-2 bg-amber-50 border border-amber-300">
-                    <div className="text-[11px] font-bold text-amber-800">หมวดหมู่</div>
-                    <div className="text-xs font-semibold text-amber-900 mt-1 truncate">
-                      {activeSet?.category === 'ALL' ? 'คละ 12 หมวด' : activeSet?.category}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-2 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setCurrentIndex(0)}
-                    className="w-full py-3 bg-amber-400 hover:bg-amber-300 text-slate-950 border-2 border-slate-900 font-display font-bold text-sm shadow-pixel active:translate-x-[2px] active:translate-y-[2px] flex items-center justify-center gap-2"
-                  >
-                    <RotateCcw className="w-4 h-4 text-slate-950" />
-                    วนซ้ำชุดนี้อีกรอบ (Repeat Deck)
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (!authUser) {
-                        requireAuth(
-                          undefined,
-                          'กรุณาเข้าสู่ระบบก่อน เพื่อสร้างและบันทึกชุดคำศัพท์เฉพาะตัวของคุณ',
-                        );
-                        return;
-                      }
-                      setModalTab('CREATE');
-                      setIsSetModalOpen(true);
-                    }}
-                    className="w-full py-2.5 bg-emerald-400 hover:bg-emerald-300 text-slate-950 border-2 border-slate-900 font-display font-bold text-xs shadow-pixel-sm active:translate-x-[1px] active:translate-y-[1px] flex items-center justify-center gap-2"
-                  >
-                    <Plus className="w-4 h-4 text-slate-950" />
-                    สร้างชุดคำศัพท์ใหม่ (Create New Deck)
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (!authUser) {
-                        requireAuth(
-                          undefined,
-                          'กรุณาเข้าสู่ระบบก่อน เพื่อเริ่มเล่นเกม Vocab Blitz และสะสมคะแนนโบนัส',
-                        );
-                        return;
-                      }
-                      setIsBlitzGameOpen(true);
-                    }}
-                    className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-amber-300 border-2 border-slate-900 font-display font-bold text-xs shadow-pixel-sm active:translate-x-[1px] active:translate-y-[1px] flex items-center justify-center gap-2"
-                  >
-                    <Zap className="w-4 h-4 fill-amber-300" />
-                    ทดสอบจำศัพท์ 5 นาที (Vocab Blitz)
-                  </button>
-                </div>
-              </div>
-            ) : activeCard ? (
-              <div className="w-full max-w-md space-y-4">
-                {/* Subtle Counter & Mana Readout */}
-                <div className="flex items-center justify-between px-1 text-xs text-slate-600">
-                  <span>
-                    ใบที่{' '}
-                    <strong className="font-pixel text-slate-900">
-                      {(currentIndex % filteredCards.length) + 1}
-                    </strong>{' '}
-                    จาก{' '}
-                    <strong className="font-pixel text-slate-900">
-                      {filteredCards.length}
-                    </strong>
+            {/* Status Filter Segmented Controls */}
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0 scrollbar-none">
+              {(
+                [
+                  { id: 'ALL', label: 'ทั้งหมด', count: statusCounts.all },
+                  { id: 'DUE', label: 'ถึงเวลาทบทวน', count: statusCounts.due },
+                  { id: 'EXAM_WRONG', label: 'เคยผิดในข้อสอบ', count: statusCounts.examWrong },
+                  { id: 'LEARNING', label: 'กำลังฝึก', count: statusCounts.learning },
+                  { id: 'MASTERED', label: 'จำแม่นแล้ว', count: statusCounts.mastered },
+                ] as const
+              ).map((st) => (
+                <button
+                  key={st.id}
+                  type="button"
+                  onClick={() => {
+                    setStatusFilter(st.id);
+                    setCurrentIndex(0);
+                    setIsFlipped(false);
+                  }}
+                  className={`px-2.5 py-1.5 text-xs font-semibold border-2 border-slate-900 whitespace-nowrap transition-all ${
+                    statusFilter === st.id
+                      ? 'bg-slate-900 text-amber-300 shadow-[2px_2px_0px_0px_#0f172a]'
+                      : 'bg-white text-slate-700 hover:bg-slate-100'
+                  }`}
+                >
+                  <span>{st.label}</span>
+                  <span className="ml-1 text-[10px] font-mono opacity-80">
+                    ({st.count})
                   </span>
+                </button>
+              ))}
+            </div>
+          </div>
 
-                  <AnimatePresence mode="wait">
-                    {swipeFeedback ? (
-                      <m.span
-                        key={swipeFeedback.word + swipeFeedback.type}
-                        initial={{ opacity: 0, y: 4 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0 }}
-                        className={`px-2 py-0.5 border border-slate-900 font-semibold ${
-                          swipeFeedback.type === 'MASTERED'
-                            ? 'bg-emerald-400 text-slate-950'
-                            : 'bg-amber-300 text-slate-950'
-                        }`}
-                      >
-                        {swipeFeedback.word}:{' '}
-                        {swipeFeedback.type === 'MASTERED'
-                          ? 'บันทึกว่าจำแม่นแล้ว'
-                          : 'เก็บไว้ทบทวนซ้ำ'}
-                      </m.span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1">
-                        <img
-                          src="/icons/icon-hud-mana.png"
-                          alt=""
-                          className="w-3.5 h-3.5 [image-rendering:pixelated]"
-                        />
-                        <span>ระดับความยาก</span>
-                        <strong className="font-pixel text-slate-900">
-                          {activeCard.manaCost}/5
-                        </strong>
-                      </span>
-                    )}
-                  </AnimatePresence>
-                </div>
-
-                {/* Draggable 3D Spell Card */}
-                <ThreeDCard
-                  key={activeCard.id + '-' + currentIndex}
-                  card={activeCard}
-                  isFlipped={isFlipped}
-                  onFlip={() => setIsFlipped((prev) => !prev)}
-                  onSpeak={speakText}
-                  dragX={dragX}
-                  rotateZ={rotateZ}
-                  onDragEnd={handleDragEnd}
-                  rightBadgeOpacity={rightBadgeOpacity}
-                  leftBadgeOpacity={leftBadgeOpacity}
-                />
-
-                {/* Tactile Controls */}
-                <div className="grid grid-cols-3 gap-2 sm:gap-3">
-                  <button
-                    type="button"
-                    onClick={() => handleSwipe(false)}
-                    className="py-2.5 px-2 sm:px-3 bg-white text-slate-900 border-2 border-slate-900 shadow-arcade hover:bg-rose-50 active:translate-x-[2px] active:translate-y-[2px] active:shadow-arcade-sm transition-all flex items-center justify-between cursor-pointer"
-                  >
-                    <span className="inline-flex items-center gap-1 sm:gap-1.5 font-display font-bold text-[11px] sm:text-xs text-rose-700">
-                      <ArrowLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
-                      ทบทวนซ้ำ
-                    </span>
-                    <kbd className="hidden sm:inline-block px-1.5 py-0.5 text-[10px] font-mono bg-slate-100 border border-slate-900">
-                      ←
-                    </kbd>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setIsFlipped((prev) => !prev)}
-                    className="py-2.5 px-2 sm:px-3 bg-amber-400 text-slate-950 border-2 border-slate-900 shadow-arcade hover:bg-amber-300 active:translate-x-[2px] active:translate-y-[2px] active:shadow-arcade-sm transition-all flex items-center justify-center sm:justify-between cursor-pointer"
-                  >
-                    <span className="font-display font-bold text-[11px] sm:text-xs truncate">
-                      พลิกดูคำแปล
-                    </span>
-                    <kbd className="hidden sm:inline-block px-1.5 py-0.5 text-[10px] font-mono bg-white border border-slate-900">
-                      SPACE
-                    </kbd>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleSwipe(true)}
-                    className="py-2.5 px-2 sm:px-3 bg-emerald-400 text-slate-950 border-2 border-slate-900 shadow-arcade hover:bg-emerald-300 active:translate-x-[2px] active:translate-y-[2px] active:shadow-arcade-sm transition-all flex items-center justify-between cursor-pointer"
-                  >
-                    <span className="inline-flex items-center gap-1 sm:gap-1.5 font-display font-bold text-[11px] sm:text-xs text-slate-950">
-                      จำแม่นแล้ว
-                      <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
-                    </span>
-                    <kbd className="hidden sm:inline-block px-1.5 py-0.5 text-[10px] font-mono bg-white border border-slate-900">
-                      →
-                    </kbd>
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="bg-[#fffdf7] border-2 border-slate-900 shadow-arcade p-8 text-center w-full">
-                <p className="text-base font-semibold text-slate-800">
-                  ไม่พบคำศัพท์ที่ตรงกับเงื่อนไขการค้นหา
-                </p>
+          {/* Row 2: 12 Business Category Chips with Word Counts */}
+          <div className="border-t border-slate-200 pt-3">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+                <Filter className="w-3.5 h-3.5 text-slate-500" />
+                หมวดหมู่ธุรกิจ TOEIC (12 หมวด):
+              </span>
+              {(selectedCategory !== 'ALL' || statusFilter !== 'ALL' || searchQuery) && (
                 <button
                   type="button"
                   onClick={() => {
                     setSelectedCategory('ALL');
                     setStatusFilter('ALL');
                     setSearchQuery('');
+                    setCurrentIndex(0);
+                    setIsFlipped(false);
                   }}
-                  className="mt-4 px-4 py-2 bg-amber-400 text-slate-950 font-display font-bold text-xs border-2 border-slate-900 shadow-arcade-sm"
+                  className="text-xs font-semibold text-rose-600 hover:text-rose-800 underline"
                 >
-                  แสดงคำศัพท์ทั้งหมด
+                  ล้างตัวกรองทั้งหมด
                 </button>
-              </div>
-            )}
-          </div>
-
-          {/* Right Column (5 cols): Word List in Active Filter */}
-          <div className="lg:col-span-5 bg-[#fffdf7] border-2 border-slate-900 shadow-arcade p-5">
-            <div className="flex items-center justify-between border-b border-slate-200 pb-3 mb-3">
-              <div>
-                <h3 className="font-bold text-sm text-slate-900">
-                  รายการคำศัพท์ในหมวดนี้ ({filteredCards.length} คำ)
-                </h3>
-                <p className="text-xs text-slate-500">
-                  คลิกที่คำศัพท์เพื่อเปิดดูการ์ดใบนั้นทันที
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setViewMode('DICTIONARY')}
-                className="text-xs font-semibold text-slate-700 underline hover:text-slate-950"
-              >
-                ดูตารางเต็ม
-              </button>
+              )}
             </div>
 
-            <div className="max-h-[420px] overflow-y-auto divide-y divide-slate-200 pr-1">
-              {filteredCards.map((item, idx) => {
-                const isCurrent = activeCard && item.id === activeCard.id;
-                const isMastered = item.progress?.isKnown === true;
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-thin">
+              {TOEIC_CATEGORIES.map((category) => {
+                const isSelected = selectedCategory === category;
+                const count = categoryCounts[category] || 0;
+                const labelTh = CATEGORY_LABELS_TH[category] || category;
 
                 return (
                   <button
-                    key={item.id}
+                    key={category}
                     type="button"
                     onClick={() => {
-                      setCurrentIndex(idx);
+                      setSelectedCategory(category);
+                      setCurrentIndex(0);
                       setIsFlipped(false);
                     }}
-                    className={`w-full text-left py-2.5 px-3 flex items-center justify-between gap-2 transition-colors ${
-                      isCurrent ? 'bg-amber-100/90' : 'hover:bg-slate-50'
+                    className={`px-2.5 py-1 text-xs font-medium border border-slate-900 whitespace-nowrap transition-colors cursor-pointer ${
+                      isSelected
+                        ? 'bg-amber-400 text-slate-950 font-bold shadow-[2px_2px_0px_0px_#0f172a]'
+                        : 'bg-slate-50 text-slate-700 hover:bg-amber-100/60'
                     }`}
                   >
-                    <div className="min-w-0">
-                      <div className="flex items-baseline gap-2">
-                        <span className="font-sans font-bold text-sm text-slate-900">
-                          {item.word}
-                        </span>
-                        <span className="font-mono text-xs text-slate-500">
-                          {item.partOfSpeech}
-                        </span>
-                      </div>
-                      <p className="text-xs text-slate-600 truncate">
-                        {item.meaningTh}
-                      </p>
-                    </div>
-
-                    <div className="shrink-0">
-                      {isMastered ? (
-                        <span className="px-2 py-0.5 bg-emerald-400 text-slate-950 font-pixel text-[9px] border border-slate-900">
-                          Mastered
-                        </span>
-                      ) : (
-                        <span className="text-[11px] text-slate-500">
-                          {item.category}
-                        </span>
-                      )}
-                    </div>
+                    <span>{category === 'ALL' ? 'ทั้งหมด' : category}</span>
+                    <span className="ml-1 text-[10px] font-mono opacity-80">
+                      ({count})
+                    </span>
                   </button>
                 );
               })}
             </div>
           </div>
         </section>
-      )}
 
-      {/* 3B. FULL TOEIC 60-WORD DICTIONARY VIEW */}
-      {viewMode === 'DICTIONARY' && (
-        <section className="bg-[#fffdf7] border-2 border-slate-900 shadow-arcade p-6 space-y-4">
-          <div className="border-b border-slate-200 pb-3">
-            <h2 className="text-lg font-bold text-slate-900">
-              พจนานุกรมคำศัพท์ธุรกิจ TOEIC ({filteredCards.length} คำ)
-            </h2>
-            <p className="text-sm text-slate-600">
-              กดที่ไอคอนลำโพงเพื่อฟังการออกเสียง หรือสลับสถานะความจำของแต่ละคำได้โดยตรง
-            </p>
-          </div>
+        {/* ==================================================================== */}
+        {/* 3A. SWIPE_DECK MODE: การ์ด 3D เป็นพระเอกตรงกลาง + คิวการ์ดด้านข้าง */}
+        {/* ==================================================================== */}
+        {viewMode === 'SWIPE_DECK' && (
+          <section className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            {/* Center Stage: Hero 3D Card Deck (7 columns on desktop) */}
+            <div className="lg:col-span-7 flex flex-col items-center">
+              {isDeckCompleted ? (
+                /* Celebration Completion Card */
+                <div className="w-full max-w-md bg-white border-2 border-slate-900 shadow-arcade-lg p-6 sm:p-8 text-center space-y-5 animate-fade-in">
+                  <div className="w-16 h-16 mx-auto rounded-full bg-amber-300 border-2 border-slate-900 flex items-center justify-center shadow-pixel">
+                    <CheckCircle2 className="w-8 h-8 text-slate-950" />
+                  </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {filteredCards.map((card, idx) => {
-              const isMastered = card.progress?.isKnown === true;
-              return (
-                <div
-                  key={card.id}
-                  className="bg-white border-2 border-slate-900 p-4 flex flex-col justify-between gap-3"
-                >
-                  <div className="space-y-2">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex items-baseline gap-2">
-                        <span className="font-sans text-lg font-bold text-slate-900">
-                          {card.word}
-                        </span>
-                        <span className="font-mono text-xs text-slate-500">
-                          {card.partOfSpeech}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => speakText(card.word)}
-                          className="p-1 bg-slate-100 text-slate-800 border border-slate-900 hover:bg-sky-200"
-                          title="ฟังเสียงอ่าน"
-                        >
-                          <Volume2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-
-                      <span className="px-2 py-0.5 bg-amber-100 text-slate-800 text-xs font-medium border border-slate-900">
-                        {card.category}
-                      </span>
-                    </div>
-
-                    <p className="text-sm font-semibold text-slate-800">
-                      {card.meaningTh}
-                    </p>
-
-                    <p className="text-xs text-slate-600 border-l-2 border-slate-300 pl-2.5 leading-relaxed">
-                      &ldquo;{card.exampleEn}&rdquo;
+                  <div className="space-y-1.5">
+                    <h2 className="text-2xl font-bold font-thai text-slate-950">
+                      จบชุดคำศัพท์แล้ว!
+                    </h2>
+                    <p className="text-xs sm:text-sm text-slate-600">
+                      คุณปัดการ์ดครบทั้ง {filteredCards.length} คำ ในชุดนี้เรียบร้อยแล้ว
                     </p>
                   </div>
 
-                  <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-xs">
+                  <div className="grid grid-cols-2 gap-3 p-3 bg-slate-50 border-2 border-slate-900 text-center">
+                    <div className="p-2.5 bg-emerald-50 border border-emerald-300">
+                      <div className="text-[11px] font-bold text-emerald-800">
+                        คำศัพท์ที่ฝึก
+                      </div>
+                      <div className="text-xl font-bold font-pixel text-emerald-700">
+                        {filteredCards.length}
+                      </div>
+                    </div>
+                    <div className="p-2.5 bg-amber-50 border border-amber-300">
+                      <div className="text-[11px] font-bold text-amber-800">
+                        หมวดหมู่
+                      </div>
+                      <div className="text-xs font-semibold text-amber-900 mt-1 truncate">
+                        {selectedCategory === 'ALL'
+                          ? activeSet?.name || 'คละ 12 หมวด'
+                          : selectedCategory}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 pt-2">
                     <button
                       type="button"
                       onClick={() => {
-                        setCurrentIndex(idx);
+                        setCurrentIndex(0);
                         setIsFlipped(false);
-                        setViewMode('SWIPE_DECK');
                       }}
-                      className="text-slate-600 hover:text-slate-950 underline"
+                      className="w-full py-3 bg-amber-400 hover:bg-amber-300 text-slate-950 border-2 border-slate-900 font-display font-bold text-sm shadow-pixel active:translate-x-[2px] active:translate-y-[2px] flex items-center justify-center gap-2 cursor-pointer"
                     >
-                      เปิดในโหมดการ์ด 3D
+                      <RotateCcw className="w-4 h-4 text-slate-950" />
+                      วนซ้ำชุดนี้อีกรอบ (Repeat Deck)
                     </button>
 
                     <button
                       type="button"
-                      onClick={async () => {
+                      onClick={() => {
+                        setModalTab('CREATE');
+                        setIsSetModalOpen(true);
+                      }}
+                      className="w-full py-2.5 bg-emerald-400 hover:bg-emerald-300 text-slate-950 border-2 border-slate-900 font-display font-bold text-xs shadow-pixel-sm active:translate-x-[1px] active:translate-y-[1px] flex items-center justify-center gap-2 cursor-pointer"
+                    >
+                      <Plus className="w-4 h-4 text-slate-950" />
+                      จัดชุดการ์ดคำศัพท์ / สร้างสำรับใหม่
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
                         if (!authUser) {
                           requireAuth(
                             undefined,
-                            'กรุณาเข้าสู่ระบบก่อน เพื่อบันทึกสถานะคำศัพท์ที่คุณจำได้แล้ว',
+                            'กรุณาเข้าสู่ระบบก่อน เพื่อเริ่มเล่นเกม Vocab Blitz และสะสมคะแนนโบนัส',
                           );
                           return;
                         }
-                        const nextState = !isMastered;
-                        setCards((prev) =>
-                          prev.map((c) =>
-                            c.id === card.id
-                              ? {
-                                  ...c,
-                                  progress: {
-                                    isKnown: nextState,
-                                    swipeCount:
-                                      (c.progress?.swipeCount ?? 0) + 1,
-                                  },
-                                }
-                              : c,
-                          ),
-                        );
-                        await recordCardSwipe(card.id, nextState, authUser?.id);
+                        setIsBlitzGameOpen(true);
                       }}
-                      className={`inline-flex items-center gap-1 px-2.5 py-1 font-medium border border-slate-900 ${
-                        isMastered
-                          ? 'bg-emerald-400 text-slate-950 font-semibold'
-                          : 'bg-slate-100 text-slate-700 hover:bg-amber-100'
-                      }`}
+                      className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-amber-300 border-2 border-slate-900 font-display font-bold text-xs shadow-pixel-sm active:translate-x-[1px] active:translate-y-[1px] flex items-center justify-center gap-2 cursor-pointer"
                     >
-                      {isMastered ? (
-                        <>
-                          <CheckCircle2 className="w-3.5 h-3.5" />
-                          จำแม่นแล้ว
-                        </>
-                      ) : (
-                        <>
-                          <RotateCcw className="w-3.5 h-3.5" />
-                          ทำเครื่องหมายว่าจำได้
-                        </>
-                      )}
+                      <Zap className="w-4 h-4 fill-amber-300" />
+                      ทดสอบจำศัพท์ 5 นาที (Vocab Blitz)
                     </button>
                   </div>
                 </div>
-              );
-            })}
-          </div>
-        </section>
-      )}
+              ) : activeCard ? (
+                /* The Active 3D Card Stage */
+                <div className="w-full max-w-md space-y-4">
+                  {/* Subtle Counter & Difficulty Readout */}
+                  <div className="flex items-center justify-between px-1 text-xs text-slate-600">
+                    <span className="font-medium">
+                      ใบที่{' '}
+                      <strong className="font-pixel text-slate-950 text-sm">
+                        {(currentIndex % filteredCards.length) + 1}
+                      </strong>{' '}
+                      จาก{' '}
+                      <strong className="font-pixel text-slate-950 text-sm">
+                        {filteredCards.length.toLocaleString()}
+                      </strong>
+                    </span>
 
-      {/* Deck Selector Modal */}
-      {isSetModalOpen && activeSet && (
-        <CardSetSelectorModal
-          isOpen={isSetModalOpen}
-          onClose={() => setIsSetModalOpen(false)}
-          allCards={cards}
-          activeSet={activeSet}
-          initialTab={modalTab}
-          onSelectSet={(newSet) => {
-            saveActiveSet(newSet);
-            setActiveSet(newSet);
-            setSelectedCategory('ALL');
-            setStatusFilter('ALL');
-            setSearchQuery('');
-            setCurrentIndex(0);
-            setIsFlipped(false);
-          }}
-        />
-      )}
+                    <AnimatePresence mode="wait">
+                      {swipeFeedback ? (
+                        <m.span
+                          key={swipeFeedback.word + swipeFeedback.type}
+                          initial={{ opacity: 0, y: 4 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0 }}
+                          className={`px-2.5 py-0.5 border border-slate-900 font-semibold text-xs ${
+                            swipeFeedback.type === 'MASTERED'
+                              ? 'bg-emerald-400 text-slate-950'
+                              : 'bg-rose-400 text-slate-950'
+                          }`}
+                        >
+                          {swipeFeedback.word}:{' '}
+                          {swipeFeedback.type === 'MASTERED'
+                            ? 'จำแม่นแล้ว'
+                            : 'เก็บไว้ทบทวน'}
+                        </m.span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5">
+                          <img
+                            src="/icons/icon-hud-mana.png"
+                            alt=""
+                            className="w-3.5 h-3.5 [image-rendering:pixelated]"
+                          />
+                          <span>ความยาก</span>
+                          <strong className="font-pixel text-slate-900">
+                            {activeCard.manaCost}/5
+                          </strong>
+                        </span>
+                      )}
+                    </AnimatePresence>
+                  </div>
 
-      {/* 5-Minute Vocab Blitz Game */}
-      {isBlitzGameOpen && activeSet && (
-        <VocabBlitzGame
-          allCards={cards}
-          activeSet={activeSet}
-          onClose={() => setIsBlitzGameOpen(false)}
-        />
-      )}
+                  {/* 3D Spell Card */}
+                  <ThreeDCard
+                    key={activeCard.id + '-' + currentIndex}
+                    card={activeCard}
+                    isFlipped={isFlipped}
+                    onFlip={() => setIsFlipped((prev) => !prev)}
+                    onSpeak={speakText}
+                    dragX={dragX}
+                    rotateZ={rotateZ}
+                    onDragEnd={handleDragEnd}
+                    rightBadgeOpacity={rightBadgeOpacity}
+                    leftBadgeOpacity={leftBadgeOpacity}
+                  />
+
+                  {/* 3 Physical Tactile Control Buttons */}
+                  <div className="grid grid-cols-3 gap-2 sm:gap-3">
+                    <button
+                      type="button"
+                      onClick={() => handleSwipe(false)}
+                      className="min-h-[44px] py-2.5 px-2 sm:px-3 bg-white text-slate-900 border-2 border-slate-900 shadow-arcade hover:bg-rose-50 active:translate-x-[2px] active:translate-y-[2px] active:shadow-arcade-sm transition-all flex items-center justify-between cursor-pointer"
+                    >
+                      <span className="inline-flex items-center gap-1 sm:gap-1.5 font-display font-bold text-[11px] sm:text-xs text-rose-700">
+                        <ArrowLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+                        ทบทวนซ้ำ
+                      </span>
+                      <kbd className="hidden sm:inline-block px-1.5 py-0.5 text-[10px] font-mono bg-slate-100 border border-slate-900">
+                        ←
+                      </kbd>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setIsFlipped((prev) => !prev)}
+                      className="min-h-[44px] py-2.5 px-2 sm:px-3 bg-amber-400 text-slate-950 border-2 border-slate-900 shadow-arcade hover:bg-amber-300 active:translate-x-[2px] active:translate-y-[2px] active:shadow-arcade-sm transition-all flex items-center justify-center sm:justify-between cursor-pointer"
+                    >
+                      <span className="font-display font-bold text-[11px] sm:text-xs truncate">
+                        พลิกดูคำแปล
+                      </span>
+                      <kbd className="hidden sm:inline-block px-1.5 py-0.5 text-[10px] font-mono bg-white border border-slate-900">
+                        SPACE
+                      </kbd>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleSwipe(true)}
+                      className="min-h-[44px] py-2.5 px-2 sm:px-3 bg-emerald-400 text-slate-950 border-2 border-slate-900 shadow-arcade hover:bg-emerald-300 active:translate-x-[2px] active:translate-y-[2px] active:shadow-arcade-sm transition-all flex items-center justify-between cursor-pointer"
+                    >
+                      <span className="inline-flex items-center gap-1 sm:gap-1.5 font-display font-bold text-[11px] sm:text-xs text-slate-950">
+                        จำแม่นแล้ว
+                        <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+                      </span>
+                      <kbd className="hidden sm:inline-block px-1.5 py-0.5 text-[10px] font-mono bg-white border border-slate-900">
+                        →
+                      </kbd>
+                    </button>
+                  </div>
+
+                  {/* Clean Keyboard Shortcuts Helper */}
+                  <p className="text-center text-[11px] text-slate-500 font-sans">
+                    กด <kbd className="px-1 py-0.5 bg-slate-100 border border-slate-400 rounded text-[10px] font-mono">SPACE</kbd> เพื่อพลิกดูคำแปล • กดลูกศร <kbd className="px-1 py-0.5 bg-slate-100 border border-slate-400 rounded text-[10px] font-mono">←</kbd> / <kbd className="px-1 py-0.5 bg-slate-100 border border-slate-400 rounded text-[10px] font-mono">→</kbd> เพื่อปัดการ์ด
+                  </p>
+                </div>
+              ) : (
+                /* Empty state */
+                <div className="bg-[#FFFDF7] border-2 border-slate-900 shadow-arcade p-8 text-center w-full max-w-md space-y-3">
+                  <p className="text-base font-semibold text-slate-800">
+                    ไม่พบคำศัพท์ที่ตรงกับเงื่อนไขการค้นหา
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    ลองเปลี่ยนคำค้นหา หรือเลือกหมวดหมู่อื่นเพื่อฝึกต่อ
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedCategory('ALL');
+                      setStatusFilter('ALL');
+                      setSearchQuery('');
+                      setCurrentIndex(0);
+                    }}
+                    className="mt-3 px-4 py-2 bg-amber-400 text-slate-950 font-display font-bold text-xs border-2 border-slate-900 shadow-arcade-sm"
+                  >
+                    แสดงคำศัพท์ทั้งหมด
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Right Stage: Deck Queue Companion Drawer (5 columns on desktop) */}
+            <div className="lg:col-span-5 bg-[#FFFDF7] border-2 border-slate-900 shadow-arcade p-4 sm:p-5 space-y-3">
+              <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+                <div>
+                  <h3 className="font-bold text-sm text-slate-900">
+                    คิวการ์ดในชุดนี้ ({filteredCards.length.toLocaleString()} คำ)
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    คลิกคำศัพท์เพื่อเปิดดูการ์ดใบนั้นทันที
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setViewMode('DICTIONARY')}
+                  className="text-xs font-semibold text-slate-700 underline hover:text-slate-950"
+                >
+                  เปิดพจนานุกรมเต็ม
+                </button>
+              </div>
+
+              {/* Paginated list of cards in queue (avoids rendering 3,000 DOM elements) */}
+              <div className="divide-y divide-slate-100 min-h-[380px]">
+                {paginatedQueueCards.length === 0 ? (
+                  <div className="py-12 text-center text-xs text-slate-500">
+                    ไม่มีคำศัพท์ในเงื่อนไขนี้
+                  </div>
+                ) : (
+                  paginatedQueueCards.map((item, localIdx) => {
+                    const globalIdx = (queuePage - 1) * QUEUE_PAGE_SIZE + localIdx;
+                    const isCurrent = activeCard && item.id === activeCard.id;
+                    const isMastered = item.progress?.isKnown === true;
+
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => {
+                          setCurrentIndex(globalIdx);
+                          setIsFlipped(false);
+                        }}
+                        className={`w-full text-left py-2.5 px-3 flex items-center justify-between gap-2 transition-colors cursor-pointer ${
+                          isCurrent
+                            ? 'bg-amber-100 border-l-4 border-amber-500 font-medium'
+                            : 'hover:bg-slate-50'
+                        }`}
+                      >
+                        <div className="min-w-0">
+                          <div className="flex items-baseline gap-2">
+                            <span className="font-sans font-bold text-sm text-slate-900">
+                              {item.word}
+                            </span>
+                            <span className="font-mono text-xs text-slate-500">
+                              {item.partOfSpeech}
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-600 truncate">
+                            {item.meaningTh}
+                          </p>
+                        </div>
+
+                        <div className="shrink-0 flex items-center gap-1.5">
+                          {isMastered ? (
+                            <span className="px-2 py-0.5 bg-emerald-400 text-slate-950 font-pixel text-[9px] border border-slate-900">
+                              จำแม่น
+                            </span>
+                          ) : (
+                            <span className="text-[11px] text-slate-500 font-mono">
+                              {item.category}
+                            </span>
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+
+              {/* Queue Pagination Bar */}
+              {totalQueuePages > 1 && (
+                <div className="border-t border-slate-200 pt-3 flex items-center justify-between text-xs">
+                  <span className="text-slate-500">
+                    หน้า {queuePage} / {totalQueuePages}
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      disabled={queuePage <= 1}
+                      onClick={() => setQueuePage((p) => Math.max(1, p - 1))}
+                      className="p-1.5 border border-slate-900 bg-white disabled:opacity-30 disabled:cursor-not-allowed hover:bg-slate-100 cursor-pointer"
+                      title="หน้าก่อนหน้า"
+                    >
+                      <ChevronLeft className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      disabled={queuePage >= totalQueuePages}
+                      onClick={() =>
+                        setQueuePage((p) => Math.min(totalQueuePages, p + 1))
+                      }
+                      className="p-1.5 border border-slate-900 bg-white disabled:opacity-30 disabled:cursor-not-allowed hover:bg-slate-100 cursor-pointer"
+                      title="หน้าถัดไป"
+                    >
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </section>
+        )}
+
+        {/* ==================================================================== */}
+        {/* 3B. DICTIONARY MODE: พจนานุกรมคำศัพท์ธุรกิจ 3,093 คำ จัดหน้าละ 24 คำ */}
+        {/* ==================================================================== */}
+        {viewMode === 'DICTIONARY' && (
+          <section className="bg-[#FFFDF7] border-2 border-slate-900 shadow-arcade p-4 sm:p-6 space-y-5">
+            {/* Header Readout & Pagination Summary */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 pb-3">
+              <div>
+                <h2 className="text-lg font-bold font-thai text-slate-900">
+                  พจนานุกรมคำศัพท์ธุรกิจ TOEIC ({filteredCards.length.toLocaleString()} คำ)
+                </h2>
+                <p className="text-xs sm:text-sm text-slate-600 mt-0.5">
+                  แสดงหน้า {dictPage} จาก {totalDictPages} (คำที่{' '}
+                  {(dictPage - 1) * DICTIONARY_PAGE_SIZE + 1} -{' '}
+                  {Math.min(dictPage * DICTIONARY_PAGE_SIZE, filteredCards.length)} จาก{' '}
+                  {filteredCards.length.toLocaleString()} คำ)
+                </p>
+              </div>
+
+              {/* Quick Jump Buttons */}
+              <div className="flex items-center gap-1.5 text-xs">
+                <button
+                  type="button"
+                  disabled={dictPage <= 1}
+                  onClick={() => setDictPage(1)}
+                  className="px-2.5 py-1 border border-slate-900 bg-white disabled:opacity-30 hover:bg-slate-100 font-medium cursor-pointer"
+                >
+                  หน้าแรก
+                </button>
+                <button
+                  type="button"
+                  disabled={dictPage <= 1}
+                  onClick={() => setDictPage((p) => Math.max(1, p - 1))}
+                  className="p-1.5 border border-slate-900 bg-white disabled:opacity-30 hover:bg-slate-100 cursor-pointer"
+                  title="ก่อนหน้า"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <span className="font-pixel text-xs px-2 text-slate-900">
+                  {dictPage} / {totalDictPages}
+                </span>
+                <button
+                  type="button"
+                  disabled={dictPage >= totalDictPages}
+                  onClick={() => setDictPage((p) => Math.min(totalDictPages, p + 1))}
+                  className="p-1.5 border border-slate-900 bg-white disabled:opacity-30 hover:bg-slate-100 cursor-pointer"
+                  title="ถัดไป"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+                <button
+                  type="button"
+                  disabled={dictPage >= totalDictPages}
+                  onClick={() => setDictPage(totalDictPages)}
+                  className="px-2.5 py-1 border border-slate-900 bg-white disabled:opacity-30 hover:bg-slate-100 font-medium cursor-pointer"
+                >
+                  หน้าสุดท้าย
+                </button>
+              </div>
+            </div>
+
+            {/* Responsive Card Grid (24 cards per page) */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {paginatedDictCards.map((card, localIdx) => {
+                const globalIdx = (dictPage - 1) * DICTIONARY_PAGE_SIZE + localIdx;
+                const isMastered = card.progress?.isKnown === true;
+
+                return (
+                  <div
+                    key={card.id}
+                    className="bg-white border-2 border-slate-900 p-4 shadow-[2px_2px_0px_0px_#0f172a] hover:shadow-[4px_4px_0px_0px_#0f172a] transition-all flex flex-col justify-between gap-3"
+                  >
+                    <div className="space-y-2.5">
+                      {/* Top Bar: Word, Part of Speech, Audio & Category */}
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-baseline gap-2 flex-wrap">
+                          <span className="font-sans text-lg font-bold text-slate-900">
+                            {card.word}
+                          </span>
+                          <span className="font-mono text-xs text-slate-500">
+                            {card.partOfSpeech}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => speakText(card.word)}
+                            className="p-1 bg-slate-100 text-slate-800 border border-slate-900 hover:bg-sky-200 transition-colors cursor-pointer"
+                            title="ฟังเสียงอ่านคำศัพท์"
+                          >
+                            <Volume2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+
+                        <span className="px-2 py-0.5 bg-amber-100 text-slate-800 text-[11px] font-semibold border border-slate-900 shrink-0">
+                          {card.category}
+                        </span>
+                      </div>
+
+                      {/* Thai Translation */}
+                      <p className="text-sm font-semibold text-slate-800 leading-snug">
+                        {card.meaningTh}
+                      </p>
+
+                      {/* Example TOEIC Business Sentence */}
+                      <p className="text-xs text-slate-600 border-l-2 border-slate-300 pl-2.5 leading-relaxed italic">
+                        &ldquo;{card.exampleEn}&rdquo;
+                      </p>
+                    </div>
+
+                    {/* Bottom Action Row */}
+                    <div className="flex items-center justify-between pt-2.5 border-t border-slate-100 text-xs">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCurrentIndex(globalIdx);
+                          setIsFlipped(false);
+                          setViewMode('SWIPE_DECK');
+                        }}
+                        className="text-slate-700 hover:text-slate-950 underline font-medium cursor-pointer"
+                      >
+                        เปิดดูในโหมดการ์ด 3D
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          if (!authUser) {
+                            requireAuth(
+                              undefined,
+                              'กรุณาเข้าสู่ระบบก่อน เพื่อบันทึกสถานะคำศัพท์ที่คุณจำได้แล้ว',
+                            );
+                            return;
+                          }
+                          const nextState = !isMastered;
+                          setCards((prev) =>
+                            prev.map((c) =>
+                              c.id === card.id
+                                ? {
+                                    ...c,
+                                    progress: {
+                                      ...c.progress,
+                                      isKnown: nextState,
+                                      swipeCount:
+                                        (c.progress?.swipeCount ?? 0) + 1,
+                                    },
+                                  }
+                                : c,
+                            ),
+                          );
+                          await recordCardSwipe(card.id, nextState, authUser?.id);
+                          invalidateDashboard(authUser?.id);
+                        }}
+                        className={`inline-flex items-center gap-1 px-2.5 py-1 font-medium border border-slate-900 transition-colors cursor-pointer ${
+                          isMastered
+                            ? 'bg-emerald-400 text-slate-950 font-semibold'
+                            : 'bg-slate-100 text-slate-700 hover:bg-amber-100'
+                        }`}
+                      >
+                        {isMastered ? (
+                          <>
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                            จำแม่นแล้ว
+                          </>
+                        ) : (
+                          <>
+                            <RotateCcw className="w-3.5 h-3.5" />
+                            ทำเครื่องหมายว่าจำได้
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Bottom Pagination Controls */}
+            {totalDictPages > 1 && (
+              <div className="border-t border-slate-200 pt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                <span className="text-slate-600">
+                  แสดง {paginatedDictCards.length} คำ ในหน้านี้ • รวมทั้งหมด{' '}
+                  {filteredCards.length.toLocaleString()} คำ
+                </span>
+
+                <div className="flex items-center gap-1.5 self-center sm:self-auto">
+                  <button
+                    type="button"
+                    disabled={dictPage <= 1}
+                    onClick={() => {
+                      setDictPage(1);
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
+                    className="px-2.5 py-1.5 border border-slate-900 bg-white disabled:opacity-30 hover:bg-slate-100 font-medium cursor-pointer"
+                  >
+                    หน้าแรก
+                  </button>
+                  <button
+                    type="button"
+                    disabled={dictPage <= 1}
+                    onClick={() => {
+                      setDictPage((p) => Math.max(1, p - 1));
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
+                    className="px-3 py-1.5 border border-slate-900 bg-white disabled:opacity-30 hover:bg-slate-100 font-medium flex items-center gap-1 cursor-pointer"
+                  >
+                    <ChevronLeft className="w-3.5 h-3.5" />
+                    ก่อนหน้า
+                  </button>
+                  <span className="font-pixel text-xs px-2 text-slate-900">
+                    {dictPage} / {totalDictPages}
+                  </span>
+                  <button
+                    type="button"
+                    disabled={dictPage >= totalDictPages}
+                    onClick={() => {
+                      setDictPage((p) => Math.min(totalDictPages, p + 1));
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
+                    className="px-3 py-1.5 border border-slate-900 bg-white disabled:opacity-30 hover:bg-slate-100 font-medium flex items-center gap-1 cursor-pointer"
+                  >
+                    ถัดไป
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    disabled={dictPage >= totalDictPages}
+                    onClick={() => {
+                      setDictPage(totalDictPages);
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
+                    className="px-2.5 py-1.5 border border-slate-900 bg-white disabled:opacity-30 hover:bg-slate-100 font-medium cursor-pointer"
+                  >
+                    หน้าสุดท้าย
+                  </button>
+                </div>
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* Deck Selector Modal */}
+        {isSetModalOpen && activeSet && (
+          <CardSetSelectorModal
+            isOpen={isSetModalOpen}
+            onClose={() => setIsSetModalOpen(false)}
+            allCards={cards}
+            activeSet={activeSet}
+            initialTab={modalTab}
+            onSelectSet={(newSet) => {
+              saveActiveSet(newSet);
+              setActiveSet(newSet);
+              setSelectedCategory('ALL');
+              setStatusFilter('ALL');
+              setSearchQuery('');
+              setCurrentIndex(0);
+              setIsFlipped(false);
+              setUseActiveDeckOnly(true);
+            }}
+          />
+        )}
+
+        {/* 5-Minute Vocab Blitz Game */}
+        {isBlitzGameOpen && activeSet && (
+          <VocabBlitzGame
+            allCards={cards}
+            activeSet={activeSet}
+            onClose={() => setIsBlitzGameOpen(false)}
+          />
+        )}
       </div>
     </LazyMotion>
   );
