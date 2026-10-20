@@ -35,10 +35,12 @@ import {
   FlashcardItem,
   TOEIC_CATEGORIES,
 } from '@/data/toeic-dictionary';
-import { fetchFlashcards, recordCardSwipe } from '@/lib/api';
+import { recordCardSwipe } from '@/lib/api';
+import { useFlashcards, useCardCraftQueryHelpers } from '@/hooks/useCardCraftQueries';
 import CardSetSelectorModal from '@/components/CardSetSelectorModal';
 import VocabBlitzGame from '@/components/VocabBlitzGame';
 import { CardSet, getStoredActiveSet, saveActiveSet } from '@/utils/card-sets';
+import { mergeServerFlashcardsWithLocalSwipes } from '@/utils/flashcard-sync.util';
 import { useAuth } from '@/context/AuthContext';
 import ThreeDCard from '@/components/ThreeDCard';
 import { speakEnglish } from '@/utils/speech-synthesis.util';
@@ -67,19 +69,35 @@ export default function FlashcardsPage() {
     word: string;
   } | null>(null);
 
+  // บันทึกการ์ดที่ถูกปัดในเซสชันนี้ เพื่อป้องกัน race condition ข้อมูลช้าจาก Backend เขียนทับ
+  const locallySwipedCardsRef = React.useRef<
+    Map<string, { isKnown: boolean; swipeCount: number }>
+  >(new Map());
+
   const dragX = useMotionValue(0);
   const rotateZ = useTransform(dragX, [-240, 0, 240], [-10, 0, 10]);
   const rightBadgeOpacity = useTransform(dragX, [25, 110], [0, 1]);
   const leftBadgeOpacity = useTransform(dragX, [-110, -25], [1, 0]);
 
+  const { data: flashcardsData } = useFlashcards(undefined, authUser?.id);
+  const { invalidateDashboard } = useCardCraftQueryHelpers();
+
   useEffect(() => {
-    fetchFlashcards(undefined, authUser?.id).then((data) => {
-      setCards(data);
-      const stored = getStoredActiveSet(data);
-      setActiveSet(stored);
-      setCurrentIndex(0);
-    });
-  }, [authUser?.id]);
+    if (flashcardsData && flashcardsData.length > 0) {
+      setCards((prev) => {
+        if (prev.length === 0) {
+          const stored = getStoredActiveSet(flashcardsData);
+          setActiveSet(stored);
+          return flashcardsData;
+        }
+        return mergeServerFlashcardsWithLocalSwipes(
+          flashcardsData,
+          prev,
+          locallySwipedCardsRef.current,
+        );
+      });
+    }
+  }, [flashcardsData]);
 
   // Real-time synchronization for active card set updates across components & tabs
   useEffect(() => {
@@ -195,6 +213,12 @@ export default function FlashcardsPage() {
       setIsFlipped(false);
       dragX.set(0);
 
+      const nextSwipeCount = (swipedCard.progress?.swipeCount ?? 0) + 1;
+      locallySwipedCardsRef.current.set(swipedCard.id, {
+        isKnown,
+        swipeCount: nextSwipeCount,
+      });
+
       setCards((prev) =>
         prev.map((c) =>
           c.id === swipedCard.id
@@ -202,7 +226,7 @@ export default function FlashcardsPage() {
                 ...c,
                 progress: {
                   isKnown,
-                  swipeCount: (c.progress?.swipeCount ?? 0) + 1,
+                  swipeCount: nextSwipeCount,
                 },
               }
             : c,
@@ -211,6 +235,7 @@ export default function FlashcardsPage() {
 
       setCurrentIndex((prev) => prev + 1);
       await recordCardSwipe(swipedCard.id, isKnown, authUser?.id);
+      invalidateDashboard(authUser?.id);
 
       setTimeout(() => {
         setSwipeFeedback(null);

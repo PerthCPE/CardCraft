@@ -13,10 +13,11 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
-import { ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { QuestionsService } from './questions.service';
 import { CreateQuestionDto } from './dto/create-question.dto';
 import { UpdateQuestionDto } from './dto/update-question.dto';
+import { QueryQuestionDto } from './dto/query-question.dto';
 
 @ApiTags('Questions (TOEIC Bank & CRUD)')
 @Controller('questions')
@@ -26,17 +27,10 @@ export class QuestionsController {
   @Get()
   @ApiOperation({
     summary:
-      'ดึงคลังข้อสอบ TOEIC ทั้งหมด หรือกรองตาม section (LISTENING/READING) และ part (1, 2, 5, 7)',
+      'ดึงคลังข้อสอบ TOEIC ทั้งหมด หรือกรองตาม section (LISTENING/READING) และ part (1 ถึง 7)',
   })
-  @ApiQuery({
-    name: 'section',
-    required: false,
-    enum: ['LISTENING', 'READING'],
-  })
-  @ApiQuery({ name: 'part', required: false, example: 5 })
-  findAll(@Query('section') section?: string, @Query('part') part?: string) {
-    const parsedPart = part ? parseInt(part, 10) : undefined;
-    return this.questionsService.findAll(section, parsedPart);
+  findAll(@Query() query: QueryQuestionDto) {
+    return this.questionsService.findAll(query.section, query.part);
   }
 
   @Get(':id')

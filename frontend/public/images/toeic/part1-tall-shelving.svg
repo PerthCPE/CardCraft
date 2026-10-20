@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" fill="none">
+  <!-- CardCraft Neo-Brutalist Frame -->
+  <rect width="640" height="360" fill="#F8F5EC"/>
+  <rect x="16" y="16" width="608" height="328" fill="#E2E8F0" stroke="#0F172A" stroke-width="5"/>
+  <rect x="24" y="24" width="592" height="36" fill="#0F172A"/>
+  <text x="36" y="47" fill="#FDE047" font-family="monospace" font-weight="bold" font-size="14" letter-spacing="1">TOEIC PART 1 • AISLE FLANKED BY SHELVING</text>
+  <!-- Scene Elements -->
+  
+    <!-- Symmetrical Shelves Aisle -->
+    <polygon points="60,80 180,140 180,310 60,310" fill="#CBD5E1" stroke="#0F172A" stroke-width="4"/>
+    <polygon points="580,80 460,140 460,310 580,310" fill="#CBD5E1" stroke="#0F172A" stroke-width="4"/>
+    <polygon points="180,140 460,140 520,310 120,310" fill="#F1F5F9" stroke="#0F172A" stroke-width="3"/>
+  
+</svg>

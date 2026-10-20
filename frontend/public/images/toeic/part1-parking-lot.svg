@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" fill="none">
+  <!-- CardCraft Neo-Brutalist Frame -->
+  <rect width="640" height="360" fill="#F8F5EC"/>
+  <rect x="16" y="16" width="608" height="328" fill="#E2E8F0" stroke="#0F172A" stroke-width="5"/>
+  <rect x="24" y="24" width="592" height="36" fill="#0F172A"/>
+  <text x="36" y="47" fill="#FDE047" font-family="monospace" font-weight="bold" font-size="14" letter-spacing="1">TOEIC PART 1 • VEHICLES IN PARKING SPACES</text>
+  <!-- Scene Elements -->
+  
+    <rect x="60" y="80" width="520" height="230" fill="#475569" stroke="#0F172A" stroke-width="4"/>
+    <!-- White Parking Lines -->
+    <line x1="170" y1="90" x2="170" y2="290" stroke="#FFFFFF" stroke-width="6"/>
+    <line x1="280" y1="90" x2="280" y2="290" stroke="#FFFFFF" stroke-width="6"/>
+    <line x1="390" y1="90" x2="390" y2="290" stroke="#FFFFFF" stroke-width="6"/>
+    <line x1="500" y1="90" x2="500" y2="290" stroke="#FFFFFF" stroke-width="6"/>
+    <!-- Parked Cars -->
+    <rect x="90" y="130" width="65" height="120" rx="12" fill="#3B82F6" stroke="#0F172A" stroke-width="3"/>
+    <rect x="200" y="125" width="65" height="125" rx="12" fill="#EF4444" stroke="#0F172A" stroke-width="3"/>
+    <rect x="310" y="135" width="65" height="115" rx="12" fill="#F8FAFC" stroke="#0F172A" stroke-width="3"/>
+    <rect x="420" y="120" width="65" height="130" rx="12" fill="#10B981" stroke="#0F172A" stroke-width="3"/>
+  
+</svg>

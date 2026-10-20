@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" fill="none">
+  <!-- CardCraft Neo-Brutalist Frame -->
+  <rect width="640" height="360" fill="#F8F5EC"/>
+  <rect x="16" y="16" width="608" height="328" fill="#E2E8F0" stroke="#0F172A" stroke-width="5"/>
+  <rect x="24" y="24" width="592" height="36" fill="#0F172A"/>
+  <text x="36" y="47" fill="#FDE047" font-family="monospace" font-weight="bold" font-size="14" letter-spacing="1">TOEIC PART 1 • PATIO UMBRELLAS SHADE</text>
+  <!-- Scene Elements -->
+  
+    <!-- Large Canvas Umbrellas -->
+    <polygon points="200,90 80,170 320,170" fill="#F8FAFC" stroke="#0F172A" stroke-width="4"/>
+    <line x1="200" y1="170" x2="200" y2="280" stroke="#0F172A" stroke-width="6"/>
+    <polygon points="440,90 320,170 560,170" fill="#F8FAFC" stroke="#0F172A" stroke-width="4"/>
+    <line x1="440" y1="170" x2="440" y2="280" stroke="#0F172A" stroke-width="6"/>
+  
+</svg>

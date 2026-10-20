@@ -33,12 +33,16 @@ import {
 } from 'lucide-react';
 import {
   DashboardSummaryResponse,
-  fetchDashboardSummary,
-  fetchPartSkillEstimates,
   PartSkillEstimatesResponse,
   PartSkillEstimateItem,
   updateHeroProfile,
 } from '@/lib/api';
+import {
+  useDashboardSummary,
+  usePartSkillEstimates,
+  useCardCraftQueryHelpers,
+  getInitialGuestDashboard,
+} from '@/hooks/useCardCraftQueries';
 import { PixelCharacterAvatar } from '@/components/PixelCharacterAvatar';
 import {
   getCharacterEvolution,
@@ -51,18 +55,14 @@ const TARGET_GOAL_OPTIONS = [600, 700, 800, 900];
 
 export default function DashboardPage() {
   const { user: authUser, refreshUser, openAuthModal } = useAuth();
-  const [dashboard, setDashboard] = useState<DashboardSummaryResponse | null>(
-    null,
-  );
-  const [readinessForecast, setReadinessForecast] =
-    useState<PartSkillEstimatesResponse | null>(null);
+  const { queryClient } = useCardCraftQueryHelpers();
+  const { data: dashboardData } = useDashboardSummary(authUser?.id);
+  const { data: readinessForecast } = usePartSkillEstimates(authUser?.id);
+
   const [guestTargetScore, setGuestTargetScore] = useState<number>(700);
   const [isUpdatingTarget, setIsUpdatingTarget] = useState(false);
 
-  useEffect(() => {
-    fetchDashboardSummary(authUser?.id).then(setDashboard);
-    fetchPartSkillEstimates(authUser?.id).then(setReadinessForecast);
-  }, [authUser?.id]);
+  const dashboard: DashboardSummaryResponse = dashboardData || getInitialGuestDashboard();
 
   const currentTargetScore =
     authUser?.targetScore || dashboard?.user?.targetScore || guestTargetScore;
@@ -78,11 +78,15 @@ export default function DashboardPage() {
           authUser.id,
         );
         const currentScore = updated.user.currentEstimatedScore;
-        setDashboard({
+        const newDashboard: DashboardSummaryResponse = {
           ...dashboard,
           user: updated.user,
           evolution: getCharacterEvolution(currentScore, newTarget),
-        });
+        };
+        queryClient.setQueryData(
+          ['dashboard-summary', authUser.id],
+          newDashboard,
+        );
         await refreshUser();
       } catch {
         // ignore
@@ -90,12 +94,16 @@ export default function DashboardPage() {
         setIsUpdatingTarget(false);
       }
     } else {
-      // โหมด Guest: อัปเดต state ในเครื่อง
+      // โหมด Guest: อัปเดต state ในเครื่องและ TanStack Cache
       setGuestTargetScore(newTarget);
-      setDashboard({
+      const newDashboard: DashboardSummaryResponse = {
         ...dashboard,
         evolution: getCharacterEvolution(0, newTarget),
-      });
+      };
+      queryClient.setQueryData(
+        ['dashboard-summary', 'guest'],
+        newDashboard,
+      );
     }
   };
 

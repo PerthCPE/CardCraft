@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" fill="none">
+  <!-- CardCraft Neo-Brutalist Frame -->
+  <rect width="640" height="360" fill="#F8F5EC"/>
+  <rect x="16" y="16" width="608" height="328" fill="#E2E8F0" stroke="#0F172A" stroke-width="5"/>
+  <rect x="24" y="24" width="592" height="36" fill="#0F172A"/>
+  <text x="36" y="47" fill="#FDE047" font-family="monospace" font-weight="bold" font-size="14" letter-spacing="1">TOEIC PART 1 • TWO HARD HAT WEARERS</text>
+  <!-- Scene Elements -->
+  
+    <!-- Worker 1 -->
+    <path d="M210 130 A30 30 0 0 1 270 130 Z" fill="#FACC15" stroke="#0F172A" stroke-width="4"/>
+    <circle cx="240" cy="160" r="22" fill="#FDE68A" stroke="#0F172A" stroke-width="3"/>
+    <path d="M200 240 C200 195 280 195 280 240 Z" fill="#3B82F6" stroke="#0F172A" stroke-width="4"/>
+    <!-- Worker 2 -->
+    <path d="M370 130 A30 30 0 0 1 430 130 Z" fill="#FFFFFF" stroke="#0F172A" stroke-width="4"/>
+    <circle cx="400" cy="160" r="22" fill="#FDE68A" stroke="#0F172A" stroke-width="3"/>
+    <path d="M360 240 C360 195 440 195 440 240 Z" fill="#10B981" stroke="#0F172A" stroke-width="4"/>
+  
+</svg>

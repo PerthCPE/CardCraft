@@ -35,14 +35,17 @@ import {
   X,
   Zap,
 } from 'lucide-react';
-import { QuestionItem } from '@/data/toeic-dictionary';
+import { QuestionItem, TOEIC_INITIAL_QUESTIONS } from '@/data/toeic-dictionary';
 import {
-  fetchQuestions,
   submitExamAttempt,
   SubmitExamResponse,
-  fetchDashboardSummary,
   DashboardSummaryResponse,
 } from '@/lib/api';
+import {
+  useQuestions,
+  useDashboardSummary,
+  useCardCraftQueryHelpers,
+} from '@/hooks/useCardCraftQueries';
 import { PixelCharacterAvatar } from '@/components/PixelCharacterAvatar';
 import RealTimeExamModal from '@/components/RealTimeExamModal';
 import { useAuth } from '@/context/AuthContext';
@@ -112,12 +115,14 @@ const PACKAGE_DIFFICULTY_META: Record<
 
 export default function BossBattleMockTestPage() {
   const { user: authUser, requireAuth, openAuthModal, refreshUser } = useAuth();
+  const { invalidateDashboard } = useCardCraftQueryHelpers();
 
-  // Raw question bank from backend/local
-  const [rawQuestions, setRawQuestions] = useState<QuestionItem[]>([]);
-  const [dashboard, setDashboard] = useState<DashboardSummaryResponse | null>(
-    null,
-  );
+  const { data: questionsData } = useQuestions();
+  const { data: dashboardData } = useDashboardSummary(authUser?.id);
+
+  // Raw question bank from TanStack Query with instant fallback
+  const rawQuestions: QuestionItem[] = questionsData || TOEIC_INITIAL_QUESTIONS;
+  const dashboard: DashboardSummaryResponse | null = dashboardData || null;
 
   // Selection Lobby & Configuration State
   const [selectedPackage, setSelectedPackage] =
@@ -152,14 +157,12 @@ export default function BossBattleMockTestPage() {
   const [isRealTimeMultiPartOpen, setIsRealTimeMultiPartOpen] =
     useState<boolean>(false);
 
-  // Fetch Questions and Dashboard Profile
+  // Speech cleanup on unmount
   useEffect(() => {
-    fetchQuestions().then(setRawQuestions);
-    fetchDashboardSummary(authUser?.id).then(setDashboard);
     return () => {
       cancelSpeech();
     };
-  }, [authUser?.id]);
+  }, []);
 
   // Exam Countdown Timer
   useEffect(() => {
@@ -325,6 +328,7 @@ export default function BossBattleMockTestPage() {
 
     // Refresh user context to sync updated official score and avatar
     await refreshUser();
+    invalidateDashboard(authUser?.id);
   };
 
   // Audio player with TTS rate 0.82

@@ -29,6 +29,27 @@ import {
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
+// ระยะเวลา Timeout สำหรับการเชื่อมต่อ Backend (50 วินาที เพื่อรองรับ Cold Start บน Free Tier)
+export const DEFAULT_REQUEST_TIMEOUT_MS = 50000;
+
+export async function fetchWithTimeout(
+  url: string,
+  options: RequestInit = {},
+  timeoutMs = DEFAULT_REQUEST_TIMEOUT_MS,
+): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, {
+      ...options,
+      signal: options.signal || controller.signal,
+    });
+    return res;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export interface HeroUserProfile {
   id: string;
   username?: string;
@@ -208,9 +229,7 @@ export async function fetchDashboardSummary(
 ): Promise<DashboardSummaryResponse> {
   try {
     const query = userId && userId !== 'guest' ? `?userId=${encodeURIComponent(userId)}` : '';
-    const res = await fetch(`${API_BASE_URL}/users/dashboard${query}`, {
-      cache: 'no-store',
-    });
+    const res = await fetchWithTimeout(`${API_BASE_URL}/users/dashboard${query}`);
     if (!res.ok) throw new Error('Backend not ok');
     const data = await res.json();
     return {
@@ -277,9 +296,7 @@ export async function fetchFlashcards(
     if (filter && filter !== 'ALL') params.set('filter', filter);
     const qs = params.toString() ? `?${params.toString()}` : '';
 
-    const res = await fetch(`${API_BASE_URL}/flashcards${qs}`, {
-      cache: 'no-store',
-    });
+    const res = await fetchWithTimeout(`${API_BASE_URL}/flashcards${qs}`);
     if (!res.ok) throw new Error('Backend fetchFlashcards failed');
     const data: FlashcardItem[] = await res.json();
     return data;
@@ -356,23 +373,22 @@ export async function fetchQuestions(
     if (part) params.set('part', String(part));
     const qs = params.toString() ? `?${params.toString()}` : '';
 
-    const res = await fetch(`${API_BASE_URL}/questions${qs}`, {
-      cache: 'no-store',
-    });
+    const res = await fetchWithTimeout(`${API_BASE_URL}/questions${qs}`);
     if (!res.ok) throw new Error('Backend fetchQuestions failed');
     const backendData: QuestionItem[] = await res.json();
     if (Array.isArray(backendData) && backendData.length > 0) {
-      if (part) {
-        const matching = backendData.filter((q) => q.part === part);
-        if (matching.length > 0) return matching;
-        return TOEIC_INITIAL_QUESTIONS.filter((q) => q.part === part);
+      // ผสานคลังข้อสอบ 484 ข้อเต็มเสมอ โดยอิง ID เป็นหลัก ป้องกันข้อสอบขาดหรือวนซ้ำ
+      const questionMap = new Map<string, QuestionItem>();
+      TOEIC_INITIAL_QUESTIONS.forEach((q) => questionMap.set(q.id, q));
+      backendData.forEach((q) => questionMap.set(q.id, q));
+      let merged = Array.from(questionMap.values());
+      if (section && section !== 'ALL') {
+        merged = merged.filter((q) => q.section === section);
       }
-      // Guarantee all 7 parts are available even if backend DB was seeded before Parts 3, 4, 6 were added
-      const backendParts = new Set(backendData.map((q) => q.part));
-      const missingPartsFallback = TOEIC_INITIAL_QUESTIONS.filter(
-        (q) => !backendParts.has(q.part),
-      );
-      return [...backendData, ...missingPartsFallback];
+      if (part) {
+        merged = merged.filter((q) => q.part === part);
+      }
+      return merged;
     }
     return TOEIC_INITIAL_QUESTIONS;
   } catch {
@@ -594,9 +610,8 @@ export async function fetchPartSkillEstimates(
 ): Promise<PartSkillEstimatesResponse> {
   try {
     if (!userId || userId === 'guest') throw new Error('Guest user');
-    const res = await fetch(
+    const res = await fetchWithTimeout(
       `${API_BASE_URL}/exams/part-estimates?userId=${encodeURIComponent(userId)}`,
-      { cache: 'no-store' },
     );
     if (!res.ok) throw new Error('Backend fetchPartSkillEstimates failed');
     return await res.json();
@@ -714,7 +729,7 @@ export async function fetchErrorLogs(
     if (part) params.set('part', String(part));
     if (errorType && errorType !== 'ALL') params.set('errorType', errorType);
 
-    const res = await fetch(`${API_BASE_URL}/exams/error-logs?${params.toString()}`, {
+    const res = await fetchWithTimeout(`${API_BASE_URL}/exams/error-logs?${params.toString()}`, {
       cache: 'no-store',
     });
     if (!res.ok) throw new Error('fetchErrorLogs failed');
@@ -728,7 +743,7 @@ export async function fetchWeaknessAnalytics(
   userId: string,
 ): Promise<WeaknessAnalyticsResponse> {
   try {
-    const res = await fetch(
+    const res = await fetchWithTimeout(
       `${API_BASE_URL}/exams/weakness-analytics?userId=${encodeURIComponent(userId)}`,
       { cache: 'no-store' },
     );

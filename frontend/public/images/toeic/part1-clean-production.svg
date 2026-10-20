@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" fill="none">
+  <!-- CardCraft Neo-Brutalist Frame -->
+  <rect width="640" height="360" fill="#F8F5EC"/>
+  <rect x="16" y="16" width="608" height="328" fill="#E2E8F0" stroke="#0F172A" stroke-width="5"/>
+  <rect x="24" y="24" width="592" height="36" fill="#0F172A"/>
+  <text x="36" y="47" fill="#FDE047" font-family="monospace" font-weight="bold" font-size="14" letter-spacing="1">TOEIC PART 1 • CLEAN ORDERLY PRODUCTION FLOOR</text>
+  <!-- Scene Elements -->
+  
+    <polygon points="60,160 580,160 620,310 20,310" fill="#E2E8F0" stroke="#0F172A" stroke-width="4"/>
+    <line x1="320" y1="160" x2="320" y2="310" stroke="#FACC15" stroke-dasharray="16 12" stroke-width="6"/>
+  
+</svg>

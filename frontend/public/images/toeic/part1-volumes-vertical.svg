@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" fill="none">
+  <!-- CardCraft Neo-Brutalist Frame -->
+  <rect width="640" height="360" fill="#F8F5EC"/>
+  <rect x="16" y="16" width="608" height="328" fill="#E2E8F0" stroke="#0F172A" stroke-width="5"/>
+  <rect x="24" y="24" width="592" height="36" fill="#0F172A"/>
+  <text x="36" y="47" fill="#FDE047" font-family="monospace" font-weight="bold" font-size="14" letter-spacing="1">TOEIC PART 1 • VOLUMES ORGANIZED VERTICALLY</text>
+  <!-- Scene Elements -->
+  
+    <rect x="80" y="120" width="480" height="170" fill="#92400E" stroke="#0F172A" stroke-width="4"/>
+    <!-- Vertical Book Spines -->
+    <rect x="120" y="140" width="28" height="140" fill="#DC2626" stroke="#0F172A" stroke-width="3"/>
+    <rect x="152" y="135" width="22" height="145" fill="#2563EB" stroke="#0F172A" stroke-width="3"/>
+    <rect x="178" y="142" width="32" height="138" fill="#16A34A" stroke="#0F172A" stroke-width="3"/>
+    <rect x="214" y="130" width="26" height="150" fill="#F59E0B" stroke="#0F172A" stroke-width="3"/>
+    <rect x="244" y="145" width="30" height="135" fill="#8B5CF6" stroke="#0F172A" stroke-width="3"/>
+  
+</svg>

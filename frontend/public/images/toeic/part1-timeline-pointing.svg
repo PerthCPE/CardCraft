@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" fill="none">
+  <!-- CardCraft Neo-Brutalist Frame -->
+  <rect width="640" height="360" fill="#F8F5EC"/>
+  <rect x="16" y="16" width="608" height="328" fill="#E2E8F0" stroke="#0F172A" stroke-width="5"/>
+  <rect x="24" y="24" width="592" height="36" fill="#0F172A"/>
+  <text x="36" y="47" fill="#FDE047" font-family="monospace" font-weight="bold" font-size="14" letter-spacing="1">TOEIC PART 1 • PROJECT TIMELINE REVIEW</text>
+  <!-- Scene Elements -->
+  
+    <rect x="100" y="80" width="440" height="200" fill="#F8FAFC" stroke="#0F172A" stroke-width="4"/>
+    <!-- Timeline milestones -->
+    <line x1="140" y1="160" x2="500" y2="160" stroke="#0F172A" stroke-width="4"/>
+    <circle cx="180" cy="160" r="14" fill="#3B82F6" stroke="#0F172A" stroke-width="3"/>
+    <circle cx="280" cy="160" r="14" fill="#10B981" stroke="#0F172A" stroke-width="3"/>
+    <circle cx="380" cy="160" r="14" fill="#F59E0B" stroke="#0F172A" stroke-width="3"/>
+    <circle cx="470" cy="160" r="14" fill="#EC4899" stroke="#0F172A" stroke-width="3"/>
+  
+</svg>

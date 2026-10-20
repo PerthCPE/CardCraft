@@ -41,8 +41,10 @@ import {
   QuestionItem,
   TOEIC_CATEGORIES,
   TOEIC_INITIAL_QUESTIONS,
+  TOEIC_DICTIONARY_CARDS,
 } from '@/data/toeic-dictionary';
-import { fetchFlashcards, fetchQuestions, submitPracticePart } from '@/lib/api';
+import { submitPracticePart } from '@/lib/api';
+import { useQuestions, useFlashcards, useCardCraftQueryHelpers } from '@/hooks/useCardCraftQueries';
 import { useAuth } from '@/context/AuthContext';
 import {
   buildShuffledQuestionsMap,
@@ -218,9 +220,8 @@ const VOCAB_GAMES_META: VocabGameMetadata[] = [
 
 export default function PracticeHubPage() {
   const { user } = useAuth();
+  const { invalidateDashboard, prefetchQuestions, prefetchFlashcards } = useCardCraftQueryHelpers();
   const [activeTab, setActiveTab] = useState<HubTab>('PARTS');
-  const [allQuestions, setAllQuestions] = useState<QuestionItem[]>([]);
-  const [allCards, setAllCards] = useState<FlashcardItem[]>([]);
 
   // Navigation View State
   const [viewState, setViewState] = useState<
@@ -259,10 +260,31 @@ export default function PracticeHubPage() {
     timeSpentSeconds: number;
   } | null>(null);
 
-  useEffect(() => {
-    fetchQuestions().then(setAllQuestions);
-    fetchFlashcards().then(setAllCards);
-  }, []);
+  // Lazy & On-Demand Data Loading:
+  // 1. คำถาม: ไม่โหลดตอนเปิดหน้า Hub เด็ดขาด! จะโหลดเฉพาะ Part ที่เลือกเมื่อเข้าสู่ Config หรือเริ่มฝึก
+  const isPartDrillActive =
+    viewState === 'CONFIG_PART' ||
+    viewState === 'DRILL_ACTIVE' ||
+    viewState === 'DRILL_RESULT';
+
+  const { data: partQuestionsData } = useQuestions(configuredPart, undefined, {
+    enabled: isPartDrillActive,
+  });
+
+  // 2. คำศัพท์: ไม่โหลดตอนเปิดหน้า Hub แต่จะโหลดเมื่อสลับมาแท็บ Vocab Arcade หรือเริ่มเล่นเกม
+  const isVocabGameActive =
+    activeTab === 'VOCAB_ARCADE' ||
+    viewState === 'CONFIG_GAME' ||
+    viewState === 'GAME_ACTIVE';
+
+  const { data: flashcardsData } = useFlashcards(
+    undefined,
+    undefined,
+    undefined,
+    { enabled: isVocabGameActive },
+  );
+
+  const allCards = flashcardsData || TOEIC_DICTIONARY_CARDS;
 
   // --------------------------------------------------------------------------
   // Pre-Game Configuration Handlers
@@ -283,22 +305,30 @@ export default function PracticeHubPage() {
   };
 
   const startPartDrill = () => {
-    // Filter questions for the selected part with guaranteed fallback to static pool
-    let pool = allQuestions.filter((q) => q.part === configuredPart);
+    // ดึงคลังข้อสอบเฉพาะ Part ที่เลือก (On-Demand) พร้อม Fallback อัตโนมัติ
+    let pool =
+      partQuestionsData && partQuestionsData.length > 0
+        ? partQuestionsData.filter((q) => q.part === configuredPart)
+        : TOEIC_INITIAL_QUESTIONS.filter((q) => q.part === configuredPart);
+
     if (pool.length === 0) {
       pool = TOEIC_INITIAL_QUESTIONS.filter((q) => q.part === configuredPart);
     }
     if (pool.length === 0) return;
 
-    // Shuffle pool and slice or duplicate if needed to reach partQuestionCount
+    // Shuffle pool and slice unique questions for the drill
     const shuffled = [...pool].sort(() => Math.random() - 0.5);
     const chosen: QuestionItem[] = [];
-    for (let i = 0; i < partQuestionCount; i++) {
-      const item = shuffled[i % shuffled.length];
-      chosen.push({
-        ...item,
-        id: i >= shuffled.length ? `${item.id}-drill-${i}` : item.id,
-      });
+    if (partQuestionCount <= shuffled.length) {
+      chosen.push(...shuffled.slice(0, partQuestionCount));
+    } else {
+      for (let i = 0; i < partQuestionCount; i++) {
+        const item = shuffled[i % shuffled.length];
+        chosen.push({
+          ...item,
+          id: i >= shuffled.length ? `${item.id}-drill-${i}` : item.id,
+        });
+      }
     }
 
     setDrillQuestions(chosen);
@@ -397,6 +427,7 @@ export default function PracticeHubPage() {
       timeLimitSeconds: partTimeLimitMinutes * 60,
       timeSpentSeconds: timeSpent,
     });
+    invalidateDashboard(user?.id);
 
     setViewState('DRILL_RESULT');
   };
@@ -441,6 +472,8 @@ export default function PracticeHubPage() {
             <button
               type="button"
               onClick={() => setActiveTab('VOCAB_ARCADE')}
+              onMouseEnter={() => prefetchFlashcards()}
+              onFocus={() => prefetchFlashcards()}
               className={`inline-flex items-center gap-2 px-4 py-2 font-display font-bold text-sm border-2 border-slate-950 transition-all ${
                 activeTab === 'VOCAB_ARCADE'
                   ? 'bg-sky-400 text-slate-950 shadow-[2px_2px_0px_0px_#020617]'
@@ -473,6 +506,8 @@ export default function PracticeHubPage() {
                 return (
                   <div
                     key={meta.part}
+                    onMouseEnter={() => prefetchQuestions(meta.part)}
+                    onFocus={() => prefetchQuestions(meta.part)}
                     className="bg-[#FFFDF7] border-2 border-slate-900 shadow-[4px_4px_0px_0px_#0f172a] p-5 flex flex-col justify-between hover:translate-x-[-1px] hover:translate-y-[-1px] transition-all"
                   >
                     <div className="space-y-3">
@@ -514,6 +549,8 @@ export default function PracticeHubPage() {
                       <button
                         type="button"
                         onClick={() => openPartConfig(meta.part)}
+                        onMouseEnter={() => prefetchQuestions(meta.part)}
+                        onFocus={() => prefetchQuestions(meta.part)}
                         className="w-full inline-flex items-center justify-center gap-2 py-2.5 bg-amber-400 hover:bg-amber-300 text-slate-950 font-display font-bold text-xs border-2 border-slate-900 shadow-arcade-sm active:translate-x-[1px] active:translate-y-[1px]"
                       >
                         <Sliders className="w-3.5 h-3.5" />
