@@ -38,7 +38,7 @@ import { useAuth } from '@/context/AuthContext';
 type DrillPart = 1 | 2 | 5 | 7;
 
 export default function PracticeDrillsPage() {
-  const { user: authUser } = useAuth();
+  const { user: authUser, requireAuth } = useAuth();
   const [questions, setQuestions] = useState<QuestionItem[]>([]);
   const [cards, setCards] = useState<FlashcardItem[]>([]);
   const [activeSet, setActiveSet] = useState<CardSet | null>(null);
@@ -149,13 +149,20 @@ export default function PracticeDrillsPage() {
 
   const handleSelectOption = useCallback(
     (question: QuestionItem, optionKey: 'A' | 'B' | 'C' | 'D') => {
+      if (!authUser) {
+        requireAuth(
+          undefined,
+          'กรุณาเข้าสู่ระบบก่อน เพื่อเริ่มทำแบบฝึกหัดและตรวจคำตอบ',
+        );
+        return;
+      }
       if (question.part === 2 && optionKey === 'D') return;
       setSelectedAnswers((prev) => ({
         ...prev,
         [question.id]: optionKey,
       }));
     },
-    [],
+    [authUser, requireAuth],
   );
 
   useEffect(() => {
@@ -239,7 +246,12 @@ export default function PracticeDrillsPage() {
             </div>
             <button
               type="button"
-              onClick={() => setRealTimeExamType('PART_5_REALTIME')}
+              onClick={() =>
+                requireAuth(
+                  () => setRealTimeExamType('PART_5_REALTIME'),
+                  'กรุณาเข้าสู่ระบบก่อน เพื่อเริ่มทำข้อสอบ Part 5 Real-Time และบันทึกคะแนน',
+                )
+              }
               className="w-full py-2 bg-amber-400 hover:bg-amber-300 text-slate-900 border-2 border-slate-900 font-display font-bold text-xs shadow-pixel-sm"
             >
               เริ่มสอบ Part 5 (12 นาที)
@@ -264,7 +276,12 @@ export default function PracticeDrillsPage() {
             </div>
             <button
               type="button"
-              onClick={() => setIsBlitzOpen(true)}
+              onClick={() =>
+                requireAuth(
+                  () => setIsBlitzOpen(true),
+                  'กรุณาเข้าสู่ระบบก่อน เพื่อเล่นมินิเกม Vocab Blitz และสะสมคะแนนโบนัส',
+                )
+              }
               className="w-full py-2 bg-indigo-500 hover:bg-indigo-400 text-white border-2 border-slate-900 font-display font-bold text-xs shadow-pixel-sm"
             >
               เริ่มประลองความจำ 5 นาที
@@ -289,7 +306,12 @@ export default function PracticeDrillsPage() {
             </div>
             <button
               type="button"
-              onClick={() => setIsBossOpen(true)}
+              onClick={() =>
+                requireAuth(
+                  () => setIsBossOpen(true),
+                  'กรุณาเข้าสู่ระบบก่อน เพื่อเข้าสู่สนามรบ Boss Survival 3-HP',
+                )
+              }
               className="w-full py-2 bg-red-500 hover:bg-red-400 text-white border-2 border-slate-900 font-display font-bold text-xs shadow-pixel-sm"
             >
               ท้าทายบอส 3-HP
@@ -314,7 +336,12 @@ export default function PracticeDrillsPage() {
             </div>
             <button
               type="button"
-              onClick={() => setIsCollocationOpen(true)}
+              onClick={() =>
+                requireAuth(
+                  () => setIsCollocationOpen(true),
+                  'กรุณาเข้าสู่ระบบก่อน เพื่อเริ่มจับคู่สำนวน Collocation Rush',
+                )
+              }
               className="w-full py-2 bg-emerald-400 hover:bg-emerald-300 text-slate-900 border-2 border-slate-900 font-display font-bold text-xs shadow-pixel-sm"
             >
               เริ่มจับคู่สำนวน 60 วิ

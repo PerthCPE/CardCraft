@@ -2,12 +2,10 @@
 
 // ============================================================================
 // frontend/src/app/page.tsx
-// หน้าหลัก Hero Dashboard & 7-Stage Character Evolution Roadmap
-// ปรับปรุงด้วยหลักการของ frontend-design + cardcraft-pixel-ui:
-// - จัดลำดับชั้นฟอนต์ (Typography Hierarchy) แยกชัดเจนระหว่างชื่อคลาส (Chakra Petch),
-//   เนื้อหาคำอธิบาย (IBM Plex Sans Thai + Plus Jakarta Sans) และตัวเลขคะแนน (Silkscreen)
-// - ตัดป้ายกำกับ ALL-CAPS ซ้ำซ้อนและตัดการ์ดเรียง 1-2-3-4 แบบแพตเทิร์น AI ทั่วไปออก
-//   เปลี่ยนเป็นเลย์เอาต์ 2 คอลัมน์แบบสมดุลไม่สมมาตร (Asymmetric Guild Ledger)
+// CardCraft Release v1.0: หน้าหลัก Hero Dashboard & 7-Stage Character Evolution Roadmap
+// - รองรับ Guest Mode อย่างเป็นทางการ (แสดงคำเชิญชวนเข้าสู่ระบบเพื่อบันทึกสถิติ)
+// - แสดงข้อมูลและสถิติของผู้เล่นจริงเมื่อเข้าสู่ระบบ
+// - สไตล์ Neo-Brutalist & Pixel Art ไร้รอยต่อ
 // ============================================================================
 
 import React, { useEffect, useState } from 'react';
@@ -17,6 +15,7 @@ import {
   Crosshair,
   Lock,
   Sliders,
+  Sparkles,
 } from 'lucide-react';
 import {
   DashboardSummaryResponse,
@@ -38,7 +37,7 @@ const DEMO_SCORE_PRESETS = [
 ];
 
 export default function DashboardPage() {
-  const { user: authUser, refreshUser } = useAuth();
+  const { user: authUser, refreshUser, openAuthModal, requireAuth } = useAuth();
   const [dashboard, setDashboard] = useState<DashboardSummaryResponse | null>(
     null,
   );
@@ -50,23 +49,35 @@ export default function DashboardPage() {
 
   const handleSimulateScore = async (newScore: number) => {
     if (!dashboard) return;
+    if (!authUser) {
+      requireAuth(
+        undefined,
+        'กรุณาเข้าสู่ระบบก่อน เพื่อทดสอบเปลี่ยนระดับคะแนนและบันทึกสถิติฮีโร่ของคุณ',
+      );
+      return;
+    }
     setIsSimulating(true);
-    const updated = await updateHeroProfile(
-      {
-        currentEstimatedScore: newScore,
-      },
-      authUser?.id,
-    );
-    setDashboard({
-      ...dashboard,
-      user: updated.user,
-      evolution: getCharacterEvolution(
-        updated.user.currentEstimatedScore,
-        updated.user.targetScore,
-      ),
-    });
-    await refreshUser();
-    setIsSimulating(false);
+    try {
+      const updated = await updateHeroProfile(
+        {
+          currentEstimatedScore: newScore,
+        },
+        authUser?.id,
+      );
+      setDashboard({
+        ...dashboard,
+        user: updated.user,
+        evolution: getCharacterEvolution(
+          updated.user.currentEstimatedScore,
+          updated.user.targetScore,
+        ),
+      });
+      await refreshUser();
+    } catch {
+      // ignore
+    } finally {
+      setIsSimulating(false);
+    }
   };
 
   if (!dashboard) {
@@ -121,7 +132,10 @@ export default function DashboardPage() {
                   </span>
                 </h1>
                 <p className="text-sm text-slate-300 mt-1">
-                  ผู้ท้าชิง: <strong className="text-white">{user.name}</strong>
+                  ผู้ท้าชิง:{' '}
+                  <strong className="text-white">
+                    {user?.name || 'ผู้เล่นทั่วไป (โหมดผู้เยี่ยมชม)'}
+                  </strong>
                 </p>
               </div>
 
@@ -130,90 +144,73 @@ export default function DashboardPage() {
               </p>
 
               <div className="pt-2 flex flex-wrap items-center justify-center sm:justify-start gap-3">
-                <Link
-                  href="/mock-test"
-                  className="px-4 py-2 bg-amber-400 text-slate-950 font-display font-bold text-sm border-2 border-slate-950 shadow-[3px_3px_0px_0px_#020617] hover:-translate-y-0.5 active:translate-x-[1px] active:translate-y-[1px] transition-all"
-                >
-                  เข้าสอบจำลองเพื่อเลื่อนคลาส
-                </Link>
+                {!authUser ? (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      openAuthModal(
+                        'เข้าสู่ระบบหรือสร้างบัญชีใหม่ เพื่อเริ่มทำแบบทดสอบ บันทึกคะแนน และเลื่อนระดับคลาสฮีโร่ของคุณ',
+                      )
+                    }
+                    className="px-4 py-2 bg-emerald-400 text-slate-950 font-display font-bold text-sm border-2 border-slate-950 shadow-[3px_3px_0px_0px_#020617] hover:-translate-y-0.5 active:translate-x-[1px] active:translate-y-[1px] transition-all flex items-center gap-1.5"
+                  >
+                    <Sparkles className="w-4 h-4 text-slate-950" />
+                    เข้าสู่ระบบ / สมัครสมาชิกเพื่อเริ่มเล่น
+                  </button>
+                ) : (
+                  <Link
+                    href="/mock-test"
+                    className="px-4 py-2 bg-amber-400 text-slate-950 font-display font-bold text-sm border-2 border-slate-950 shadow-[3px_3px_0px_0px_#020617] hover:-translate-y-0.5 active:translate-x-[1px] active:translate-y-[1px] transition-all"
+                  >
+                    เข้าสอบจำลองเพื่อเลื่อนคลาส
+                  </Link>
+                )}
                 <Link
                   href="/flashcards"
-                  className="px-4 py-2 bg-slate-800 text-slate-100 font-display font-semibold text-sm border-2 border-slate-950 hover:bg-slate-700 transition-colors"
+                  className="px-4 py-2 bg-slate-800 text-amber-300 font-display font-bold text-sm border-2 border-slate-700 hover:bg-slate-750 transition-colors"
                 >
-                  ทบทวนคำศัพท์ ({stats.masteredCards}/{stats.totalFlashcards})
+                  ดูคลังคำศัพท์ ({stats.totalFlashcards.toLocaleString()} คำ)
                 </Link>
               </div>
             </div>
           </div>
 
-          {/* Right (5 cols): Score Readout & 700+ Threshold Meter */}
-          <div className="lg:col-span-5 bg-slate-800/90 border-2 border-slate-950 p-5 space-y-4 shadow-[4px_4px_0px_0px_#020617]">
-            <div className="flex items-start justify-between border-b border-slate-700 pb-4">
-              <div>
-                <p className="text-xs text-slate-300">คะแนนประเมิน TOEIC ปัจจุบัน</p>
-                <div className="flex items-baseline gap-2 mt-1">
-                  <span className="font-pixel text-4xl text-amber-400">
-                    {evolution.estimatedScore}
-                  </span>
-                  <span className="font-pixel text-xs text-slate-400">
-                    / 990
-                  </span>
-                </div>
-              </div>
-              <img
-                src="/icons/icon-trophy-700.png"
-                alt="700+ Trophy"
-                className="w-11 h-11 object-contain [image-rendering:pixelated]"
-              />
+          {/* Right (5 cols): Numeric Score Readout & Target Gap */}
+          <div className="lg:col-span-5 bg-slate-950 border-2 border-slate-800 p-5 space-y-4">
+            <div className="flex items-baseline justify-between border-b border-slate-800 pb-3">
+              <span className="text-xs uppercase tracking-wider text-slate-400">
+                คะแนนประเมินปัจจุบัน
+              </span>
+              <span className="text-xs text-amber-300 font-medium">
+                เป้าหมาย {user?.targetScore || 700} คะแนน
+              </span>
             </div>
 
-            {/* Tier Progress Bar */}
+            <div className="flex items-baseline justify-between">
+              <span className="font-pixel text-4xl sm:text-5xl text-amber-300 tracking-tight">
+                {evolution.estimatedScore}
+              </span>
+              <span className="font-pixel text-sm text-slate-500">
+                / 990 คะแนน
+              </span>
+            </div>
+
+            {/* Target 700+ Progress Meter */}
             <div className="space-y-1.5">
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-slate-300">
-                  ความคืบหน้าในคลาส {evolution.classTitle}
-                </span>
-                <span className="font-pixel text-amber-300">
-                  {evolution.tierExpPercentage}%
-                </span>
-              </div>
-              <div className="w-full h-4 bg-slate-950 border border-slate-600 p-0.5">
+              <div className="w-full h-3 bg-slate-800 border border-slate-700 overflow-hidden relative">
                 <div
-                  className="h-full bg-amber-400 transition-all duration-300"
-                  style={{ width: `${evolution.tierExpPercentage}%` }}
+                  className="h-full bg-emerald-400 transition-all duration-300"
+                  style={{
+                    width: `${Math.min(100, Math.round((evolution.estimatedScore / (user?.targetScore || 700)) * 100))}%`,
+                  }}
                 />
               </div>
-              <p className="text-xs text-slate-300 pt-0.5">
-                {evolution.nextTier ? (
-                  <>
-                    ต้องการอีก{' '}
-                    <strong className="font-pixel text-amber-300">
-                      {evolution.pointsToNextTier}
-                    </strong>{' '}
-                    คะแนน เพื่อปลดล็อกคลาส{' '}
-                    <strong className="text-white">
-                      {evolution.nextTier.title}
-                    </strong>
-                  </>
-                ) : (
-                  <span className="text-emerald-400 font-medium">
-                    อยู่ในคลาสสูงสุดของระบบแล้ว
-                  </span>
-                )}
-              </p>
             </div>
 
-            {/* 700+ Goal Status */}
-            <div
-              className={`p-3 border-2 border-slate-950 flex items-center justify-between text-xs font-medium ${
-                evolution.isPassedTarget
-                  ? 'bg-emerald-400 text-slate-950'
-                  : 'bg-slate-900 text-amber-200'
-              }`}
-            >
-              <div className="flex items-center gap-2">
+            <div className="flex items-center justify-between text-xs text-slate-300 pt-1">
+              <div className="flex items-center gap-1.5">
                 {evolution.isPassedTarget ? (
-                  <CheckCircle2 className="w-4 h-4 shrink-0" />
+                  <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
                 ) : (
                   <Crosshair className="w-4 h-4 text-amber-400 shrink-0" />
                 )}
@@ -224,7 +221,7 @@ export default function DashboardPage() {
                 </span>
               </div>
               <span className="font-pixel text-[10px]">
-                {user.targetScore}
+                {user?.targetScore || 700}
               </span>
             </div>
           </div>
@@ -271,66 +268,63 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
-          {evolution.roadmap.map((stage) => {
-            const isTargetStage = stage.isTargetGoalTier;
+        {/* 7-Tier Timeline Track */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+          {evolution.roadmap.map((tier) => {
+            const isTarget700 = tier.tier === 5;
+
             return (
               <div
-                key={stage.tier}
-                className={`p-3.5 border-2 border-slate-900 flex flex-col justify-between transition-all ${
-                  stage.isCurrent
-                    ? 'bg-amber-100/90 shadow-arcade -translate-y-0.5'
-                    : stage.isUnlocked
-                      ? isTargetStage
-                        ? 'bg-emerald-50/80'
-                        : 'bg-white'
-                      : 'bg-slate-100/80 text-slate-500'
+                key={tier.tier}
+                className={`relative border-2 p-3 flex flex-col items-center text-center transition-all ${
+                  tier.isCurrent
+                    ? 'border-slate-900 bg-amber-50 shadow-arcade-sm'
+                    : tier.isUnlocked
+                      ? 'border-slate-400 bg-white'
+                      : 'border-slate-200 bg-slate-50 opacity-60'
                 }`}
               >
-                <div className="flex items-center justify-between gap-1 mb-2">
-                  <span
-                    className={`font-pixel text-[10px] px-1.5 py-0.5 border border-slate-900 ${
-                      stage.isCurrent
-                        ? 'bg-amber-400 text-slate-950'
-                        : stage.isUnlocked
-                          ? 'bg-slate-900 text-white'
-                          : 'bg-slate-200 text-slate-600'
-                    }`}
-                  >
-                    T{stage.tier}
+                {/* Milestone Badge for Target 700+ */}
+                {isTarget700 && (
+                  <span className="absolute -top-2.5 px-1.5 py-0.2 bg-emerald-500 text-slate-950 font-pixel text-[9px] border border-slate-900">
+                    GOAL 700+
                   </span>
+                )}
 
-                  {isTargetStage && (
-                    <span className="font-pixel text-[9px] px-1.5 py-0.5 bg-emerald-500 text-slate-950 border border-slate-900">
-                      700+
-                    </span>
-                  )}
+                <div className="w-full flex items-center justify-between text-[10px] text-slate-500 font-pixel mb-1">
+                  <span>Lv.{tier.tier}</span>
+                  <span>{tier.minScore}+</span>
                 </div>
 
-                <div className="my-2 relative flex items-center justify-center">
+                <div className="my-2 h-14 flex items-center justify-center">
                   <PixelCharacterAvatar
-                    tier={stage.tier}
+                    tier={tier.tier}
                     size="md"
-                    isLocked={!stage.isUnlocked}
+                    isLocked={!tier.isUnlocked}
                   />
-                  {!stage.isUnlocked && (
-                    <span className="absolute -bottom-1 inline-flex items-center gap-1 px-2 py-0.5 bg-slate-900 text-amber-300 font-pixel text-[9px] border border-slate-950">
-                      <Lock className="w-2.5 h-2.5" />
-                      {stage.minScore}
-                    </span>
-                  )}
                 </div>
 
-                <div className="mt-3 pt-2 border-t border-slate-200 text-left">
-                  <p className="font-display font-bold text-xs text-slate-900 truncate">
-                    {stage.title}
-                  </p>
-                  <p className="text-[11px] text-slate-600 truncate">
-                    {stage.titleTh}
-                  </p>
-                  <p className="font-pixel text-[10px] text-slate-500 mt-1">
-                    {stage.minScore}–{stage.maxScore}
-                  </p>
+                <h3 className="font-display font-bold text-xs text-slate-900 truncate w-full">
+                  {tier.title}
+                </h3>
+                <p className="text-[11px] text-slate-600 truncate w-full mt-0.5">
+                  {tier.titleTh}
+                </p>
+
+                <div className="mt-2 pt-2 border-t border-slate-200 w-full flex items-center justify-center text-[10px]">
+                  {tier.isCurrent ? (
+                    <span className="font-display font-bold text-amber-700">
+                      คลาสปัจจุบัน
+                    </span>
+                  ) : tier.isUnlocked ? (
+                    <span className="text-emerald-700 flex items-center gap-1 font-medium">
+                      <CheckCircle2 className="w-3 h-3" /> ปลดล็อกแล้ว
+                    </span>
+                  ) : (
+                    <span className="text-slate-400 flex items-center gap-1 font-mono">
+                      <Lock className="w-3 h-3" /> ล็อกอยู่
+                    </span>
+                  )}
                 </div>
               </div>
             );
@@ -339,22 +333,22 @@ export default function DashboardPage() {
       </section>
 
       {/* ===================================================================
-          3. ASYMMETRIC 2-COLUMN WORKSPACE (Training Grounds & Score Ledger)
+          3. TWO-COLUMN GUILD LEDGER (Content + History Balance)
          =================================================================== */}
       <section className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* Left (7 cols): Training Modes */}
-        <div className="lg:col-span-7 bg-[#fffdf7] border-2 border-slate-900 shadow-arcade p-6 space-y-5">
-          <div className="border-b border-slate-200 pb-3">
-            <h2 className="text-lg font-bold text-slate-900">
-              โหมดฝึกฝนและเตรียมสอบ
+        {/* Left (7 cols): Guild Training Grounds (3 Clear Modes) */}
+        <div className="lg:col-span-7 bg-[#fffdf7] border-2 border-slate-900 shadow-arcade p-6 space-y-6">
+          <div>
+            <h2 className="text-lg sm:text-xl font-bold text-slate-900">
+              ลานฝึกฝนหลัก (Training Grounds)
             </h2>
-            <p className="text-sm text-slate-600">
-              เลือกฝึกคำศัพท์ เจาะลึกโจทย์รายพาร์ท หรือเข้าสนามสอบจับเวลาเพื่ออัปเดตระดับคลาส
+            <p className="text-sm text-slate-600 mt-0.5">
+              ระบบฝึกฝน 3 เสาหลักเพื่อยกระดับคะแนน Listening และ Reading สู่เป้าหมาย 700+
             </p>
           </div>
 
           <div className="divide-y divide-slate-200">
-            {/* Mode A: Flashcards & 60-Word Dictionary */}
+            {/* Mode A: 3D Flashcards Deck */}
             <div className="py-4 first:pt-0 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="flex items-start gap-3.5">
                 <div className="w-11 h-11 bg-amber-400 border-2 border-slate-900 shadow-arcade-sm flex items-center justify-center shrink-0 mt-0.5">
@@ -367,14 +361,14 @@ export default function DashboardPage() {
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
                     <h3 className="font-bold text-base text-slate-900">
-                      สำรับการ์ดคำศัพท์และพจนานุกรม 60 คำ
+                      สำรับการ์ดคำศัพท์ 3D Flip
                     </h3>
-                    <span className="font-pixel text-[10px] px-1.5 py-0.5 bg-emerald-100 text-emerald-900 border border-slate-900">
-                      {masteryPercent}%
+                    <span className="font-pixel text-[10px] px-1.5 py-0.2 bg-emerald-100 text-emerald-800 border border-emerald-300">
+                      {masteryPercent}% จำได้
                     </span>
                   </div>
                   <p className="text-sm text-slate-600 reading-measure">
-                    ปัดขวาเมื่อจำแม่น ปัดซ้ายเพื่อทบทวนซ้ำ หรือค้นหาศัพท์จาก 8 หมวดธุรกิจออกสอบบ่อย
+                    พจนานุกรมคำศัพท์ธุรกิจออกสอบบ่อย {stats.totalFlashcards.toLocaleString()} คำ พร้อมระบบ Spaced Repetition จำแนกคำที่จำได้แล้วกับคำที่ต้องทบทวน
                   </p>
                 </div>
               </div>
@@ -428,15 +422,15 @@ export default function DashboardPage() {
                     สนามสอบจำลองจับเวลา (Mini Mock Test)
                   </h3>
                   <p className="text-sm text-slate-600 reading-measure">
-                    ทำข้อสอบรวม 15 ข้อภายใต้เวลา 15 นาที เพื่อคำนวณคะแนนสเกล 10–990 และปลดล็อกคลาสใหม่
+                    จำลองสอบจริง 15 ข้อ 15 นาที มีตัวนับถอยหลังพร้อมคำนวณคะแนนสเกล TOEIC ทันทีเพื่อประเมินระดับคลาส
                   </p>
                 </div>
               </div>
               <Link
                 href="/mock-test"
-                className="shrink-0 px-4 py-2 bg-rose-500 text-white font-display font-bold text-xs border-2 border-slate-900 shadow-arcade-sm hover:bg-rose-600 text-center"
+                className="shrink-0 px-4 py-2 bg-rose-500 text-white font-display font-bold text-xs border-2 border-slate-900 shadow-arcade-sm hover:-translate-y-0.5 active:translate-y-0 text-center"
               >
-                เข้าห้องสอบ
+                เข้าสู่สนามสอบ
               </Link>
             </div>
           </div>
@@ -459,45 +453,54 @@ export default function DashboardPage() {
               </span>
             </div>
 
-            <div className="divide-y divide-slate-200 text-sm">
-              {recentAttempts.map((attempt) => (
-                <div
-                  key={attempt.id}
-                  className="py-2.5 flex items-center justify-between gap-2"
-                >
-                  <div>
-                    <p className="font-semibold text-slate-900 text-xs">
-                      {attempt.mode === 'MINI_MOCK'
-                        ? 'สอบจำลอง Mini Mock'
-                        : attempt.mode === 'READING_DRILL'
-                          ? 'ฝึกโจทย์การอ่าน'
-                          : 'ฝึกโจทย์การฟัง'}
-                    </p>
-                    <p className="text-xs text-slate-500">
-                      ฟังถูก {attempt.listeningCorrect} ข้อ · อ่านถูก{' '}
-                      {attempt.readingCorrect} ข้อ
-                    </p>
-                  </div>
+            {recentAttempts.length === 0 ? (
+              <div className="py-8 text-center text-slate-500 text-xs space-y-2">
+                <p>ยังไม่มีประวัติการสอบที่บันทึกไว้</p>
+                <p className="text-slate-400">
+                  เข้าสู่ระบบแล้วทำ Mini Mock Test เพื่อบันทึกผลคะแนนและวิเคราะห์จุดอ่อน
+                </p>
+              </div>
+            ) : (
+              <div className="divide-y divide-slate-200 text-sm">
+                {recentAttempts.map((attempt) => (
+                  <div
+                    key={attempt.id}
+                    className="py-2.5 flex items-center justify-between gap-2"
+                  >
+                    <div>
+                      <p className="font-semibold text-slate-900 text-xs">
+                        {attempt.mode === 'MINI_MOCK'
+                          ? 'สอบจำลอง Mini Mock'
+                          : attempt.mode === 'READING_DRILL'
+                            ? 'ฝึกโจทย์การอ่าน'
+                            : 'ฝึกโจทย์การฟัง'}
+                      </p>
+                      <p className="text-xs text-slate-500">
+                        ฟังถูก {attempt.listeningCorrect} ข้อ · อ่านถูก{' '}
+                        {attempt.readingCorrect} ข้อ
+                      </p>
+                    </div>
 
-                  <div className="text-right">
-                    <span className="font-pixel text-sm text-slate-900">
-                      {attempt.estimatedScore}
-                    </span>
-                    <div className="mt-0.5">
-                      <span
-                        className={`inline-block font-pixel text-[9px] px-1.5 py-0.5 border border-slate-900 ${
-                          attempt.isPassedTarget
-                            ? 'bg-emerald-400 text-slate-950'
-                            : 'bg-slate-100 text-slate-700'
-                        }`}
-                      >
-                        Tier {attempt.unlockedTier}
+                    <div className="text-right">
+                      <span className="font-pixel text-sm text-slate-900">
+                        {attempt.estimatedScore}
                       </span>
+                      <div className="mt-0.5">
+                        <span
+                          className={`inline-block font-pixel text-[9px] px-1.5 py-0.5 border border-slate-900 ${
+                            attempt.isPassedTarget
+                              ? 'bg-emerald-400 text-slate-950'
+                              : 'bg-slate-100 text-slate-700'
+                          }`}
+                        >
+                          Tier {attempt.unlockedTier}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Admin Guild CRUD Card */}
@@ -507,7 +510,7 @@ export default function DashboardPage() {
                 ระบบจัดการฐานข้อมูล (CRUD Manager)
               </h3>
               <p className="text-xs text-slate-300">
-                เพิ่ม แก้ไข หรือลบรายการคำศัพท์ ({stats.totalFlashcards} คำ) และข้อสอบ ({stats.totalQuestions} ข้อ)
+                เพิ่ม แก้ไข หรือลบรายการคำศัพท์ ({stats.totalFlashcards.toLocaleString()} คำ) และข้อสอบ ({stats.totalQuestions} ข้อ)
               </p>
             </div>
             <Link

@@ -1,14 +1,18 @@
 // ============================================================================
 // users.controller.ts
-// เปรียบเทียบกับ Go (Gin):
-// - `@Controller('users')` เทียบเท่ากับ `usersGroup := router.Group("/users")`
-// - `@Get('dashboard')` เทียบเท่ากับ `usersGroup.GET("/dashboard", handler.GetDashboard)`
-// - `@Query('userId')` เทียบเท่ากับ `c.DefaultQuery("userId", "demo-hero-1")`
+// CardCraft Release v1.0: Endpoints สำหรับ Hero Dashboard & Profile
 // ============================================================================
 
-import { Body, Controller, Get, Patch, Query } from '@nestjs/common';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Get,
+  Patch,
+  Query,
+} from '@nestjs/common';
 import { ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
-import { DEFAULT_DEMO_USER_ID, UsersService } from './users.service';
+import { UsersService } from './users.service';
 import { UpdateUserDto } from './dto/update-user.dto';
 
 @ApiTags('Users & Hero Dashboard')
@@ -19,25 +23,26 @@ export class UsersController {
   @Get('dashboard')
   @ApiOperation({
     summary:
-      'ดึงข้อมูล Hero HUD, 7-Stage Evolution Roadmap, สถิติการ์ดคำศัพท์ และประวัติการสอบ',
+      'ดึงข้อมูล Hero HUD, 7-Stage Evolution Roadmap, สถิติการ์ดคำศัพท์ และประวัติการสอบ (รองรับ Guest)',
   })
-  @ApiQuery({ name: 'userId', required: false, example: DEFAULT_DEMO_USER_ID })
+  @ApiQuery({ name: 'userId', required: false })
   async getDashboard(@Query('userId') userId?: string) {
-    return this.usersService.getDashboardSummary(
-      userId || DEFAULT_DEMO_USER_ID,
-    );
+    return this.usersService.getDashboardSummary(userId);
   }
 
   @Patch('profile')
   @ApiOperation({
     summary:
-      'อัปเดตชื่อ Hero, เป้าหมายคะแนน (Target Score) หรือจำลองปรับคะแนนประเมิน (Current Score)',
+      'อัปเดตชื่อ Hero, เป้าหมายคะแนน (Target Score) หรือปรับคะแนนประเมิน (Current Score)',
   })
-  @ApiQuery({ name: 'userId', required: false, example: DEFAULT_DEMO_USER_ID })
+  @ApiQuery({ name: 'userId', required: true })
   async updateProfile(
     @Query('userId') userId: string | undefined,
     @Body() dto: UpdateUserDto,
   ) {
-    return this.usersService.updateProfile(userId || DEFAULT_DEMO_USER_ID, dto);
+    if (!userId) {
+      throw new BadRequestException('ต้องระบุ userId เพื่ออัปเดตโปรไฟล์');
+    }
+    return this.usersService.updateProfile(userId, dto);
   }
 }

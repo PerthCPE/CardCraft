@@ -1,11 +1,10 @@
 // ============================================================================
 // users.service.ts
-// เปรียบเทียบกับ Go:
-// เทียบเท่ากับ Service Layer (`type UserService struct { db *gorm.DB }`)
-// ทำหน้าที่ดึงข้อมูล Hero Profile, คำนวณสถานะ 7-Tier Evolution และสรุปสถิติสำหรับหน้า Dashboard
+// CardCraft Release v1.0: Service Layer สำหรับจัดการข้อมูล Hero Profile & Dashboard
+// รองรับ Guest Mode เริ่มต้น (ไม่มีข้อมูลค้าง) และคำนวณสถิติตามผู้ใช้งานจริง
 // ============================================================================
 
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { getCharacterEvolution } from '../common/utils/character-evolution.util';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -17,59 +16,85 @@ export class UsersService {
   constructor(private readonly prisma: PrismaService) {}
 
   /**
-   * ดึงข้อมูลผู้เล่นหลัก (หากยังไม่มีใน DB จะสร้าง Demo User ให้อัตโนมัติเพื่อกัน Error)
+   * ดึงข้อมูลผู้เล่นตาม ID
    */
-  async getOrCreateUser(userId = DEFAULT_DEMO_USER_ID) {
-    const existing = await this.prisma.user.findUnique({
-      where: { id: userId },
-    });
-
-    if (existing) {
-      return existing;
+  async getUser(userId?: string) {
+    if (!userId || userId === 'guest') {
+      return null;
     }
-
-    return this.prisma.user.upsert({
-      where: { username: 'hero' },
-      update: {},
-      create: {
-        id: userId,
-        username: 'hero',
-        password: '8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918', // sha256 of '123456'
-        email: 'hero@cardcraft.dev',
-        name: 'Alden the Rune Challenger',
-        targetScore: 700,
-        currentEstimatedScore: 350,
-      },
+    return this.prisma.user.findUnique({
+      where: { id: userId },
     });
   }
 
   /**
-   * ดึงข้อมูล Dashboard ครบวงจร:
-   * - ข้อมูลผู้เล่น (User)
-   * - สถานะวิวัฒนาการ 7-Tier + Roadmap (CharacterEvolutionStatus)
-   * - สถิติการปัดการ์ดคำศัพท์ (Mastered vs Still Learning)
-   * - ประวัติการทำข้อสอบล่าสุด (Recent ExamAttempts)
+   * ดึงข้อมูลผู้เล่น หากไม่พบจะโยน NotFoundException (ไม่สร้างผู้ใช้จำลองอัตโนมัติ)
    */
-  async getDashboardSummary(userId = DEFAULT_DEMO_USER_ID) {
-    const user = await this.getOrCreateUser(userId);
+  async getOrCreateUser(userId?: string) {
+    if (!userId || userId === 'guest') {
+      throw new NotFoundException('กรุณาเข้าสู่ระบบก่อนทำรายการ');
+    }
+
+    const existing = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!existing) {
+      throw new NotFoundException(`ไม่พบบัญชีผู้เล่น (User ID: ${userId})`);
+    }
+
+    return existing;
+  }
+
+  /**
+   * ดึงข้อมูล Dashboard ครบวงจร:
+   * - หากเป็น Guest (ไม่มี userId หรือ userId === 'guest'): สรุปคลังข้อมูลทั้งหมดในสถานะเริ่มต้น
+   * - หากเป็นสมาชิกที่เข้าสู่ระบบแล้ว: ดึงความคืบหน้าการ์ด, Tier Evolution และประวัติการสอบจริง
+   */
+  async getDashboardSummary(userId?: string) {
+    const user =
+      userId && userId !== 'guest' ? await this.getUser(userId) : null;
+
+    const [totalFlashcards, totalQuestions] = await Promise.all([
+      this.prisma.flashcard.count(),
+      this.prisma.question.count(),
+    ]);
+
+    // โหมด Guest เริ่มต้น
+    if (!user) {
+      const guestEvolution = getCharacterEvolution(10, 700);
+      return {
+        user: null,
+        isGuest: true,
+        evolution: guestEvolution,
+        stats: {
+          totalFlashcards,
+          masteredCards: 0,
+          learningCards: 0,
+          unseenCards: totalFlashcards,
+          totalQuestions,
+          totalExamsCompleted: 0,
+        },
+        recentAttempts: [],
+      };
+    }
+
+    // ผู้เล่นจริงที่เข้าสู่ระบบ
+    const [cardProgresses, recentAttempts] = await Promise.all([
+      this.prisma.cardProgress.findMany({
+        where: { userId: user.id },
+      }),
+      this.prisma.examAttempt.findMany({
+        where: { userId: user.id },
+        orderBy: { createdAt: 'desc' },
+        take: 5,
+      }),
+    ]);
+
     const evolution = getCharacterEvolution(
       user.currentEstimatedScore,
       user.targetScore,
     );
-
-    const [totalFlashcards, cardProgresses, totalQuestions, recentAttempts] =
-      await Promise.all([
-        this.prisma.flashcard.count(),
-        this.prisma.cardProgress.findMany({
-          where: { userId: user.id },
-        }),
-        this.prisma.question.count(),
-        this.prisma.examAttempt.findMany({
-          where: { userId: user.id },
-          orderBy: { createdAt: 'desc' },
-          take: 5,
-        }),
-      ]);
 
     const masteredCards = cardProgresses.filter((cp) => cp.isKnown).length;
     const learningCards = cardProgresses.filter((cp) => !cp.isKnown).length;
@@ -80,6 +105,7 @@ export class UsersService {
 
     return {
       user,
+      isGuest: false,
       evolution,
       stats: {
         totalFlashcards,
@@ -94,13 +120,13 @@ export class UsersService {
   }
 
   /**
-   * อัปเดตข้อมูลโปรไฟล์ เป้าหมายคะแนน หรือคะแนนประเมินของผู้เล่น
+   * อัปเดตข้อมูลโปรไฟล์ เป้าหมายคะแนน หรือคะแนนประเมินของผู้เล่นจริง
    */
-  async updateProfile(userId = DEFAULT_DEMO_USER_ID, dto: UpdateUserDto) {
-    await this.getOrCreateUser(userId);
+  async updateProfile(userId: string | undefined, dto: UpdateUserDto) {
+    const user = await this.getOrCreateUser(userId);
 
     const updatedUser = await this.prisma.user.update({
-      where: { id: userId },
+      where: { id: user.id },
       data: {
         ...(dto.name !== undefined ? { name: dto.name } : {}),
         ...(dto.targetScore !== undefined

@@ -35,10 +35,12 @@ import {
   updateFlashcard,
   updateQuestion,
 } from '@/lib/api';
+import { useAuth } from '@/context/AuthContext';
 
 type AdminTab = 'FLASHCARDS' | 'QUESTIONS';
 
 export default function AdminGuildCrudPage() {
+  const { user, openAuthModal } = useAuth();
   const [activeTab, setActiveTab] = useState<AdminTab>('FLASHCARDS');
   const [flashcards, setFlashcards] = useState<FlashcardItem[]>([]);
   const [questions, setQuestions] = useState<QuestionItem[]>([]);
@@ -237,6 +239,31 @@ export default function AdminGuildCrudPage() {
         item.explanationTh.toLowerCase().includes(q),
     );
   }, [questions, searchQuery]);
+
+  if (!user) {
+    return (
+      <div className="bg-[#fffdf7] border-2 border-slate-900 shadow-arcade p-10 max-w-xl mx-auto text-center space-y-4 my-12">
+        <div className="w-12 h-12 bg-amber-400 border-2 border-slate-900 mx-auto flex items-center justify-center shadow-pixel-sm">
+          <Wrench className="w-6 h-6 text-slate-900" />
+        </div>
+        <h1 className="text-xl font-bold font-display text-slate-900">
+          พื้นที่สำหรับสมาชิกและผู้ดูแลระบบ
+        </h1>
+        <p className="text-sm text-slate-600 leading-relaxed">
+          หน้าจัดการคลังคำศัพท์และข้อสอบ (CRUD Manager) สงวนสิทธิ์สำหรับผู้ที่เข้าสู่ระบบแล้วเท่านั้น กรุณาเข้าสู่ระบบหรือสมัครสมาชิกก่อนดำเนินการ
+        </p>
+        <button
+          type="button"
+          onClick={() =>
+            openAuthModal('กรุณาเข้าสู่ระบบเพื่อจัดการคลังคำศัพท์และข้อสอบ')
+          }
+          className="px-5 py-2.5 bg-amber-400 hover:bg-amber-300 text-slate-950 font-display font-bold text-sm border-2 border-slate-900 shadow-pixel active:translate-x-[1px] active:translate-y-[1px]"
+        >
+          เข้าสู่ระบบเพื่อจัดการข้อมูล
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

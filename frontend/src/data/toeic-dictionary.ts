@@ -96,41 +96,4 @@ export const TOEIC_DICTIONARY_CARDS: FlashcardItem[] = (toeic1000Json as Array<{
 
 export const TOEIC_INITIAL_QUESTIONS: QuestionItem[] = toeicQuestionsJson as QuestionItem[];
 
-export const TOEIC_INITIAL_ATTEMPTS: ExamAttemptItem[] = [
-  {
-    id: 'attempt-seed-3',
-    userId: 'demo-hero-1',
-    mode: 'MINI_MOCK',
-    listeningCorrect: 5,
-    readingCorrect: 5,
-    estimatedScore: 625,
-    unlockedTier: 4,
-    isPassedTarget: false,
-    timeSpentSeconds: 685,
-    createdAt: '2026-10-19T14:30:00.000Z',
-  },
-  {
-    id: 'attempt-seed-2',
-    userId: 'demo-hero-1',
-    mode: 'READING_DRILL',
-    listeningCorrect: 4,
-    readingCorrect: 5,
-    estimatedScore: 545,
-    unlockedTier: 3,
-    isPassedTarget: false,
-    timeSpentSeconds: 520,
-    createdAt: '2026-10-18T10:15:00.000Z',
-  },
-  {
-    id: 'attempt-seed-1',
-    userId: 'demo-hero-1',
-    mode: 'MINI_MOCK',
-    listeningCorrect: 3,
-    readingCorrect: 3,
-    estimatedScore: 405,
-    unlockedTier: 3,
-    isPassedTarget: false,
-    timeSpentSeconds: 740,
-    createdAt: '2026-10-16T09:00:00.000Z',
-  },
-];
+export const TOEIC_INITIAL_ATTEMPTS: ExamAttemptItem[] = [];

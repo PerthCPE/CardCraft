@@ -7,7 +7,6 @@ import { Body, Controller, Get, Post, Query } from '@nestjs/common';
 import { ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { ExamsService } from './exams.service';
 import { SubmitExamDto } from './dto/submit-exam.dto';
-import { DEFAULT_DEMO_USER_ID } from '../users/users.service';
 
 @ApiTags('Exams (Boss Battle & Score Evaluation)')
 @Controller('exams')
@@ -25,8 +24,8 @@ export class ExamsController {
 
   @Get('history')
   @ApiOperation({ summary: 'ดึงประวัติการทำข้อสอบทั้งหมดของผู้เล่น' })
-  @ApiQuery({ name: 'userId', required: false, example: DEFAULT_DEMO_USER_ID })
+  @ApiQuery({ name: 'userId', required: false })
   getHistory(@Query('userId') userId?: string) {
-    return this.examsService.getExamHistory(userId || DEFAULT_DEMO_USER_ID);
+    return this.examsService.getExamHistory(userId);
   }
 }

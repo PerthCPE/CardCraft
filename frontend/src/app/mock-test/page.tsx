@@ -33,7 +33,7 @@ import { useAuth } from '@/context/AuthContext';
 const EXAM_DURATION_SECONDS = 15 * 60;
 
 export default function BossBattleMockTestPage() {
-  const { user: authUser } = useAuth();
+  const { user: authUser, requireAuth, openAuthModal } = useAuth();
   const [questions, setQuestions] = useState<QuestionItem[]>([]);
   const [isRealTimeMultiPartOpen, setIsRealTimeMultiPartOpen] = useState<boolean>(false);
   const [currentIdx, setCurrentIdx] = useState<number>(0);
@@ -78,13 +78,20 @@ export default function BossBattleMockTestPage() {
 
   const handleSelectAnswer = useCallback(
     (qId: string, opt: 'A' | 'B' | 'C' | 'D', part: number) => {
+      if (!authUser) {
+        requireAuth(
+          undefined,
+          'กรุณาเข้าสู่ระบบก่อน เพื่อเริ่มทำข้อสอบและบันทึกคำตอบลงกระดาษคำตอบของคุณ',
+        );
+        return;
+      }
       if (part === 2 && opt === 'D') return;
       setAnswers((prev) => ({
         ...prev,
         [qId]: opt,
       }));
     },
-    [],
+    [authUser, requireAuth],
   );
 
   const handleToggleFlag = useCallback((qId: string) => {
@@ -94,19 +101,14 @@ export default function BossBattleMockTestPage() {
     }));
   }, []);
 
-  const handleQuickFillDemo700 = () => {
-    const demoAnswers: Record<string, 'A' | 'B' | 'C' | 'D'> = {};
-    questions.forEach((q, idx) => {
-      if (idx % 5 === 4) {
-        demoAnswers[q.id] = q.correctOption === 'A' ? 'B' : 'A';
-      } else {
-        demoAnswers[q.id] = q.correctOption;
-      }
-    });
-    setAnswers(demoAnswers);
-  };
-
   const handleSubmitExam = async () => {
+    if (!authUser) {
+      requireAuth(
+        undefined,
+        'กรุณาเข้าสู่ระบบก่อน เพื่อส่งกระดาษคำตอบและคำนวณคะแนนสเกล TOEIC สู่โปรไฟล์ของคุณ',
+      );
+      return;
+    }
     if (questions.length === 0 || isSubmitting) return;
     setIsSubmitting(true);
 
@@ -448,19 +450,16 @@ export default function BossBattleMockTestPage() {
 
             <button
               type="button"
-              onClick={() => setIsRealTimeMultiPartOpen(true)}
+              onClick={() =>
+                requireAuth(
+                  () => setIsRealTimeMultiPartOpen(true),
+                  'กรุณาเข้าสู่ระบบก่อน เพื่อเริ่มทำข้อสอบรวมพาร์ท Real-Time',
+                )
+              }
               className="px-3.5 py-2.5 bg-amber-400 hover:bg-amber-300 text-slate-950 font-display font-bold text-xs border-2 border-slate-950 shadow-[2px_2px_0px_0px_#020617] inline-flex items-center gap-1.5"
             >
               <Clock className="w-4 h-4 text-slate-950" />
               การทดสอบรวมพาร์ทตามเวลาจริง (Full Real-Time)
-            </button>
-
-            <button
-              type="button"
-              onClick={handleQuickFillDemo700}
-              className="px-3.5 py-2.5 bg-slate-800 text-amber-300 text-xs font-semibold border-2 border-slate-950 hover:bg-slate-700"
-            >
-              จำลองเลือกคำตอบ 700+ (สำหรับสาธิต)
             </button>
 
             <button
@@ -474,6 +473,26 @@ export default function BossBattleMockTestPage() {
             </button>
           </div>
         </div>
+
+        {/* Guest Mode Notice in Header */}
+        {!authUser && (
+          <div className="mt-4 pt-3 border-t border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs bg-slate-950/60 p-3 border border-amber-400/40">
+            <span className="text-amber-200">
+              คุณกำลังอยู่ในโหมดทดลองเปิดดูข้อสอบ (Guest Mode) — เข้าสู่ระบบเพื่อเริ่มจับเวลาทำข้อสอบจริง 15 ข้อ และบันทึกคะแนนเพื่อเลื่อนระดับคลาส
+            </span>
+            <button
+              type="button"
+              onClick={() =>
+                openAuthModal(
+                  'เข้าสู่ระบบหรือสร้างบัญชีใหม่ เพื่อเริ่มทำแบบทดสอบ บันทึกคะแนน และเลื่อนระดับคลาสฮีโร่ของคุณ',
+                )
+              }
+              className="px-3 py-1.5 bg-emerald-400 hover:bg-emerald-300 text-slate-950 font-display font-bold text-xs border border-slate-950 shrink-0 self-start sm:self-auto"
+            >
+              เข้าสู่ระบบ / สมัครสมาชิก
+            </button>
+          </div>
+        )}
       </section>
 
       {/* 2. EXAM QUESTION & NAVIGATOR */}

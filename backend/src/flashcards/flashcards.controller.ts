@@ -24,7 +24,6 @@ import { FlashcardsService } from './flashcards.service';
 import { CreateFlashcardDto } from './dto/create-flashcard.dto';
 import { UpdateFlashcardDto } from './dto/update-flashcard.dto';
 import { SwipeFlashcardDto } from './dto/swipe-flashcard.dto';
-import { DEFAULT_DEMO_USER_ID } from '../users/users.service';
 
 @ApiTags('Flashcards (Spell Deck & CRUD)')
 @Controller('flashcards')
@@ -36,15 +35,12 @@ export class FlashcardsController {
     summary: 'ดึงการ์ดคำศัพท์ทั้งหมด พร้อมสถานะ Mastered/Learning ของผู้เล่น',
   })
   @ApiQuery({ name: 'category', required: false, example: 'Contracts' })
-  @ApiQuery({ name: 'userId', required: false, example: DEFAULT_DEMO_USER_ID })
+  @ApiQuery({ name: 'userId', required: false })
   findAll(
     @Query('category') category?: string,
     @Query('userId') userId?: string,
   ) {
-    return this.flashcardsService.findAll(
-      category,
-      userId || DEFAULT_DEMO_USER_ID,
-    );
+    return this.flashcardsService.findAll(category, userId);
   }
 
   @Get(':id')

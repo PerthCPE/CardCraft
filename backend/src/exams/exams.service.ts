@@ -8,9 +8,9 @@
 // 3. บันทึกประวัติการสอบ (ExamAttempt) และอัปเดตคะแนนปัจจุบันของผู้เล่นในฐานข้อมูล
 // ============================================================================
 
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { DEFAULT_DEMO_USER_ID, UsersService } from '../users/users.service';
+import { UsersService } from '../users/users.service';
 import {
   calculateScaledToeicScore,
   CharacterEvolutionStatus,
@@ -72,7 +72,12 @@ export class ExamsService {
    * ประมวลผลการส่งข้อสอบ POST /exams/submit
    */
   async submitExam(dto: SubmitExamDto) {
-    const userId = dto.userId || DEFAULT_DEMO_USER_ID;
+    if (!dto.userId || dto.userId === 'guest') {
+      throw new BadRequestException(
+        'กรุณาเข้าสู่ระบบก่อนส่งผลการสอบ เพื่อบันทึกคะแนนและวิวัฒนาการฮีโร่',
+      );
+    }
+    const userId = dto.userId;
     const user = await this.usersService.getOrCreateUser(userId);
 
     const previousScore = user.currentEstimatedScore;
@@ -163,7 +168,10 @@ export class ExamsService {
   /**
    * ดึงประวัติการทำข้อสอบทั้งหมดของผู้เล่น
    */
-  async getExamHistory(userId = DEFAULT_DEMO_USER_ID) {
+  async getExamHistory(userId?: string) {
+    if (!userId || userId === 'guest') {
+      return [];
+    }
     return this.prisma.examAttempt.findMany({
       where: { userId },
       orderBy: { createdAt: 'desc' },

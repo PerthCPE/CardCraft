@@ -42,7 +42,7 @@ import { CardSet, getStoredActiveSet } from '@/utils/card-sets';
 import { useAuth } from '@/context/AuthContext';
 
 export default function FlashcardsPage() {
-  const { user: authUser } = useAuth();
+  const { user: authUser, requireAuth } = useAuth();
   const [cards, setCards] = useState<FlashcardItem[]>([]);
   const [activeSet, setActiveSet] = useState<CardSet | null>(null);
   const [isSetModalOpen, setIsSetModalOpen] = useState<boolean>(false);
@@ -151,6 +151,14 @@ export default function FlashcardsPage() {
 
   const handleSwipe = useCallback(
     async (isKnown: boolean) => {
+      if (!authUser) {
+        dragX.set(0);
+        requireAuth(
+          undefined,
+          'กรุณาเข้าสู่ระบบก่อน เพื่อบันทึกคำศัพท์ที่คุณจำได้แล้วและสะสมค่าประสบการณ์ฮีโร่',
+        );
+        return;
+      }
       if (!activeCard) return;
       const swipedCard = activeCard;
 
@@ -182,7 +190,7 @@ export default function FlashcardsPage() {
         setSwipeFeedback(null);
       }, 1000);
     },
-    [activeCard, dragX, authUser?.id],
+    [activeCard, dragX, authUser, requireAuth],
   );
 
   const handleDragEnd = (
@@ -301,6 +309,13 @@ export default function FlashcardsPage() {
               <button
                 type="button"
                 onClick={() => {
+                  if (!authUser) {
+                    requireAuth(
+                      undefined,
+                      'กรุณาเข้าสู่ระบบก่อน เพื่อสร้างและบันทึกชุดคำศัพท์เฉพาะตัวของคุณ',
+                    );
+                    return;
+                  }
                   setModalTab('CREATE');
                   setIsSetModalOpen(true);
                 }}
@@ -313,6 +328,13 @@ export default function FlashcardsPage() {
               <button
                 type="button"
                 onClick={() => {
+                  if (!authUser) {
+                    requireAuth(
+                      undefined,
+                      'กรุณาเข้าสู่ระบบก่อน เพื่อจัดการและโหลดชุดการ์ดคำศัพท์ที่คุณบันทึกไว้',
+                    );
+                    return;
+                  }
                   setModalTab('SAVED');
                   setIsSetModalOpen(true);
                 }}
@@ -324,7 +346,16 @@ export default function FlashcardsPage() {
 
               <button
                 type="button"
-                onClick={() => setIsBlitzGameOpen(true)}
+                onClick={() => {
+                  if (!authUser) {
+                    requireAuth(
+                      undefined,
+                      'กรุณาเข้าสู่ระบบก่อน เพื่อเริ่มเล่นเกม Vocab Blitz และสะสมคะแนนโบนัส',
+                    );
+                    return;
+                  }
+                  setIsBlitzGameOpen(true);
+                }}
                 className="px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-amber-300 border-2 border-slate-900 font-display font-bold text-xs shadow-pixel-sm active:translate-x-[1px] active:translate-y-[1px] inline-flex items-center gap-1.5"
               >
                 <Zap className="w-4 h-4 fill-amber-300 text-amber-300" />
@@ -477,6 +508,13 @@ export default function FlashcardsPage() {
                   <button
                     type="button"
                     onClick={() => {
+                      if (!authUser) {
+                        requireAuth(
+                          undefined,
+                          'กรุณาเข้าสู่ระบบก่อน เพื่อสร้างและบันทึกชุดคำศัพท์เฉพาะตัวของคุณ',
+                        );
+                        return;
+                      }
                       setModalTab('CREATE');
                       setIsSetModalOpen(true);
                     }}
@@ -488,7 +526,16 @@ export default function FlashcardsPage() {
 
                   <button
                     type="button"
-                    onClick={() => setIsBlitzGameOpen(true)}
+                    onClick={() => {
+                      if (!authUser) {
+                        requireAuth(
+                          undefined,
+                          'กรุณาเข้าสู่ระบบก่อน เพื่อเริ่มเล่นเกม Vocab Blitz และสะสมคะแนนโบนัส',
+                        );
+                        return;
+                      }
+                      setIsBlitzGameOpen(true);
+                    }}
                     className="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-amber-300 border-2 border-slate-900 font-display font-bold text-xs shadow-pixel-sm active:translate-x-[1px] active:translate-y-[1px] flex items-center justify-center gap-2"
                   >
                     <Zap className="w-4 h-4 fill-amber-300" />
@@ -894,6 +941,13 @@ export default function FlashcardsPage() {
                     <button
                       type="button"
                       onClick={async () => {
+                        if (!authUser) {
+                          requireAuth(
+                            undefined,
+                            'กรุณาเข้าสู่ระบบก่อน เพื่อบันทึกสถานะคำศัพท์ที่คุณจำได้แล้ว',
+                          );
+                          return;
+                        }
                         const nextState = !isMastered;
                         setCards((prev) =>
                           prev.map((c) =>

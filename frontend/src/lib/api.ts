@@ -37,7 +37,8 @@ export interface HeroUserProfile {
 }
 
 export interface DashboardSummaryResponse {
-  user: HeroUserProfile;
+  user: HeroUserProfile | null;
+  isGuest?: boolean;
   evolution: CharacterEvolutionStatus;
   stats: {
     totalFlashcards: number;
@@ -141,7 +142,7 @@ export async function fetchDashboardSummary(
   userId?: string,
 ): Promise<DashboardSummaryResponse> {
   try {
-    const query = userId ? `?userId=${encodeURIComponent(userId)}` : '';
+    const query = userId && userId !== 'guest' ? `?userId=${encodeURIComponent(userId)}` : '';
     const res = await fetch(`${API_BASE_URL}/users/dashboard${query}`, {
       cache: 'no-store',
     });
@@ -152,32 +153,22 @@ export async function fetchDashboardSummary(
       isBackendConnected: true,
     };
   } catch {
-    // กรณีที่ Backend กำลังเชื่อมต่อหรืออยู่ในระหว่าง Boot ให้คำนวณจากค่าตั้งต้น
-    const defaultUser: HeroUserProfile = {
-      id: userId || 'demo-hero-1',
-      username: 'hero',
-      email: 'hero@cardcraft.dev',
-      name: 'Alden the Rune Challenger',
-      targetScore: 700,
-      currentEstimatedScore: 625,
-    };
-    const evolution = getCharacterEvolution(
-      defaultUser.currentEstimatedScore,
-      defaultUser.targetScore,
-    );
+    // โหมด Guest เริ่มต้น หรือกรณี Backend กำลัง Boot
+    const guestEvolution = getCharacterEvolution(10, 700);
 
     return {
-      user: defaultUser,
-      evolution,
+      user: null,
+      isGuest: true,
+      evolution: guestEvolution,
       stats: {
         totalFlashcards: TOEIC_DICTIONARY_CARDS.length,
         masteredCards: 0,
         learningCards: 0,
         unseenCards: TOEIC_DICTIONARY_CARDS.length,
         totalQuestions: TOEIC_INITIAL_QUESTIONS.length,
-        totalExamsCompleted: TOEIC_INITIAL_ATTEMPTS.length,
+        totalExamsCompleted: 0,
       },
-      recentAttempts: TOEIC_INITIAL_ATTEMPTS.slice(0, 5),
+      recentAttempts: [],
       isBackendConnected: false,
     };
   }
@@ -389,7 +380,7 @@ export async function submitExamAttempt(
 
     const attempt: ExamAttemptItem = {
       id: `attempt-${Date.now()}`,
-      userId: payload.userId || 'demo-hero-1',
+      userId: payload.userId || '',
       mode: payload.mode,
       listeningCorrect: payload.listeningCorrect,
       readingCorrect: payload.readingCorrect,
@@ -401,9 +392,9 @@ export async function submitExamAttempt(
     };
 
     const user: HeroUserProfile = {
-      id: payload.userId || 'demo-hero-1',
+      id: payload.userId || '',
       username: 'hero',
-      name: 'Alden the Rune Challenger',
+      name: 'CardCraft Hero',
       targetScore: 700,
       currentEstimatedScore: scoreBreakdown.estimatedScore,
     };

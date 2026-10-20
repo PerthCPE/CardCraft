@@ -1,15 +1,15 @@
 // ============================================================================
 // flashcards.service.ts
-// เปรียบเทียบกับ Go (Gin + GORM):
-// - เมธอด CRUD ที่นี่เทียบเท่ากับ Repository/Service methods ใน Go เช่น
-//   `db.Where("category = ?", cat).Preload("CardProgresses").Find(&cards)`
-// - ส่วน `recordSwipe` ใช้ `prisma.cardProgress.upsert()` ซึ่งเทียบเท่ากับ
-//   `clause.OnConflict{Columns: []clause.Column{{Name: "user_id"}, {Name: "card_id"}}, DoUpdates: ...}` ใน GORM
+// CardCraft Release v1.0: Flashcards & Spaced Repetition (CardProgress) Service
 // ============================================================================
 
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { DEFAULT_DEMO_USER_ID, UsersService } from '../users/users.service';
+import { UsersService } from '../users/users.service';
 import { CreateFlashcardDto } from './dto/create-flashcard.dto';
 import { UpdateFlashcardDto } from './dto/update-flashcard.dto';
 import { SwipeFlashcardDto } from './dto/swipe-flashcard.dto';
@@ -23,20 +23,29 @@ export class FlashcardsService {
 
   /**
    * ดึงรายการการ์ดคำศัพท์ทั้งหมด พร้อมสถานะความจำ (CardProgress) ของผู้เล่นปัจจุบัน
+   * หากเป็น Guest (ไม่มี userId) จะคืนค่า progress เป็น null
    */
-  async findAll(category?: string, userId = DEFAULT_DEMO_USER_ID) {
-    const cards = await this.prisma.flashcard.findMany({
+  async findAll(category?: string, userId?: string) {
+    const isGuest = !userId || userId === 'guest';
+
+    const cards = (await this.prisma.flashcard.findMany({
       where: category && category !== 'ALL' ? { category } : undefined,
-      include: {
-        cardProgresses: {
-          where: { userId },
-        },
-      },
+      include: !isGuest
+        ? {
+            cardProgresses: {
+              where: { userId },
+            },
+          }
+        : undefined,
       orderBy: [{ manaCost: 'asc' }, { word: 'asc' }],
-    });
+    })) as any[];
 
     return cards.map((card) => {
-      const progress = card.cardProgresses[0] ?? null;
+      const progress =
+        !isGuest && card.cardProgresses && card.cardProgresses.length > 0
+          ? card.cardProgresses[0]
+          : null;
+
       return {
         id: card.id,
         word: card.word,
@@ -45,22 +54,16 @@ export class FlashcardsService {
         exampleEn: card.exampleEn,
         category: card.category,
         manaCost: card.manaCost,
-        createdAt: card.createdAt,
-        updatedAt: card.updatedAt,
         progress: progress
           ? {
               isKnown: progress.isKnown,
               swipeCount: progress.swipeCount,
-              updatedAt: progress.updatedAt,
             }
           : null,
       };
     });
   }
 
-  /**
-   * ดึงข้อมูลการ์ดคำศัพท์รายใบตาม ID
-   */
   async findOne(id: string) {
     const card = await this.prisma.flashcard.findUnique({
       where: { id },
@@ -73,18 +76,19 @@ export class FlashcardsService {
     return card;
   }
 
-  /**
-   * สร้างการ์ดคำศัพท์ใหม่ (Create)
-   */
   async create(dto: CreateFlashcardDto) {
     return this.prisma.flashcard.create({
-      data: dto,
+      data: {
+        word: dto.word,
+        partOfSpeech: dto.partOfSpeech,
+        meaningTh: dto.meaningTh,
+        exampleEn: dto.exampleEn,
+        category: dto.category,
+        manaCost: dto.manaCost ?? 3,
+      },
     });
   }
 
-  /**
-   * แก้ไขข้อมูลการ์ดคำศัพท์ (Update)
-   */
   async update(id: string, dto: UpdateFlashcardDto) {
     await this.findOne(id);
     return this.prisma.flashcard.update({
@@ -93,9 +97,6 @@ export class FlashcardsService {
     });
   }
 
-  /**
-   * ลบการ์ดคำศัพท์ (Delete)
-   */
   async remove(id: string) {
     await this.findOne(id);
     return this.prisma.flashcard.delete({
@@ -105,12 +106,14 @@ export class FlashcardsService {
 
   /**
    * บันทึกผลการปัดการ์ดซ้าย/ขวา (Upsert CardProgress)
-   * - ปัดขวา (isKnown: true) = Mastered
-   * - ปัดซ้าย (isKnown: false) = Still Learning
+   * ต้องเข้าสู่ระบบก่อนเสมอ
    */
   async recordSwipe(cardId: string, dto: SwipeFlashcardDto) {
-    const userId = dto.userId || DEFAULT_DEMO_USER_ID;
+    if (!dto.userId || dto.userId === 'guest') {
+      throw new BadRequestException('กรุณาเข้าสู่ระบบก่อนบันทึกสถานะคำศัพท์');
+    }
 
+    const userId = dto.userId;
     await this.findOne(cardId);
     await this.usersService.getOrCreateUser(userId);
 
@@ -137,8 +140,8 @@ export class FlashcardsService {
 
     return {
       message: dto.isKnown
-        ? 'Spell Card Mastered! (+EXP)'
-        : 'Marked as Still Learning (Returned to Training Deck)',
+        ? 'บันทึกการ์ดคำศัพท์เป็น "จำแม่นแล้ว" สำเร็จ!'
+        : 'บันทึกการ์ดคำศัพท์เป็น "ยังจำไม่ได้" สำเร็จ!',
       progress,
     };
   }
