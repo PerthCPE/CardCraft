@@ -1,0 +1,705 @@
+// ============================================================================
+// frontend/src/data/questions/generate-p1.js
+// 50 Authentic TOEIC Part 1 (Photographs) Questions
+// Image-based Listening Questions using realistic ImageFX/Imagen photos
+// ============================================================================
+
+const fs = require('fs');
+const path = require('path');
+
+const part1Data = [
+  // Scene 1: Boardroom Timeline (Q 01 - 05)
+  {
+    num: 1,
+    img: "/images/toeic/part1-boardroom-timeline.jpg",
+    desc: "A businesswoman and a businessman standing beside a whiteboard discussing a quarterly project timeline chart.",
+    q: "[Part 1 Photograph: Two business professionals reviewing a project chart at a whiteboard] Listen to the four statements and select the one that best describes the photograph.",
+    a: "They are discussing information displayed on a whiteboard.",
+    b: "They are moving furniture across the hallway.",
+    c: "One of the men is erasing the marker board.",
+    d: "The chairs are being stacked in the corner.",
+    correct: "A",
+    exp: "เทคนิค Part 1 (คนคู่): ทั้งสองคนกำลังยืนชี้และพูดคุยเรื่องข้อมูลบนไวท์บอร์ด 'discussing information displayed on a whiteboard' ส่วนข้อ (D) เป็นหลุมพราง Passive Voice 'being stacked' ซึ่งไม่มีคนกำลังยกซ้อนเก้าอี้อยู่จริง",
+    tag: "Part 1 - Office Meeting"
+  },
+  {
+    num: 2,
+    img: "/images/toeic/part1-boardroom-timeline.jpg",
+    desc: "Boardroom chart review",
+    q: "[Part 1 Photograph: Professionals reviewing a timeline in a modern meeting room] Select the statement that best describes the scene.",
+    a: "A chart has been drawn on the board.",
+    b: "The conference room is completely dark.",
+    c: "The woman is packing documents into a briefcase.",
+    d: "Coffee cups are being washed in the sink.",
+    correct: "A",
+    exp: "เทคนิค Part 1 (สภาพสิ่งของ Present Perfect Passive): 'A chart has been drawn on the board' แผนภูมิถูกวาดไว้บนกระดานเรียบร้อยแล้ว ตรงกับภาพ 100%",
+    tag: "Part 1 - Present Perfect Passive"
+  },
+  {
+    num: 3,
+    img: "/images/toeic/part1-boardroom-timeline.jpg",
+    desc: "Boardroom chart review",
+    q: "[Part 1 Photograph: Professionals standing by a whiteboard] Select the statement that best describes the photograph.",
+    a: "Both people are wearing business attire.",
+    b: "A projector screen is being pulled down.",
+    c: "The windows are covered with heavy curtains.",
+    d: "The man is shaking hands with a client.",
+    correct: "A",
+    exp: "ทั้งสองคนสวมชุดทำงานสากล (wearing business attire) ถูกต้องตรงตามภาพจริง",
+    tag: "Part 1 - Attire & Appearance"
+  },
+  {
+    num: 4,
+    img: "/images/toeic/part1-boardroom-timeline.jpg",
+    desc: "Boardroom chart review",
+    q: "[Part 1 Photograph: Two colleagues in a brightly lit meeting room] Select the statement that best describes the photograph.",
+    a: "The woman is pointing toward the timeline.",
+    b: "The attendees are taking notes in notebooks.",
+    c: "A laptop is being repaired on the floor.",
+    d: "The conference table has been cleared of all chairs.",
+    correct: "A",
+    exp: "ผู้หญิงกำลังชี้ไปที่เส้นกราฟไทม์ไลน์ ('pointing toward the timeline') ตรงกับการกระทำในภาพ",
+    tag: "Part 1 - Action & Gesture"
+  },
+  {
+    num: 5,
+    img: "/images/toeic/part1-boardroom-timeline.jpg",
+    desc: "Boardroom chart review",
+    q: "[Part 1 Photograph: Two business colleagues in an office boardroom] Select the statement that best describes the photograph.",
+    a: "They are standing next to each other near a board.",
+    b: "One person is handing a pen to the other.",
+    c: "A presentation video is playing on a television.",
+    d: "The office door is being painted white.",
+    correct: "A",
+    exp: "ตำแหน่งของทั้งสองคนกำลังยืนเคียงข้างกันใกล้กระดาน ('standing next to each other near a board')",
+    tag: "Part 1 - Relative Position"
+  },
+
+  // Scene 2: Warehouse Forklift (Q 06 - 10)
+  {
+    num: 6,
+    img: "/images/toeic/part1-warehouse-forklift.jpg",
+    desc: "A warehouse worker wearing a hi-vis neon safety vest operating a yellow forklift carrying a pallet of cartons.",
+    q: "[Part 1 Photograph: A forklift operator moving pallets in a modern warehouse] Select the statement that best describes the photograph.",
+    a: "A worker is operating an industrial forklift truck.",
+    b: "Boxes are being loaded onto an airplane.",
+    c: "The warehouse floor is undergoing water repairs.",
+    d: "Shelves are being assembled with power tools.",
+    correct: "A",
+    exp: "ผู้ปฏิบัติงานกำลังขับขี่และควบคุมรถยกโฟล์กลิฟต์ในคลังสินค้า ('operating an industrial forklift truck')",
+    tag: "Part 1 - Industrial Machinery"
+  },
+  {
+    num: 7,
+    img: "/images/toeic/part1-warehouse-forklift.jpg",
+    desc: "Warehouse forklift with pallet",
+    q: "[Part 1 Photograph: Storage facility with stacked shipping cartons] Select the statement that best describes the scene.",
+    a: "Merchandise has been arranged on high storage racks.",
+    b: "The driver has stepped out of the vehicle.",
+    c: "Pallets are being dismantled into firewood.",
+    d: "The forklift is parked outside on the street.",
+    correct: "A",
+    exp: "สินค้าและกล่องบรรจุภัณฑ์ถูกจัดวางอยู่บนชั้นวางสินค้าทรงสูง ('arranged on high storage racks')",
+    tag: "Part 7 - Warehouse Environment"
+  },
+  {
+    num: 8,
+    img: "/images/toeic/part1-warehouse-forklift.jpg",
+    desc: "Warehouse worker with safety gear",
+    q: "[Part 1 Photograph: A logistics employee on a forklift in a distribution center] Select the statement that best describes the photograph.",
+    a: "The worker is wearing a high-visibility safety vest.",
+    b: "The operator is carrying a clipboard in his hands.",
+    c: "Safety helmets are being handed to visitors.",
+    d: "The forklift is carrying empty plastic trays.",
+    correct: "A",
+    exp: "คนงานกำลังสวมเสื้อกั๊กนิรภัยสะท้อนแสงสีสะท้อนตา ('wearing a high-visibility safety vest')",
+    tag: "Part 1 - Safety Equipment"
+  },
+  {
+    num: 9,
+    img: "/images/toeic/part1-warehouse-forklift.jpg",
+    desc: "Pallet raised on forklift",
+    q: "[Part 1 Photograph: Cartons stacked on a wooden pallet lifted by a forklift] Select the statement that best describes the photograph.",
+    a: "A pallet of cardboard boxes is being transported.",
+    b: "Boxes are falling off the vehicle.",
+    c: "Workers are gathered around a delivery truck.",
+    d: "The aisle is completely blocked by loose cargo.",
+    correct: "A",
+    exp: "พาเลทที่มีกล่องกระดาษเรียงซ้อนกันกำลังถูกขนย้าย ('pallet of cardboard boxes is being transported')",
+    tag: "Part 1 - Cargo Handling"
+  },
+  {
+    num: 10,
+    img: "/images/toeic/part1-warehouse-forklift.jpg",
+    desc: "Warehouse aisle view",
+    q: "[Part 1 Photograph: High warehouse shelves lined with stored inventory] Select the statement that best describes the photograph.",
+    a: "Tall shelving units line both sides of the aisle.",
+    b: "The warehouse ceiling is being painted blue.",
+    c: "A conveyor belt is moving packages upstairs.",
+    d: "All boxes on the pallet are identical in color.",
+    correct: "A",
+    exp: "ชั้นวางสินค้าทรงสูงขนาบอยู่สองฝั่งของทางเดินในโกดัง ('Tall shelving units line both sides of the aisle')",
+    tag: "Part 1 - Facility Layout"
+  },
+
+  // Scene 3: Construction Engineers (Q 11 - 15)
+  {
+    num: 11,
+    img: "/images/toeic/part1-construction-engineers.jpg",
+    desc: "Two civil engineers wearing hard hats and reflective safety vests examining a blueprint on a building construction site.",
+    q: "[Part 1 Photograph: Two engineers examining building plans on a construction site] Select the statement that best describes the photograph.",
+    a: "Two people are examining architectural plans together.",
+    b: "Workers are climbing up a scaffold ladder.",
+    c: "Concrete is being poured into a foundation trench.",
+    d: "The building under construction has been completed.",
+    correct: "A",
+    exp: "วิศวกรสองคนกำลังก้มดูและตรวจสอบแบบแปลนก่อสร้างร่วมกัน ('examining architectural plans together')",
+    tag: "Part 1 - Construction Scene"
+  },
+  {
+    num: 12,
+    img: "/images/toeic/part1-construction-engineers.jpg",
+    desc: "Construction site hardhats",
+    q: "[Part 1 Photograph: Construction personnel reviewing blueprints] Select the statement that best describes the photograph.",
+    a: "Protective hard hats are being worn by both individuals.",
+    b: "One person is operating a yellow bulldozer.",
+    c: "Safety glasses are being wiped with a cloth.",
+    d: "Blueprints are being photocopied at a desk.",
+    correct: "A",
+    exp: "หมวกนิรภัยป้องกันกำลังถูกสวมใส่โดยทั้งสองบุคคล ('Protective hard hats are being worn by both individuals')",
+    tag: "Part 1 - Safety Gear Passive"
+  },
+  {
+    num: 13,
+    img: "/images/toeic/part1-construction-engineers.jpg",
+    desc: "Building framework background",
+    q: "[Part 1 Photograph: A commercial building frame under construction] Select the statement that best describes the photograph.",
+    a: "A steel framework structure is visible in the background.",
+    b: "Glass windows have been installed on every floor.",
+    c: "The construction site is deserted and silent.",
+    d: "Bricks are being laid along the sidewalk.",
+    correct: "A",
+    exp: "โครงสร้างเหล็กของอาคารที่กำลังก่อสร้างปรากฏให้เห็นในฉากหลัง ('steel framework structure is visible in the background')",
+    tag: "Part 1 - Background Detail"
+  },
+  {
+    num: 14,
+    img: "/images/toeic/part1-construction-engineers.jpg",
+    desc: "Engineers pointing at plans",
+    q: "[Part 1 Photograph: Two engineers on a commercial job site] Select the statement that best describes the photograph.",
+    a: "One of the professionals is gesturing toward the document.",
+    b: "A worker is drilling into a concrete beam.",
+    c: "Safety tape is being wrapped around a pole.",
+    d: "Both people are seated on wooden benches.",
+    correct: "A",
+    exp: "หนึ่งในวิศวกรกำลังชี้/แสดงท่าทางไปยังเอกสารแบบแปลน ('gesturing toward the document')",
+    tag: "Part 1 - Hand Gestures"
+  },
+  {
+    num: 15,
+    img: "/images/toeic/part1-construction-engineers.jpg",
+    desc: "Construction vests",
+    q: "[Part 1 Photograph: Site inspection in progress] Select the statement that best describes the photograph.",
+    a: "Both individuals are wearing reflective safety vests.",
+    b: "A blueprint has fallen onto the muddy ground.",
+    c: "Heavy cranes are lifting steel beams overhead.",
+    d: "The engineers are entering a construction trailer.",
+    correct: "A",
+    exp: "ทั้งสองคนสวมเสื้อกั๊กสะท้อนแสงเพื่อความปลอดภัย ('wearing reflective safety vests')",
+    tag: "Part 1 - Attire Detail"
+  },
+
+  // Scene 4: Modern Library (Q 16 - 20)
+  {
+    num: 16,
+    img: "/images/toeic/part1-modern-library.jpg",
+    desc: "A patron reaching up to pull a book from a tall wooden bookshelf in a bright modern library hall.",
+    q: "[Part 1 Photograph: A person browsing books in a quiet modern library] Select the statement that best describes the photograph.",
+    a: "A patron is reaching for a book on a high shelf.",
+    b: "Books are being packed into shipping boxes.",
+    c: "A librarian is checking out books with a barcode scanner.",
+    d: "The library shelves are completely empty of volumes.",
+    correct: "A",
+    exp: "บุคคลในภาพกำลังเอื้อมมือขึ้นไปหยิบหนังสือบนชั้นวางทรงสูง ('reaching for a book on a high shelf')",
+    tag: "Part 1 - Library Action"
+  },
+  {
+    num: 17,
+    img: "/images/toeic/part1-modern-library.jpg",
+    desc: "Library bookshelf rows",
+    q: "[Part 1 Photograph: Books arranged on wooden library shelving] Select the statement that best describes the scene.",
+    a: "Volumes have been organized vertically on the shelves.",
+    b: "Books are scattered loosely across the floor.",
+    c: "The bookshelf is being painted with brown varnish.",
+    d: "A step stool has overturned in the aisle.",
+    correct: "A",
+    exp: "หนังสือเล่มต่างๆ ถูกจัดวางในแนวตั้งอย่างเป็นระเบียบบนชั้นวาง ('Volumes have been organized vertically on the shelves')",
+    tag: "Part 1 - Object Arrangement"
+  },
+  {
+    num: 18,
+    img: "/images/toeic/part1-modern-library.jpg",
+    desc: "Library lighting & aisle",
+    q: "[Part 1 Photograph: An aisle between tall wooden bookshelves] Select the statement that best describes the photograph.",
+    a: "The library aisle is brightly illuminated.",
+    b: "People are crowded around the circulation desk.",
+    c: "Study tables are being wiped down by staff.",
+    d: "The patron is seated on a reading armchair.",
+    correct: "A",
+    exp: "ทางเดินระหว่างชั้นหนังสือมีแสงสว่างส่องทั่วถึงอย่างสดใส ('The library aisle is brightly illuminated')",
+    tag: "Part 1 - Atmosphere & Lighting"
+  },
+  {
+    num: 19,
+    img: "/images/toeic/part1-modern-library.jpg",
+    desc: "Patron selecting book",
+    q: "[Part 1 Photograph: A reader examining titles in a library] Select the statement that best describes the photograph.",
+    a: "The person is browsing titles on a bookshelf.",
+    b: "A magazine is being photocopied at a copier.",
+    c: "The reader is returning a stack of books to a cart.",
+    d: "A book has been dropped onto the carpet.",
+    correct: "A",
+    exp: "คนในภาพกำลังเลือกดูหนังสือบนชั้นวาง ('browsing titles on a bookshelf')",
+    tag: "Part 1 - Action"
+  },
+  {
+    num: 20,
+    img: "/images/toeic/part1-modern-library.jpg",
+    desc: "Library books vertical spines",
+    q: "[Part 1 Photograph: High shelves filled with books in a library] Select the statement that best describes the photograph.",
+    a: "Books are arranged in neat rows along the shelving.",
+    b: "A patron is climbing a rolling library ladder.",
+    c: "The library is closed for evening inventory.",
+    d: "Newspapers are hung on wooden reading racks.",
+    correct: "A",
+    exp: "หนังสือถูกจัดเรียงเป็นแถวอย่างเป็นระเบียบตามชั้นวาง ('arranged in neat rows along the shelving')",
+    tag: "Part 1 - Neat Rows"
+  },
+
+  // Scene 5: Airport Departure Concourse (Q 21 - 25)
+  {
+    num: 21,
+    img: "/images/toeic/part1-airport-departure.jpg",
+    desc: "Two business travelers pulling rolling carry-on luggage across an airport terminal concourse beneath flight departure monitors.",
+    q: "[Part 1 Photograph: Business travelers walking with luggage through an airport terminal] Select the statement that best describes the photograph.",
+    a: "Travelers are pulling wheeled luggage across the concourse.",
+    b: "Passengers are boarding an aircraft via a jet bridge.",
+    c: "Baggage is being unloaded from an airplane cargo hold.",
+    d: "Security officers are inspecting a passenger's passport.",
+    correct: "A",
+    exp: "ผู้โดยสารกำลังลากกระเป๋าเดินทางมีล้อเลื่อนข้ามทางเดินในอาคารผู้โดยสาร ('pulling wheeled luggage across the concourse')",
+    tag: "Part 1 - Travel & Airport"
+  },
+  {
+    num: 22,
+    img: "/images/toeic/part1-airport-departure.jpg",
+    desc: "Flight monitors overhead",
+    q: "[Part 1 Photograph: An airport concourse with digital flight displays] Select the statement that best describes the scene.",
+    a: "Information display screens are mounted overhead.",
+    b: "The flight departure board is being replaced by technicians.",
+    c: "The terminal floor is completely covered in snow.",
+    d: "All check-in ticket counters are shuttered.",
+    correct: "A",
+    exp: "หน้าจอมอนิเตอร์แสดงข้อมูลเที่ยวบินถูกติดตั้งอยู่เหนือศีรษะ ('Information display screens are mounted overhead')",
+    tag: "Part 1 - Overhead Fixtures"
+  },
+  {
+    num: 23,
+    img: "/images/toeic/part1-airport-departure.jpg",
+    desc: "Airport terminal floor reflection",
+    q: "[Part 1 Photograph: Travelers walking through a modern airport terminal] Select the statement that best describes the photograph.",
+    a: "The airport terminal floor has a polished surface.",
+    b: "Passengers are sleeping on benches in the waiting lounge.",
+    c: "A pilot is addressing passengers through a microphone.",
+    d: "Flight tickets are being printed at an automatic kiosk.",
+    correct: "A",
+    exp: "พื้นอาคารผู้โดยสารเป็นผิวมันขัดเงาสะท้อนแสงไฟ ('The airport terminal floor has a polished surface')",
+    tag: "Part 1 - Architectural Surface"
+  },
+  {
+    num: 24,
+    img: "/images/toeic/part1-airport-departure.jpg",
+    desc: "Travelers in motion",
+    q: "[Part 1 Photograph: Passengers moving toward departure gates] Select the statement that best describes the photograph.",
+    a: "People are walking through an airport corridor.",
+    b: "An aircraft is taking off outside the terminal window.",
+    c: "Carry-on luggage is being weighed at a check-in scale.",
+    d: "Passengers are going through a metal detector arch.",
+    correct: "A",
+    exp: "ผู้คนกำลังเดินผ่านโถงทางเดินของสนามบิน ('walking through an airport corridor')",
+    tag: "Part 1 - Passenger Movement"
+  },
+  {
+    num: 25,
+    img: "/images/toeic/part1-airport-departure.jpg",
+    desc: "Travelers business attire with suitcases",
+    q: "[Part 1 Photograph: Business passengers with carry-on bags in an airport] Select the statement that best describes the photograph.",
+    a: "Travelers are transporting their personal luggage.",
+    b: "A flight attendant is serving beverages from a trolley.",
+    c: "A passenger is checking in at an airline counter.",
+    d: "Luggage has been left unattended on the floor.",
+    correct: "A",
+    exp: "ผู้เดินทางกำลังเคลื่อนย้ายกระเป๋าสัมภาระส่วนตัว ('transporting their personal luggage')",
+    tag: "Part 1 - Luggage Transport"
+  },
+
+  // Scene 6: Supermarket Produce (Q 26 - 30)
+  {
+    num: 26,
+    img: "/images/toeic/part1-supermarket-produce.jpg",
+    desc: "A customer pushing a grocery cart in a supermarket produce aisle lined with fresh fruits and vegetables.",
+    q: "[Part 1 Photograph: A shopper browsing fresh produce in a supermarket] Select the statement that best describes the photograph.",
+    a: "A customer is pushing a shopping cart in a grocery store.",
+    b: "Groceries are being rung up at the cash register.",
+    c: "Shelves are being restocked from wooden crates.",
+    d: "The supermarket aisles are completely deserted.",
+    correct: "A",
+    exp: "ลูกค้ากำลังเข็นรถเข็นช็อปปิ้งในร้านขายของชำ/ซูเปอร์มาร์เก็ต ('pushing a shopping cart in a grocery store')",
+    tag: "Part 1 - Retail & Shopping"
+  },
+  {
+    num: 27,
+    img: "/images/toeic/part1-supermarket-produce.jpg",
+    desc: "Produce display bins",
+    q: "[Part 1 Photograph: Fresh fruits and vegetables displayed in a market] Select the statement that best describes the scene.",
+    a: "Produce has been arranged in open display bins.",
+    b: "Canned goods are stacked into tall pyramids.",
+    c: "A butcher is cutting meat behind a glass counter.",
+    d: "Prices are being handwritten on cardboard signs.",
+    correct: "A",
+    exp: "ผักและผลไม้สดถูกจัดวางอย่างเป็นระเบียบในกระบะเปิดสำหรับจัดแสดงสินค้า ('arranged in open display bins')",
+    tag: "Part 1 - Product Display"
+  },
+  {
+    num: 28,
+    img: "/images/toeic/part1-supermarket-produce.jpg",
+    desc: "Customer selecting fruits",
+    q: "[Part 1 Photograph: A customer in the produce section of a store] Select the statement that best describes the photograph.",
+    a: "The shopper is selecting fresh items from a display.",
+    b: "Food items are being placed into paper shopping bags.",
+    c: "The shopping cart is overflowing with bakery bread.",
+    d: "Store employees are sweeping the market floor.",
+    correct: "A",
+    exp: "ผู้ซื้อกำลังเลือกหยิบสินค้าสดจากแท่นวางแสดง ('selecting fresh items from a display')",
+    tag: "Part 1 - Shopper Action"
+  },
+  {
+    num: 29,
+    img: "/images/toeic/part1-supermarket-produce.jpg",
+    desc: "Store aisle lighting",
+    q: "[Part 1 Photograph: A brightly lit grocery store aisle] Select the statement that best describes the photograph.",
+    a: "Overhead lighting illuminates the merchandise.",
+    b: "The store entrance is blocked with shopping baskets.",
+    c: "A cashier is scanning barcodes with a handheld laser.",
+    d: "Frozen food freezer doors have been left open.",
+    correct: "A",
+    exp: "แสงไฟจากเพดานส่องสว่างกระทบสินค้าอย่างชัดเจน ('Overhead lighting illuminates the merchandise')",
+    tag: "Part 1 - Lighting & Visibility"
+  },
+  {
+    num: 30,
+    img: "/images/toeic/part1-supermarket-produce.jpg",
+    desc: "Supermarket merchandise variety",
+    q: "[Part 1 Photograph: Fresh agricultural food on display] Select the statement that best describes the photograph.",
+    a: "A variety of fruits and vegetables is on sale.",
+    b: "Customers are standing in a long checkout queue.",
+    c: "A delivery van is parked inside the grocery aisle.",
+    d: "Price tags have fallen onto the supermarket floor.",
+    correct: "A",
+    exp: "ผักและผลไม้นานาชนิดวางจำหน่ายอยู่ ('variety of fruits and vegetables is on sale')",
+    tag: "Part 1 - Store Inventory"
+  },
+
+  // Scene 7: Outdoor Cafe Patio (Q 31 - 35)
+  {
+    num: 31,
+    img: "/images/toeic/part1-cafe-patio.jpg",
+    desc: "Customers seated at small round tables under patio umbrellas at an outdoor cafe on a pedestrian street.",
+    q: "[Part 1 Photograph: Diners at an outdoor patio cafe] Select the statement that best describes the photograph.",
+    a: "Patrons are seated outdoors under patio umbrellas.",
+    b: "Waiters are setting formal indoor banquet tables.",
+    c: "A street sweeper is cleaning the roadway with a machine.",
+    d: "The cafe entrance is locked with an iron gate.",
+    correct: "A",
+    exp: "ลูกค้านั่งรับประทานอาหารกลางแจ้งใต้ร่มกันแดด ('Patrons are seated outdoors under patio umbrellas')",
+    tag: "Part 1 - Outdoor Dining"
+  },
+  {
+    num: 32,
+    img: "/images/toeic/part1-cafe-patio.jpg",
+    desc: "Round cafe tables with cups",
+    q: "[Part 1 Photograph: Coffee cups and saucers on outdoor tables] Select the statement that best describes the scene.",
+    a: "Beverage cups have been placed on the tables.",
+    b: "The patio chairs have been stacked upside down.",
+    c: "Rainwater is dripping from the umbrellas.",
+    d: "A waiter is clearing dirty plates from a tray.",
+    correct: "A",
+    exp: "ถ้วยเครื่องดื่มถูกวางไว้บนโต๊ะเรียบร้อยแล้ว ('Beverage cups have been placed on the tables')",
+    tag: "Part 1 - Tableware State"
+  },
+  {
+    num: 33,
+    img: "/images/toeic/part1-cafe-patio.jpg",
+    desc: "People conversing at cafe",
+    q: "[Part 1 Photograph: Customers relaxing outside an espresso cafe] Select the statement that best describes the photograph.",
+    a: "Several people are conversing at small tables.",
+    b: "A chef is cooking food on an open outdoor grill.",
+    c: "Bicycles are leaning against the cafe storefront.",
+    d: "The umbrellas are being folded up by the staff.",
+    correct: "A",
+    exp: "ผู้คนหลายคนกำลังนั่งพูดคุยกันที่โต๊ะเล็ก ('Several people are conversing at small tables')",
+    tag: "Part 1 - People Interaction"
+  },
+  {
+    num: 34,
+    img: "/images/toeic/part1-cafe-patio.jpg",
+    desc: "Pedestrian street cafe",
+    q: "[Part 1 Photograph: A sidewalk cafe on a European street] Select the statement that best describes the photograph.",
+    a: "Tables and chairs are set up along the pedestrian walkway.",
+    b: "Automobiles are parked right next to the tables.",
+    c: "A delivery truck is unloading crates of soda.",
+    d: "The cafe is closed for morning floor cleaning.",
+    correct: "A",
+    exp: "โต๊ะและเก้าอี้ถูกจัดตั้งไว้ตามแนวทางเดินคนเดิน ('Tables and chairs are set up along the pedestrian walkway')",
+    tag: "Part 1 - Spatial Setup"
+  },
+  {
+    num: 35,
+    img: "/images/toeic/part1-cafe-patio.jpg",
+    desc: "Cafe open umbrellas",
+    q: "[Part 1 Photograph: Large fabric umbrellas shading cafe diners] Select the statement that best describes the photograph.",
+    a: "Large umbrellas provide shade for the outdoor seating.",
+    b: "Customers are carrying umbrellas while walking in rain.",
+    c: "Menus are being printed at a sidewalk register.",
+    d: "The waiter is taking an order with a tablet.",
+    correct: "A",
+    exp: "ร่มผ้าใบขนาดใหญ่ช่วยบังแดดให้กับที่นั่งกลางแจ้ง ('Large umbrellas provide shade for the outdoor seating')",
+    tag: "Part 1 - Functional Feature"
+  },
+
+  // Scene 8: Office Presentation (Q 36 - 40)
+  {
+    num: 36,
+    img: "/images/toeic/part1-office-presentation.jpg",
+    desc: "A professional giving a presentation using a projector screen to colleagues around a boardroom table.",
+    q: "[Part 1 Photograph: A business presentation in a corporate boardroom] Select the statement that best describes the photograph.",
+    a: "A presenter is addressing colleagues around a conference table.",
+    b: "Employees are packing their belongings into cardboard boxes.",
+    c: "A projector is being mounted onto the ceiling.",
+    d: "The conference room chairs are unoccupied.",
+    correct: "A",
+    exp: "วิทยากร/ผู้นำเสนอ กำลังพูดบรรยายให้เพื่อนร่วมงานรอบโต๊ะประชุมฟัง ('presenter is addressing colleagues around a conference table')",
+    tag: "Part 1 - Corporate Presentation"
+  },
+  {
+    num: 37,
+    img: "/images/toeic/part1-office-presentation.jpg",
+    desc: "Slide projected on screen",
+    q: "[Part 1 Photograph: A projection screen showing business charts] Select the statement that best describes the scene.",
+    a: "A visual slide is displayed on a projection screen.",
+    b: "The projection screen has been retracted into the ceiling.",
+    c: "Attendees are watching a commercial movie.",
+    d: "The presenter is adjusting the room's thermostat.",
+    correct: "A",
+    exp: "สไลด์ภาพกราฟิกถูกแสดงอยู่บนจอโปรเจกเตอร์ ('visual slide is displayed on a projection screen')",
+    tag: "Part 1 - Presentation Display"
+  },
+  {
+    num: 38,
+    img: "/images/toeic/part1-office-presentation.jpg",
+    desc: "Seated meeting attendees",
+    q: "[Part 1 Photograph: Attendees listening to a business presentation] Select the statement that best describes the photograph.",
+    a: "Audience members are seated facing the front of the room.",
+    b: "All participants are standing with their hands raised.",
+    c: "Notepads are being passed around the room by a waiter.",
+    d: "The presenter is unplugging audio cables.",
+    correct: "A",
+    exp: "ผู้เข้าร่วมประชุมนั่งหันหน้าไปทางด้านหน้าห้อง ('seated facing the front of the room')",
+    tag: "Part 1 - Audience Posture"
+  },
+  {
+    num: 39,
+    img: "/images/toeic/part1-office-presentation.jpg",
+    desc: "Laptops and notebooks on table",
+    q: "[Part 1 Photograph: Documents and laptops on a conference table] Select the statement that best describes the photograph.",
+    a: "Laptops and papers are placed on the conference table.",
+    b: "A coffee pot is being poured into plastic cups.",
+    c: "The boardroom lights have been turned off completely.",
+    d: "A speaker is writing on a chalkboard with chalk.",
+    correct: "A",
+    exp: "แล็ปท็อปและเอกสารวางอยู่บนโต๊ะประชุม ('Laptops and papers are placed on the conference table')",
+    tag: "Part 1 - Table Items"
+  },
+  {
+    num: 40,
+    img: "/images/toeic/part1-office-presentation.jpg",
+    desc: "Presenter standing gesture",
+    q: "[Part 1 Photograph: Professional speaker leading a meeting] Select the statement that best describes the photograph.",
+    a: "The speaker is standing while delivering remarks.",
+    b: "The presenter is shaking hands with an audience member.",
+    c: "Handouts are being shredded in an office machine.",
+    d: "The attendees are leaving the meeting room in a hurry.",
+    correct: "A",
+    exp: "ผู้พูดกำลังยืนขณะกล่าวบรรยาย ('standing while delivering remarks')",
+    tag: "Part 1 - Speaker Action"
+  },
+
+  // Scene 9: Laboratory Research (Q 41 - 45)
+  {
+    num: 41,
+    img: "/images/toeic/part1-laboratory-research.jpg",
+    desc: "A scientist in a white lab coat using an optical microscope on a sterile laboratory workbench with glassware.",
+    q: "[Part 1 Photograph: A researcher working with a microscope in a laboratory] Select the statement that best describes the photograph.",
+    a: "A scientist is looking through a laboratory microscope.",
+    b: "Glass test tubes are being washed in a dishwasher.",
+    c: "Chemical bottles are being packed into shipping crates.",
+    d: "The laboratory workbench is covered in dirt and dust.",
+    correct: "A",
+    exp: "นักวิทยาศาสตร์กำลังก้มมองผ่านกล้องจุลทรรศน์ ('looking through a laboratory microscope')",
+    tag: "Part 1 - Laboratory Action"
+  },
+  {
+    num: 42,
+    img: "/images/toeic/part1-laboratory-research.jpg",
+    desc: "Lab glassware and test tubes",
+    q: "[Part 1 Photograph: Glass beakers and flasks on a lab bench] Select the statement that best describes the scene.",
+    a: "Glassware has been arranged on the workbench.",
+    b: "A beaker has shattered onto the floor.",
+    c: "Test tubes are being heated over a gas flame.",
+    d: "The scientist has removed her protective gloves.",
+    correct: "A",
+    exp: "เครื่องแก้วในห้องแล็บถูกจัดวางอยู่บนโต๊ะทดลอง ('Glassware has been arranged on the workbench')",
+    tag: "Part 1 - Lab Equipment State"
+  },
+  {
+    num: 43,
+    img: "/images/toeic/part1-laboratory-research.jpg",
+    desc: "Lab protective coat and gloves",
+    q: "[Part 1 Photograph: A technician wearing protective lab gear] Select the statement that best describes the photograph.",
+    a: "The researcher is wearing a white protective lab coat.",
+    b: "The technician is repairing an electrical wall outlet.",
+    c: "A microscope lens is being cleaned with a brush.",
+    d: "Liquid is spilling out of an unstoppered bottle.",
+    correct: "A",
+    exp: "นักวิจัยกำลังสวมเสื้อกาวน์สีขาวสำหรับห้องปฏิบัติการ ('wearing a white protective lab coat')",
+    tag: "Part 1 - Protective Gear"
+  },
+  {
+    num: 44,
+    img: "/images/toeic/part1-laboratory-research.jpg",
+    desc: "Clean sterile workbench",
+    q: "[Part 1 Photograph: A clean scientific workspace] Select the statement that best describes the photograph.",
+    a: "Scientific instruments are positioned on the table surface.",
+    b: "A fire extinguisher is being discharged on the bench.",
+    c: "The laboratory door has been boarded up.",
+    d: "The microscope has been packed away into a wooden case.",
+    correct: "A",
+    exp: "เครื่องมือทางวิทยาศาสตร์ถูกจัดวางบนพื้นผิวโต๊ะทดลอง ('Scientific instruments are positioned on the table surface')",
+    tag: "Part 1 - Workspace Setup"
+  },
+  {
+    num: 45,
+    img: "/images/toeic/part1-laboratory-research.jpg",
+    desc: "Scientist adjusting microscope focus",
+    q: "[Part 1 Photograph: Scientific examination in progress] Select the statement that best describes the photograph.",
+    a: "The person is adjusting an optical instrument.",
+    b: "A chart is being attached to the laboratory wall.",
+    c: "The researcher is typing on a desktop keyboard.",
+    d: "Gloves are being thrown into a biohazard trash bin.",
+    correct: "A",
+    exp: "คนในภาพกำลังปรับปุ่มโฟกัสของอุปกรณ์เชิงแสง (กล้องจุลทรรศน์) ('adjusting an optical instrument')",
+    tag: "Part 1 - Instrument Adjustment"
+  },
+
+  // Scene 10: Factory Operations (Q 46 - 50)
+  {
+    num: 46,
+    img: "/images/toeic/part1-factory.svg",
+    desc: "A factory technician in safety gear inspecting automated conveyor machinery.",
+    q: "[Part 1 Photograph: An automated production line in an industrial factory] Select the statement that best describes the photograph.",
+    a: "A technician is inspecting industrial assembly equipment.",
+    b: "Automobiles are being driven off a ferry boat.",
+    c: "The factory lights have been switched off for the night.",
+    d: "Finished goods are being loaded into delivery vans.",
+    correct: "A",
+    exp: "ช่างเทคนิคกำลังตรวจสอบอุปกรณ์สายพานการประกอบในโรงงานอุตสาหกรรม ('inspecting industrial assembly equipment')",
+    tag: "Part 1 - Factory Inspection"
+  },
+  {
+    num: 47,
+    img: "/images/toeic/part1-factory.svg",
+    desc: "Conveyor belt machinery",
+    q: "[Part 1 Photograph: Industrial machinery on a plant floor] Select the statement that best describes the scene.",
+    a: "Machinery is installed along a manufacturing line.",
+    b: "The plant floor is covered in standing water.",
+    c: "Workers are taking a break outside the factory gate.",
+    d: "A crane is dismantling the factory roof.",
+    correct: "A",
+    exp: "เครื่องจักรติดตั้งอยู่ตามแนวสายการผลิตในโรงงาน ('Machinery is installed along a manufacturing line')",
+    tag: "Part 1 - Plant Machinery"
+  },
+  {
+    num: 48,
+    img: "/images/toeic/part1-factory.svg",
+    desc: "Technician operating controls",
+    q: "[Part 1 Photograph: A worker in a manufacturing plant] Select the statement that best describes the photograph.",
+    a: "The operator is standing beside a control panel.",
+    b: "The technician is climbing a telephone pole outside.",
+    c: "Parts are being painted with an automatic spray gun.",
+    d: "A forklift is backing into an emergency exit.",
+    correct: "A",
+    exp: "ผู้ปฏิบัติงานกำลังยืนอยู่ข้างแผงควบคุมระบบ ('standing beside a control panel')",
+    tag: "Part 1 - Control Panel"
+  },
+  {
+    num: 49,
+    img: "/images/toeic/part1-factory.svg",
+    desc: "Safety gear on plant floor",
+    q: "[Part 1 Photograph: Safety protocols on a factory floor] Select the statement that best describes the photograph.",
+    a: "Personal protective gear is being utilized by the worker.",
+    b: "The worker is wearing a tuxedo and bowtie.",
+    c: "Safety signs have been removed from the walls.",
+    d: "Tools are lying scattered across the walkway.",
+    correct: "A",
+    exp: "อุปกรณ์ป้องกันส่วนบุคคลกำลังถูกสวมใส่ใช้งานโดยคนงาน ('Personal protective gear is being utilized...')",
+    tag: "Part 1 - Safety Compliance"
+  },
+  {
+    num: 50,
+    img: "/images/toeic/part1-factory.svg",
+    desc: "Clean industrial plant environment",
+    q: "[Part 1 Photograph: An orderly industrial plant interior] Select the statement that best describes the photograph.",
+    a: "The production area is kept clean and orderly.",
+    b: "The factory has been abandoned for many years.",
+    c: "Machines are being disassembled for scrap metal.",
+    d: "Smoke is billowing from a broken boiler unit.",
+    correct: "A",
+    exp: "พื้นที่การผลิตถูกดูแลรักษาให้สะอาดและเป็นระเบียบเรียบร้อย ('The production area is kept clean and orderly')",
+    tag: "Part 1 - Plant Condition"
+  }
+];
+
+const formattedQuestions = part1Data.map((item) => ({
+  id: `q-list-p1-ext-${String(item.num).padStart(2, '0')}`,
+  section: 'LISTENING',
+  part: 1,
+  audioUrl: `/audio/part1-ext-${String(item.num).padStart(2, '0')}.mp3`,
+  imageUrl: item.img,
+  passageText: null,
+  questionText: item.q,
+  optionA: item.a,
+  optionB: item.b,
+  optionC: item.c,
+  optionD: item.d,
+  correctOption: item.correct,
+  explanationTh: item.exp,
+  tag: item.tag,
+}));
+
+fs.writeFileSync(
+  path.join(__dirname, 'part1-extended.json'),
+  JSON.stringify(formattedQuestions, null, 2),
+  'utf8'
+);
+
+console.log(`Generated ${formattedQuestions.length} Part 1 extended questions.`);
