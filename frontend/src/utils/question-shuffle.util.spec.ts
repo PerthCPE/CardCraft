@@ -2,9 +2,11 @@ import { QuestionItem } from '@/data/toeic-dictionary';
 import {
   shuffleQuestionChoices,
   buildShuffledQuestionsMap,
+  MOCK_EXAM_PACKAGES,
+  generateProportionalMockExam,
 } from './question-shuffle.util';
 
-describe('Question Choice Shuffling Utility', () => {
+describe('Question Choice Shuffling & Mock Exam Packages Utility', () => {
   const sampleQuestion: QuestionItem = {
     id: 'q-test-01',
     section: 'READING',
@@ -62,5 +64,40 @@ describe('Question Choice Shuffling Utility', () => {
 
     const q2 = map.get('q-test-02')!;
     expect(q2.displayToOriginalMap[q2.displayCorrectOption]).toBe('C');
+  });
+
+  it('provides all 7 official mock exam packages (50, 75, 100, 125, 150, 175, 200)', () => {
+    expect(MOCK_EXAM_PACKAGES.length).toBe(7);
+    const sizes = MOCK_EXAM_PACKAGES.map((p) => p.size);
+    expect(sizes).toEqual([50, 75, 100, 125, 150, 175, 200]);
+
+    MOCK_EXAM_PACKAGES.forEach((pkg) => {
+      // Every part 1 to 7 must have at least 2 questions
+      for (let p = 1; p <= 7; p++) {
+        expect(pkg.distribution[p]).toBeGreaterThanOrEqual(2);
+      }
+      // Sum of distribution must equal pkg.size
+      const sum = Object.values(pkg.distribution).reduce((a, b) => a + b, 0);
+      expect(sum).toBe(pkg.size);
+    });
+  });
+
+  it('generates proportional mock exam set matching exact requested size', () => {
+    const dummyBank: QuestionItem[] = [];
+    for (let p = 1; p <= 7; p++) {
+      for (let i = 1; i <= 3; i++) {
+        dummyBank.push({
+          ...sampleQuestion,
+          id: `q-p${p}-${i}`,
+          part: p as any,
+        });
+      }
+    }
+
+    const exam50 = generateProportionalMockExam(50, dummyBank);
+    expect(exam50.length).toBe(50);
+
+    const exam100 = generateProportionalMockExam(100, dummyBank);
+    expect(exam100.length).toBe(100);
   });
 });

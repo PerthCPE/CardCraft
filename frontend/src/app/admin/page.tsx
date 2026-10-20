@@ -65,7 +65,7 @@ export default function AdminGuildCrudPage() {
   );
   const [questionForm, setQuestionForm] = useState({
     section: 'READING' as 'LISTENING' | 'READING',
-    part: 5 as 1 | 2 | 5 | 7,
+    part: 5 as 1 | 2 | 3 | 4 | 5 | 6 | 7,
     audioUrl: '',
     imageUrl: '',
     passageText: '',
@@ -672,19 +672,22 @@ export default function AdminGuildCrudPage() {
                   <select
                     value={questionForm.part}
                     onChange={(e) => {
-                      const p = Number(e.target.value) as 1 | 2 | 5 | 7;
+                      const p = Number(e.target.value) as 1 | 2 | 3 | 4 | 5 | 6 | 7;
                       setQuestionForm({
                         ...questionForm,
                         part: p,
-                        section: p <= 2 ? 'LISTENING' : 'READING',
+                        section: p <= 4 ? 'LISTENING' : 'READING',
                       });
                     }}
                     className="w-full px-3 py-2 bg-white border-2 border-slate-900 text-sm"
                   >
                     <option value={1}>Part 1 (Photographs)</option>
                     <option value={2}>Part 2 (Question-Response)</option>
+                    <option value={3}>Part 3 (Conversations)</option>
+                    <option value={4}>Part 4 (Short Talks)</option>
                     <option value={5}>Part 5 (Incomplete Sentences)</option>
-                    <option value={7}>Part 7 (Reading Passage)</option>
+                    <option value={6}>Part 6 (Text Completion)</option>
+                    <option value={7}>Part 7 (Reading Comprehension)</option>
                   </select>
                 </div>
 

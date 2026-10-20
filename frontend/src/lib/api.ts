@@ -17,11 +17,13 @@ import {
   TOEIC_INITIAL_QUESTIONS,
 } from '@/data/toeic-dictionary';
 import {
+  calculateEstimatedPartScore,
   calculateScaledToeicScore,
   CharacterEvolutionStatus,
   CharacterTierInfo,
   getCharacterEvolution,
   ScaledScoreBreakdown,
+  SupportivePerformanceTier,
 } from '@/utils/character-evolution.util';
 
 const API_BASE_URL =
@@ -78,6 +80,51 @@ export interface LogAnswerPayload {
   mode: string;
   selectedOption: string;
   timeSpentMs?: number;
+}
+
+export interface SubmitPracticePartPayload {
+  userId?: string;
+  part: number;
+  totalQuestions: number;
+  correctAnswers: number;
+  timeLimitSeconds: number;
+  timeSpentSeconds: number;
+  answers?: ExamAnswerItemPayload[];
+}
+
+export interface PartSkillEstimateItem {
+  id?: string;
+  userId?: string;
+  part: number;
+  accuracy: number;
+  totalQuestions: number;
+  correctAnswers: number;
+  estimatedScore: number;
+  maxPartScore: number;
+  supportiveTier: number;
+  lastPracticedAt?: string;
+  supportiveInfo?: SupportivePerformanceTier;
+}
+
+export interface PartSkillEstimatesResponse {
+  estimates: PartSkillEstimateItem[];
+  forecastListeningTotal: number;
+  forecastReadingTotal: number;
+  totalForecastScore: number;
+}
+
+export interface SubmitPracticePartResponse {
+  estimate: PartSkillEstimateItem;
+  partEvaluation: {
+    part: number;
+    accuracy: number;
+    accuracyPercent: number;
+    estimatedPartScore: number;
+    maxPartScore: number;
+    supportiveTier: SupportivePerformanceTier;
+  };
+  officialScoreUnchanged: number;
+  user?: HeroUserProfile;
 }
 
 export interface SubmitExamResponse {
@@ -400,6 +447,26 @@ export async function submitExamAttempt(
       targetScore,
     );
 
+    const isMockExam =
+      payload.mode === 'MINI_MOCK' ||
+      payload.mode === 'FULL_MOCK' ||
+      payload.mode === 'BOSS_RAID' ||
+      payload.mode.startsWith('MOCK_') ||
+      payload.mode.includes('MOCK');
+
+    let currentScore = 650;
+    try {
+      const stored = localStorage.getItem('cardcraft_auth_user_v2');
+      if (stored) {
+        const u = JSON.parse(stored);
+        currentScore = u.currentEstimatedScore || 650;
+        if (isMockExam) {
+          u.currentEstimatedScore = scoreBreakdown.estimatedScore;
+          localStorage.setItem('cardcraft_auth_user_v2', JSON.stringify(u));
+        }
+      }
+    } catch {}
+
     const attempt: ExamAttemptItem = {
       id: `attempt-${Date.now()}`,
       userId: payload.userId || '',
@@ -418,18 +485,18 @@ export async function submitExamAttempt(
       username: 'hero',
       name: 'CardCraft Hero',
       targetScore: 700,
-      currentEstimatedScore: scoreBreakdown.estimatedScore,
+      currentEstimatedScore: isMockExam ? scoreBreakdown.estimatedScore : currentScore,
     };
 
     return {
       attempt,
       user,
       scoreBreakdown,
-      previousScore: 625,
-      scoreDelta: scoreBreakdown.estimatedScore - 625,
-      previousTier: getCharacterEvolution(625, targetScore).currentTier,
+      previousScore: currentScore,
+      scoreDelta: scoreBreakdown.estimatedScore - currentScore,
+      previousTier: getCharacterEvolution(currentScore, targetScore).currentTier,
       evolution,
-      hasEvolved: evolution.unlockedTier > 4,
+      hasEvolved: isMockExam && evolution.unlockedTier > getCharacterEvolution(currentScore, targetScore).unlockedTier,
       targetAnalysis: {
         targetScore,
         isPassedTarget: evolution.isPassedTarget,
@@ -439,6 +506,114 @@ export async function submitExamAttempt(
           ? 'ภารกิจสำเร็จ! คุณทะลุเป้าหมาย TOEIC 700+ และปลดล็อกคลาสระดับสูงแล้ว!'
           : `อีกเพียง ${evolution.pointsToTarget700} คะแนน จะทะลุเป้าหมาย 700+ (High Paladin)!`,
       },
+    };
+  }
+}
+
+// ----------------------------------------------------------------------------
+// 4.1 Practice Part Submission API (POST /exams/submit-practice)
+// - คำนวณ Estimated Part Score และ Supportive Performance Tier (1-5)
+// - STRICT SEPARATION: ไม่แก้ไข Official Hero Level หรือ User.currentEstimatedScore!
+// ----------------------------------------------------------------------------
+export async function submitPracticePart(
+  payload: SubmitPracticePartPayload,
+): Promise<SubmitPracticePartResponse> {
+  const partEval = calculateEstimatedPartScore(
+    payload.part,
+    payload.correctAnswers,
+    payload.totalQuestions,
+  );
+
+  try {
+    const res = await fetch(`${API_BASE_URL}/exams/submit-practice`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error('Backend submitPracticePart failed');
+    const data = await res.json();
+    saveLocalPartEstimate(data.estimate);
+    return data;
+  } catch {
+    const estimate: PartSkillEstimateItem = {
+      id: `est-p${payload.part}-${Date.now()}`,
+      userId: payload.userId || 'guest',
+      part: payload.part,
+      accuracy: partEval.accuracy,
+      totalQuestions: payload.totalQuestions,
+      correctAnswers: payload.correctAnswers,
+      estimatedScore: partEval.estimatedPartScore,
+      maxPartScore: partEval.maxPartScore,
+      supportiveTier: partEval.supportiveTier.tier,
+      lastPracticedAt: new Date().toISOString(),
+      supportiveInfo: partEval.supportiveTier,
+    };
+    saveLocalPartEstimate(estimate);
+
+    let officialScore = 0;
+    try {
+      const stored = localStorage.getItem('cardcraft_auth_user_v2');
+      if (stored) {
+        officialScore = JSON.parse(stored).currentEstimatedScore || 0;
+      }
+    } catch {}
+
+    return {
+      estimate,
+      partEvaluation: partEval,
+      officialScoreUnchanged: officialScore,
+    };
+  }
+}
+
+function saveLocalPartEstimate(est: PartSkillEstimateItem) {
+  try {
+    const key = 'cardcraft_part_skill_estimates';
+    const existing = JSON.parse(localStorage.getItem(key) || '{}');
+    existing[est.part] = est;
+    localStorage.setItem(key, JSON.stringify(existing));
+  } catch {}
+}
+
+export async function fetchPartSkillEstimates(
+  userId?: string,
+): Promise<PartSkillEstimatesResponse> {
+  try {
+    if (!userId || userId === 'guest') throw new Error('Guest user');
+    const res = await fetch(
+      `${API_BASE_URL}/exams/part-estimates?userId=${encodeURIComponent(userId)}`,
+      { cache: 'no-store' },
+    );
+    if (!res.ok) throw new Error('Backend fetchPartSkillEstimates failed');
+    return await res.json();
+  } catch {
+    let map: Record<number, PartSkillEstimateItem> = {};
+    try {
+      map = JSON.parse(
+        localStorage.getItem('cardcraft_part_skill_estimates') || '{}',
+      );
+    } catch {}
+
+    const estimates: PartSkillEstimateItem[] = [];
+    let forecastListeningTotal = 0;
+    let forecastReadingTotal = 0;
+
+    for (let p = 1; p <= 7; p++) {
+      if (map[p]) {
+        estimates.push(map[p]);
+        if (p <= 4) {
+          forecastListeningTotal += map[p].estimatedScore;
+        } else {
+          forecastReadingTotal += map[p].estimatedScore;
+        }
+      }
+    }
+
+    return {
+      estimates,
+      forecastListeningTotal,
+      forecastReadingTotal,
+      totalForecastScore: forecastListeningTotal + forecastReadingTotal,
     };
   }
 }

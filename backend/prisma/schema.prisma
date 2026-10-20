@@ -41,6 +41,7 @@ model User {
   cardProgresses        CardProgress[]
   examAttempts          ExamAttempt[]
   answerLogs            AnswerLog[]
+  partSkillEstimates    PartSkillEstimate[]
 }
 
 // 2. Flashcard Model — การ์ดคำศัพท์ RPG (Spell Cards) สำหรับฝึกศัพท์ TOEIC 700+
@@ -158,4 +159,25 @@ model AnswerLog {
   @@index([userId, errorType])
   @@index([userId, part])
   @@index([userId, createdAt])
+}
+
+// 7. PartSkillEstimate Model — บันทึกผลการประเมินคะแนนแยก 7 พาร์ทจากการฝึกซ้อมรายพาร์ท (/practice)
+// ไม่กระทบ official currentEstimatedScore หรือ Character Evolution Tier (Tiers 1-7)
+model PartSkillEstimate {
+  id             String    @id @default(uuid())
+  userId         String
+  part           Int       // 1 - 7
+  accuracy       Float     // ค่าความแม่นยำ 0.0 - 1.0
+  totalQuestions Int       // จำนวนข้อที่ทำในการฝึกรอบล่าสุด
+  correctAnswers Int       // จำนวนข้อที่ตอบถูก
+  estimatedScore Int       // คะแนนคาดการณ์เฉพาะพาร์ทนี้ตามสัดส่วนคะแนนเต็มของพาร์ท
+  maxPartScore   Int       // คะแนนเต็มของพาร์ทนั้นๆ (P1=30, P2=125, P3=190, P4=150, P5=150, P6=80, P7=265)
+  supportiveTier Int       // ช่วงระดับกำลังใจ 1 - 5 (Seedling Stage -> Grand Master)
+  lastPracticedAt DateTime @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, part])
+  @@index([userId])
 }

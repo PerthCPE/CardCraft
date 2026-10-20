@@ -12,12 +12,14 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { UsersService } from '../users/users.service';
 import {
+  calculateEstimatedPartScore,
   calculateScaledToeicScore,
   CharacterEvolutionStatus,
   getCharacterEvolution,
   ScaledScoreBreakdown,
 } from '../common/utils/character-evolution.util';
 import { LogAnswerDto, SubmitExamDto } from './dto/submit-exam.dto';
+import { SubmitPracticePartDto } from './dto/submit-practice.dto';
 
 @Injectable()
 export class ExamsService {
@@ -267,15 +269,28 @@ export class ExamsService {
       }
     }
 
-    // อัปเดตคะแนนประเมินล่าสุดของ Hero ในตาราง User
-    const updatedUser = await this.prisma.user.update({
-      where: { id: user.id },
-      data: {
-        currentEstimatedScore: scoreBreakdown.estimatedScore,
-      },
-    });
+    // กฎเหล็ก CardCraft v2.0 (Strict Separation of Practice vs Mock Exam):
+    // เฉพาะการสอบจำลอง Mock Exam (เช่น MINI_MOCK, FULL_MOCK, BOSS_RAID, MOCK_SET_*) เท่านั้น
+    // ที่มีสิทธิ์อัปเดต Official currentEstimatedScore และวิวัฒนาการตัวละคร
+    // หากเป็นการฝึกซ้อม (Practice Drills / Games) จะไม่อนุญาตให้อัปเดต Hero Level
+    const isMockExam =
+      dto.mode === 'MINI_MOCK' ||
+      dto.mode === 'FULL_MOCK' ||
+      dto.mode === 'BOSS_RAID' ||
+      dto.mode.startsWith('MOCK_') ||
+      dto.mode.includes('MOCK');
 
-    const hasEvolved = evolution.unlockedTier > previousEvolution.unlockedTier;
+    let updatedUser = user;
+    if (isMockExam) {
+      updatedUser = await this.prisma.user.update({
+        where: { id: user.id },
+        data: {
+          currentEstimatedScore: scoreBreakdown.estimatedScore,
+        },
+      });
+    }
+
+    const hasEvolved = isMockExam && evolution.unlockedTier > previousEvolution.unlockedTier;
     const scoreDelta = scoreBreakdown.estimatedScore - previousScore;
 
     return {
@@ -296,6 +311,121 @@ export class ExamsService {
           ? 'ภารกิจสำเร็จ! คุณทะลุเป้าหมาย TOEIC 700+ และปลดล็อกคลาสระดับสูงแล้ว!'
           : `อีกเพียง ${evolution.pointsToTarget700} คะแนน จะทะลุเป้าหมาย 700+ (High Paladin)!`,
       },
+    };
+  }
+
+  /**
+   * บันทึกผลการฝึกซ้อมรายพาร์ท (TOEIC 7-Part Drills) POST /exams/submit-practice
+   * - คำนวณ Estimated Part Score และ Supportive Performance Tier (1-5)
+   * - อัปเดตตาราง PartSkillEstimate สำหรับแสดงผลในหน้า Dashboard (Readiness Forecast Panel)
+   * - STRICT RULE: ห้ามอัปเดต User.currentEstimatedScore หรือ Character Evolution Tier โดยเด็ดขาด!
+   */
+  async submitPracticePart(dto: SubmitPracticePartDto) {
+    if (!dto.userId || dto.userId === 'guest') {
+      throw new BadRequestException(
+        'กรุณาเข้าสู่ระบบเพื่อบันทึกประวัติการฝึกซ้อมรายพาร์ท',
+      );
+    }
+    const user = await this.usersService.getOrCreateUser(dto.userId);
+
+    const partEvaluation = calculateEstimatedPartScore(
+      dto.part,
+      dto.correctAnswers,
+      dto.totalQuestions,
+    );
+
+    const estimate = await this.prisma.partSkillEstimate.upsert({
+      where: {
+        userId_part: {
+          userId: user.id,
+          part: dto.part,
+        },
+      },
+      create: {
+        userId: user.id,
+        part: dto.part,
+        accuracy: partEvaluation.accuracy,
+        totalQuestions: dto.totalQuestions,
+        correctAnswers: dto.correctAnswers,
+        estimatedScore: partEvaluation.estimatedPartScore,
+        maxPartScore: partEvaluation.maxPartScore,
+        supportiveTier: partEvaluation.supportiveTier.tier,
+        lastPracticedAt: new Date(),
+      },
+      update: {
+        accuracy: partEvaluation.accuracy,
+        totalQuestions: dto.totalQuestions,
+        correctAnswers: dto.correctAnswers,
+        estimatedScore: partEvaluation.estimatedPartScore,
+        maxPartScore: partEvaluation.maxPartScore,
+        supportiveTier: partEvaluation.supportiveTier.tier,
+        lastPracticedAt: new Date(),
+      },
+    });
+
+    // บันทึก AnswerLogs ถ้าระบุ answers[] มา
+    if (dto.answers && dto.answers.length > 0) {
+      await this.prisma.answerLog.createMany({
+        data: dto.answers.map((ans) => ({
+          userId: user.id,
+          questionId: ans.questionId,
+          part: dto.part,
+          mode: `PRACTICE_PART_${dto.part}`,
+          selectedOption: ans.selectedOption.toUpperCase(),
+          correctOption: ans.selectedOption.toUpperCase(),
+          isCorrect: true,
+          errorType: null,
+          vocabId: null,
+          timeSpentMs: ans.timeSpentMs ?? 0,
+        })),
+      });
+    }
+
+    return {
+      estimate,
+      partEvaluation,
+      officialScoreUnchanged: user.currentEstimatedScore,
+      user,
+    };
+  }
+
+  /**
+   * ดึงข้อมูลการคาดการณ์ความพร้อมรายพาร์ท (PartSkillEstimates) ทั้ง 7 พาร์ทของผู้เล่น
+   * สำหรับนำไปแสดงผลที่ "TOEIC Readiness Forecast (คาดการณ์คะแนนแยก 7 พาร์ท)" บนหน้าแรก
+   */
+  async getPartSkillEstimates(userId?: string) {
+    if (!userId || userId === 'guest') {
+      return {
+        estimates: [],
+        forecastListeningTotal: 0,
+        forecastReadingTotal: 0,
+        totalForecastScore: 0,
+      };
+    }
+
+    const estimates = await this.prisma.partSkillEstimate.findMany({
+      where: { userId },
+      orderBy: { part: 'asc' },
+    });
+
+    let forecastListeningTotal = 0;
+    let forecastReadingTotal = 0;
+
+    for (const est of estimates) {
+      if (est.part <= 4) {
+        forecastListeningTotal += est.estimatedScore;
+      } else {
+        forecastReadingTotal += est.estimatedScore;
+      }
+    }
+
+    const totalForecastScore = forecastListeningTotal + forecastReadingTotal;
+
+    return {
+      estimates,
+      forecastListeningTotal,
+      forecastReadingTotal,
+      totalForecastScore,
     };
   }
 

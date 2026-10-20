@@ -7,6 +7,7 @@ import { Body, Controller, Get, Post, Query } from '@nestjs/common';
 import { ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { ExamsService } from './exams.service';
 import { LogAnswerDto, SubmitExamDto } from './dto/submit-exam.dto';
+import { SubmitPracticePartDto } from './dto/submit-practice.dto';
 
 @ApiTags('Exams (Boss Battle & Score Evaluation)')
 @Controller('exams')
@@ -20,6 +21,25 @@ export class ExamsController {
   })
   submitExam(@Body() dto: SubmitExamDto) {
     return this.examsService.submitExam(dto);
+  }
+
+  @Post('submit-practice')
+  @ApiOperation({
+    summary:
+      'ส่งผลการฝึกซ้อมรายพาร์ท (TOEIC 7-Part Drills) เพื่อประเมินคะแนนแยกพาร์ทและให้กำลังใจ 5 ระดับ (ไม่กระทบ Hero Level)',
+  })
+  submitPracticePart(@Body() dto: SubmitPracticePartDto) {
+    return this.examsService.submitPracticePart(dto);
+  }
+
+  @Get('part-estimates')
+  @ApiOperation({
+    summary:
+      'ดึงคะแนนคาดการณ์ความพร้อมแยก 7 พาร์ท (Readiness Forecast) และผลรวมคะแนนคาดการณ์สำหรับหน้าแรก',
+  })
+  @ApiQuery({ name: 'userId', required: true })
+  getPartEstimates(@Query('userId') userId?: string) {
+    return this.examsService.getPartSkillEstimates(userId);
   }
 
   @Post('log-answer')

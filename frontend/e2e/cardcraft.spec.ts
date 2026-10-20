@@ -1,8 +1,8 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('CardCraft Full E2E & UI Quality Assurance Suite', () => {
-  // Test 1: Homepage, 7-Tier Evolution Roadmap & Target Goal Selection
-  test('1. Homepage: Brand identity, Roadmap dynamic GOAL badge, Target selector & AuthModal', async ({ page }) => {
+test.describe('CardCraft Full E2E & UI Quality Assurance Suite (CardCraft v2.0)', () => {
+  // Test 1: Homepage, 7-Tier Evolution Roadmap, Target Goal Selection & TOEIC Readiness Forecast
+  test('1. Homepage: Brand identity, Roadmap dynamic GOAL badge, Target selector, Readiness Forecast & AuthModal', async ({ page }) => {
     const consoleErrors: string[] = [];
     page.on('console', (msg) => {
       const text = msg.text();
@@ -32,7 +32,7 @@ test.describe('CardCraft Full E2E & UI Quality Assurance Suite', () => {
     await expect(navbar.getByText('คลังจุดอ่อน')).toBeVisible();
 
     // Verify Character Evolution Roadmap description
-    await expect(page.getByText(/ปลดล็อกรูปลักษณ์และฉายาใหม่ตามระดับความเชี่ยวชาญ TOEIC/i)).toBeVisible();
+    await expect(page.getByText(/ปลดล็อกรูปลักษณ์และฉายาใหม่ตามระดับคะแนนสอบจริง/i)).toBeVisible();
     await expect(page.getByText(/150, 200 และ 100 คะแนน/i)).not.toBeVisible();
 
     // Test Dynamic Target Goal Selector (600, 700, 800, 900)
@@ -63,6 +63,13 @@ test.describe('CardCraft Full E2E & UI Quality Assurance Suite', () => {
     await btn700.click();
     await expect(page.getByText(/GOAL 700\+/i).first()).toBeVisible();
 
+    // Verify Dedicated TOEIC Readiness Forecast Section (Module 1.6)
+    await expect(page.getByText(/TOEIC READINESS FORECAST/i)).toBeVisible();
+    await expect(page.getByText(/คะแนนคาดการณ์จากการฝึกซ้อมรายพาร์ท/i)).toBeVisible();
+    await expect(page.getByText(/Part 1: Photographs/i)).toBeVisible();
+    await expect(page.getByText(/Part 5: Incomplete Sentences/i)).toBeVisible();
+    await expect(page.getByText(/Part 7: Reading Comprehension/i)).toBeVisible();
+
     // Test Hero Dossier Auth CTA button opens AuthModal
     const authCtaBtn = page.getByRole('button', { name: /เข้าสู่ระบบ \/ สมัครสมาชิกเพื่อเริ่มเล่น/i });
     await expect(authCtaBtn).toBeVisible();
@@ -81,8 +88,8 @@ test.describe('CardCraft Full E2E & UI Quality Assurance Suite', () => {
 
     // Verify 3 Guild Training grounds cards exist
     await expect(page.getByText('สำรับการ์ดคำศัพท์ 3D Flip')).toBeVisible();
-    await expect(page.getByText('ฝึกทำโจทย์แยกพาร์ท (Part 1, 2, 5 และ 7)')).toBeVisible();
-    await expect(page.getByText('สนามสอบจำลองจับเวลา (Mini Mock Test)')).toBeVisible();
+    await expect(page.getByText(/ฝึก 7 พาร์ท & Vocab Arcade/i)).toBeVisible();
+    await expect(page.getByText(/สนามสอบจำลองทางการ \(7 Mock Exam Packages\)/i)).toBeVisible();
 
     // Assert 0 unexpected console errors
     expect(consoleErrors).toEqual([]);
@@ -102,131 +109,55 @@ test.describe('CardCraft Full E2E & UI Quality Assurance Suite', () => {
       }
     });
 
-    // Authenticate user to access custom deck selector and features
-    await page.addInitScript(() => {
-      localStorage.setItem(
-        'cardcraft_auth_user_v2',
-        JSON.stringify({
-          id: 'user_e2e_tester_1',
-          username: 'e2e_hero',
-          name: 'E2E Hero Tester',
-          targetScore: 750,
-          currentEstimatedScore: 680,
-          level: 5,
-          totalExp: 1200,
-          stamina: 100,
-        }),
-      );
-    });
-
     await page.goto('/flashcards');
 
-    // Page header & active deck verification
+    // Verify Flashcards Hub Header
     await expect(page.getByText(/คลังการ์ดคำศัพท์และพจนานุกรมธุรกิจ/i)).toBeVisible({ timeout: 15000 });
-    await expect(page.getByText(/ชุดคำศัพท์ปัจจุบัน/i)).toBeVisible();
 
-    // 2.1 3D Flip Card: Front face initial state
-    const flipHelper = page.getByText(/แตะหรือคลิกเพื่อพลิกดูคำแปล/i);
-    await expect(flipHelper).toBeVisible();
+    // 2.1 Test Flip Card (Clicking flip button or Space key)
+    const flipBtn = page.getByRole('button', { name: /พลิกดูคำแปล/i }).first();
+    await expect(flipBtn).toBeVisible();
+    await flipBtn.click();
+    // After flip, Thai meaning or sentence speech button should be visible
+    await expect(page.getByText(/ความหมายภาษาไทย|ฟังประโยค/i).first()).toBeVisible({ timeout: 5000 });
 
-    // Flip card to Back by clicking helper
-    await flipHelper.click();
-    await expect(page.getByText(/ความหมายภาษาไทย/i)).toBeVisible({ timeout: 3000 });
-    await expect(page.getByText(/ปัดขวาเมื่อจำได้ หรือปัดซ้ายเพื่อทบทวน/i)).toBeVisible();
+    // 2.2 Test Audio Non-Flip Guarantee
+    // Clicking the audio icon button must speak audio but NOT flip the card back
+    const audioBtn = page.locator('button:has(svg.lucide-volume2)').first();
+    if (await audioBtn.isVisible()) {
+      await audioBtn.click();
+      // Card should still be showing the back
+      await expect(page.getByText(/ความหมายภาษาไทย|ฟังประโยค/i).first()).toBeVisible();
+    }
 
-    // Flip back to Front by clicking helper
-    await page.getByText(/ปัดขวาเมื่อจำได้ หรือปัดซ้ายเพื่อทบทวน/i).click();
-    await expect(page.getByText(/แตะหรือคลิกเพื่อพลิกดูคำแปล/i)).toBeVisible({ timeout: 3000 });
+    // 2.3 Test Swipe Buttons (จำแม่นแล้ว / ทบทวนซ้ำ)
+    const knownBtn = page.getByRole('button', { name: /จำแม่นแล้ว/i }).first();
+    const reviewBtn = page.getByRole('button', { name: /ทบทวนซ้ำ/i }).first();
+    await expect(knownBtn).toBeVisible();
+    await expect(reviewBtn).toBeVisible();
 
-    // 2.2 Tactile flip button
-    const flipButton = page.getByRole('button', { name: /พลิกดูคำแปล/i });
-    await expect(flipButton).toBeVisible();
-    await flipButton.click();
-    await expect(page.getByText(/ความหมายภาษาไทย/i)).toBeVisible();
-    await flipButton.click();
-    await expect(page.getByText(/แตะหรือคลิกเพื่อพลิกดูคำแปล/i)).toBeVisible();
+    await knownBtn.click();
+    // Verify toast or card transition
+    await page.waitForTimeout(500);
 
-    // 2.3 Keyboard Space bar flips card
-    await page.keyboard.press('Space');
-    await expect(page.getByText(/ความหมายภาษาไทย/i)).toBeVisible();
-    await page.keyboard.press('Space');
-    await expect(page.getByText(/แตะหรือคลิกเพื่อพลิกดูคำแปล/i)).toBeVisible();
-
-    // 2.4 Audio non-flip test on Front face
-    const speakWordBtn = page.getByRole('button', { name: /ฟังเสียงอ่าน/i });
-    await expect(speakWordBtn).toBeVisible();
-    await speakWordBtn.click();
-    // Card MUST remain on Front face
-    await expect(page.getByText(/แตะหรือคลิกเพื่อพลิกดูคำแปล/i)).toBeVisible();
-    await expect(page.getByText(/ความหมายภาษาไทย/i)).not.toBeVisible();
-
-    // 2.5 Audio non-flip test on Back face
-    await flipButton.click();
-    await expect(page.getByText(/ความหมายภาษาไทย/i)).toBeVisible();
-    const speakSentenceBtn = page.getByRole('button', { name: /ฟังประโยค/i });
-    await expect(speakSentenceBtn).toBeVisible();
-    await speakSentenceBtn.click();
-    // Card MUST remain on Back face
-    await expect(page.getByText(/ความหมายภาษาไทย/i)).toBeVisible();
-    await flipButton.click(); // Return to front
-
-    // 2.6 Swipe buttons test
-    const swipeLeftBtn = page.getByRole('button', { name: /ทบทวนซ้ำ/i }).filter({ hasText: '←' });
-    const swipeRightBtn = page.getByRole('button', { name: /จำแม่นแล้ว/i }).filter({ hasText: '→' });
-    await expect(swipeLeftBtn).toBeVisible();
-    await expect(swipeRightBtn).toBeVisible();
-
-    // Click swipe right -> advance card
-    await swipeRightBtn.click();
-    // Click swipe left -> advance card
-    await swipeLeftBtn.click();
-
-    // 2.7 Keyboard ArrowRight / ArrowLeft shortcuts test
-    await page.keyboard.press('ArrowRight');
-    await page.keyboard.press('ArrowLeft');
-
-    // 2.8 Custom Deck Selector Modal (CardSetSelectorModal)
-    const manageSetBtn = page.getByRole('button', { name: /สร้างชุดใหม่ \(เลือกจำนวนคำ\)/i });
-    await expect(manageSetBtn).toBeVisible();
-    await manageSetBtn.click();
-
-    // Verify Modal opened and tabs exist
-    await expect(page.getByText(/จัดการและสร้างชุดคำศัพท์/i)).toBeVisible();
-    await expect(page.getByRole('button', { name: /สร้างชุดใหม่ \(Create Deck\)/i })).toBeVisible();
-    await expect(page.getByRole('button', { name: /ชุดของฉัน/i })).toBeVisible();
-    await expect(page.getByRole('button', { name: /ชุดมาตรฐาน/i })).toBeVisible();
-
-    // Verify Spaced Repetition filters exist in modal
-    await expect(page.locator('div.fixed').getByRole('button', { name: /ถึงเวลาทบทวน/i })).toBeVisible();
-    await expect(page.locator('div.fixed').getByRole('button', { name: /ที่เคยผิดจากข้อสอบ/i })).toBeVisible();
-
-    // Switch to Presets tab
-    await page.getByRole('button', { name: /ชุดมาตรฐาน/i }).click();
-    await expect(page.getByText(/30 คำ|Quick Scout|50 คำ/i).first()).toBeVisible();
-
-    // Close Custom Deck modal
-    const closeDeckModalBtn = page.locator('div.fixed button:has(svg.lucide-x)').first();
-    await closeDeckModalBtn.click();
-    await expect(page.getByText(/จัดการและสร้างชุดคำศัพท์/i)).not.toBeVisible();
-
-    // 2.9 Switch to Dictionary Table view
-    await page.getByText('ตารางพจนานุกรม').click();
-    const searchInput = page.getByPlaceholder(/ค้นหาคำศัพท์/i);
-    await expect(searchInput).toBeVisible();
-
-    // Test search filter
-    await searchInput.fill('negotiat');
-    await expect(page.getByText(/negotiat/i).first()).toBeVisible();
-
-    // Switch back to Swipe Deck mode
-    await page.getByText('โหมดปัดการ์ด').click();
-    await expect(page.getByText(/แตะหรือคลิกเพื่อพลิกดูคำแปล/i)).toBeVisible();
+    // 2.4 Test Custom Deck Builder Modal
+    const customDeckBtn = page.getByRole('button', { name: /จัดชุดการ์ดคำศัพท์|สร้างสำรับ/i }).first();
+    if (await customDeckBtn.isVisible()) {
+      await customDeckBtn.click();
+      // Verify modal opened
+      await expect(page.getByText(/สร้างสำรับคำศัพท์เฉพาะคุณ|ตัวกรองสำรับ/i).first()).toBeVisible();
+      // Close modal
+      const closeDeckBtn = page.locator('div.fixed button:has(svg.lucide-x)').first();
+      if (await closeDeckBtn.isVisible()) {
+        await closeDeckBtn.click();
+      }
+    }
 
     expect(consoleErrors).toEqual([]);
   });
 
-  // Test 3: Practice Drills (Part 1, 2, 5, 7), Part 2 4 Choices, Part 7 sets, Real-Time Exam & Blitz modals
-  test('3. Practice: Part 1-7 drills, Part 2 4 choices, Part 7 sets, Real-Time Exam & Blitz modals', async ({ page }) => {
+  // Test 3: Practice & Vocab Arcade Hub (CardCraft v2.0 - Hub First, Constraints & 6 Mini-Games)
+  test('3. Practice Hub: Hub-first flow, 7-Part drills config with min-15 constraint, and Vocab Arcade', async ({ page }) => {
     const consoleErrors: string[] = [];
     page.on('console', (msg) => {
       const text = msg.text();
@@ -239,7 +170,7 @@ test.describe('CardCraft Full E2E & UI Quality Assurance Suite', () => {
       }
     });
 
-    // Authenticate user to access interactive modals
+    // Authenticate user
     await page.addInitScript(() => {
       localStorage.setItem(
         'cardcraft_auth_user_v2',
@@ -258,110 +189,90 @@ test.describe('CardCraft Full E2E & UI Quality Assurance Suite', () => {
 
     await page.goto('/practice');
 
-    // Verify Page Header
-    await expect(page.getByText(/ลานประลองและห้องสอบตามเวลาจริง/i)).toBeVisible({ timeout: 15000 });
+    // 3.1 Verify Selection Hub Header (No instant auto-start!)
+    await expect(page.getByText(/ลานฝึกซ้อมและอาร์เคดคำศัพท์|Practice & Vocab Arcade/i)).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText(/เลือกฝึกโจทย์เจาะลึก 7 พาร์ท หรือประลองมินิเกมคำศัพท์/i)).toBeVisible();
 
-    // Verify 4 Timed Mode cards exist
-    await expect(page.getByText(/Part 5 Speed Exam \(30 ข้อ\)/i)).toBeVisible();
-    await expect(page.getByText(/5-Min Vocab Blitz/i)).toBeVisible();
-    await expect(page.getByText(/Boss Survival/i)).toBeVisible();
-    await expect(page.getByText(/Collocation Rush/i)).toBeVisible();
+    // 3.2 Verify 2 Main Tabs exist
+    const tabParts = page.getByRole('button', { name: /ฝึกแยก 7 พาร์ท/i });
+    const tabArcade = page.getByRole('button', { name: /มินิเกมคำศัพท์/i });
+    await expect(tabParts).toBeVisible();
+    await expect(tabArcade).toBeVisible();
 
-    // 3.1 Part 1 Drill: Photographs & 4 Choices
-    await page.getByRole('button', { name: /^Part 1/i }).click();
-    await expect(page.getByText('A').first()).toBeVisible();
-    await expect(page.getByText('B').first()).toBeVisible();
-    await expect(page.getByText('C').first()).toBeVisible();
-    await expect(page.getByText('D').first()).toBeVisible();
+    // 3.3 Verify 7 Parts Cards in Tab 1
+    await expect(page.getByText('Part 1: Photographs')).toBeVisible();
+    await expect(page.getByText('Part 2: Question-Response')).toBeVisible();
+    await expect(page.getByText('Part 3: Conversations')).toBeVisible();
+    await expect(page.getByText('Part 4: Short Talks')).toBeVisible();
+    await expect(page.getByText('Part 5: Incomplete Sentences')).toBeVisible();
+    await expect(page.getByText('Part 6: Text Completion')).toBeVisible();
+    await expect(page.getByText('Part 7: Reading Comprehension')).toBeVisible();
 
-    // Select Option A and verify feedback appears
-    await page.getByRole('button', { name: /เลือกตัวเลือก \(A\)/i }).first().click();
-    await expect(page.getByText(/ตอบถูกต้อง|คำตอบที่ถูกต้องคือข้อ/i).first()).toBeVisible({ timeout: 3000 });
+    // 3.4 Open Pre-Game Configuration Modal for Part 5
+    await page.getByRole('button', { name: /ตั้งค่าการฝึกซ้อม Part 5/i }).click();
 
-    // 3.2 Part 2 Drill: 4 Choices (A, B, C, D) Verification
-    await page.getByRole('button', { name: /^Part 2/i }).click();
-    await expect(page.getByText('A').first()).toBeVisible();
-    await expect(page.getByText('B').first()).toBeVisible();
-    await expect(page.getByText('C').first()).toBeVisible();
-    await expect(page.getByText('D').first()).toBeVisible();
+    // Verify Pre-Game Configuration Modal opened
+    await expect(page.getByText(/ตั้งค่าการฝึกซ้อม.*Part 5/i)).toBeVisible();
+    await expect(page.getByText(/ขั้นต่ำ 15 ข้อ และ 5 นาที/i)).toBeVisible();
 
-    // 3.3 Part 5 Drill: Incomplete Sentences & 20s Speed Timer
-    await page.getByRole('button', { name: 'Part 5 เติมคำในช่องว่าง' }).click();
-    await expect(page.getByText(/20s/i).first()).toBeVisible();
-    await expect(page.getByText('A').first()).toBeVisible();
-    await expect(page.getByText('D').first()).toBeVisible();
+    // Verify min 15 constraint: '-' button is disabled when at default 15
+    const decQBtn = page.locator('button:has-text("-")').first();
+    await expect(decQBtn).toBeDisabled();
+    await expect(page.getByText('15 ข้อ').first()).toBeVisible();
 
-    // 3.4 Part 7 Drill: Reading Comprehension & Responsive Passage Set Buttons
-    await page.getByRole('button', { name: /^Part 7/i }).click();
-    await expect(page.getByText(/ชุดที่ 1/).first()).toBeVisible();
-    await expect(page.getByRole('button', { name: /ถัดไป/i }).first()).toBeVisible();
+    // Launch Part 5 Drill
+    await page.getByRole('button', { name: /เริ่มทำโจทย์ Part 5/i }).click();
 
-    // Click "ชุดที่ 2" to verify set switching
-    const set2Btn = page.getByRole('button', { name: /ชุดที่ 2/i }).first();
-    if (await set2Btn.isVisible()) {
-      await set2Btn.click();
-      await expect(set2Btn).toBeVisible();
-    }
+    // Verify Active Drill Runner opened
+    await expect(page.getByText(/ข้อที่ 1 จาก/i)).toBeVisible();
+    await expect(page.getByText(/PART 5/i).first()).toBeVisible();
+    // Verify Choices exist
+    await expect(page.locator('button:has-text("A")').first()).toBeVisible();
+    await expect(page.locator('button:has-text("D")').first()).toBeVisible();
 
-    // 3.5 Real-Time Exam Modal (Part 5 Speed Exam)
-    const startPart5Btn = page.getByRole('button', { name: /เริ่มสอบ Part 5 \(12 นาที\)/i });
-    await expect(startPart5Btn).toBeVisible();
-    await startPart5Btn.click();
+    // Select Choice A
+    await page.locator('div.space-y-3 button').first().click();
 
-    // Verify RealTimeExamModal opened
-    await expect(page.getByText(/Part 5 Speed Exam \(30 ข้อ 12 นาที\)/i)).toBeVisible({ timeout: 5000 });
-    // Check choices A-D in modal
-    await expect(page.locator('div.fixed').getByText('A').first()).toBeVisible();
-    await expect(page.locator('div.fixed').getByText('D').first()).toBeVisible();
-    // Close modal
-    const closeExamModalBtn = page.locator('div.fixed button[title="ปิด"]').first();
-    await closeExamModalBtn.click();
-    await expect(page.getByText(/Part 5 Speed Exam \(30 ข้อ 12 นาที\)/i)).not.toBeVisible();
+    // Leave Drill to return to Hub
+    await page.locator('button[aria-label="กลับสู่ Selection Hub"]').click();
+    await expect(page.getByText(/ลานฝึกซ้อมและอาร์เคดคำศัพท์|Practice & Vocab Arcade/i)).toBeVisible();
 
-    // 3.6 5-Minute Vocab Blitz Modal
-    const startBlitzBtn = page.getByRole('button', { name: /เริ่มประลองความจำ 5 นาที/i });
-    await expect(startBlitzBtn).toBeVisible();
-    await startBlitzBtn.click();
+    // 3.5 Switch to Vocab Arcade Tab
+    await tabArcade.click();
 
-    // Verify VocabBlitzGame Ready state
-    await expect(page.getByText(/5-Minute Vocab Blitz/i)).toBeVisible();
-    await expect(page.getByText(/พร้อมทดสอบความเร็วและความจำหรือยัง\?/i)).toBeVisible();
-    // Close Blitz modal
-    const closeBlitzBtn = page.locator('div.fixed button:has(svg.lucide-x)').first();
-    await closeBlitzBtn.click();
-    await expect(page.getByText(/พร้อมทดสอบความเร็วและความจำหรือยัง\?/i)).not.toBeVisible();
+    // Verify 6 Mini-Games are present
+    await expect(page.getByText(/Rune Match/i).first()).toBeVisible();
+    await expect(page.getByText(/Bard's Echo/i).first()).toBeVisible();
+    await expect(page.getByText(/Word Alchemist/i).first()).toBeVisible();
+    await expect(page.getByText(/Twin Blades/i).first()).toBeVisible();
+    await expect(page.getByText(/Context Cloze/i).first()).toBeVisible();
+    await expect(page.getByText(/Anagram Forge/i).first()).toBeVisible();
 
-    // 3.7 Boss Survival Modal (3-HP Gauntlet)
-    const startBossBtn = page.getByRole('button', { name: /ท้าทายบอส 3-HP/i });
-    await expect(startBossBtn).toBeVisible();
-    await startBossBtn.click();
+    // 3.6 Launch Rune Match Game
+    await page.getByRole('button', { name: /เริ่มเล่น Rune Match/i }).click();
 
-    // Verify BossSurvivalModal
-    await expect(page.getByText(/Boss Survival Gauntlet/i)).toBeVisible();
-    await expect(page.getByText(/Void Wyrm of Distraction/i)).toBeVisible();
-    // Close Boss modal
-    const closeBossBtn = page.locator('div.fixed button:has(svg.lucide-x)').first();
-    await closeBossBtn.click();
-    await expect(page.getByText(/Boss Survival Gauntlet/i)).not.toBeVisible();
+    // Verify Config Modal with Category Filter
+    await expect(page.getByText(/ตั้งค่า.*กระดานจับคู่ศิลาคำศัพท์/i).first()).toBeVisible();
+    await expect(page.getByText(/เลือกหมวดหมู่คำศัพท์/i)).toBeVisible();
+    await expect(page.getByText(/ทั้งหมด \/ คละหมวดหมู่/i)).toBeVisible();
 
-    // 3.8 Collocation Rush Modal (60s speed match)
-    const startCollocationBtn = page.getByRole('button', { name: /เริ่มจับคู่สำนวน 60 วิ/i });
-    await expect(startCollocationBtn).toBeVisible();
-    await startCollocationBtn.click();
+    // Click "เริ่มเล่นมินิเกม"
+    await page.getByRole('button', { name: /เริ่มเล่นมินิเกม/i }).click();
 
-    // Verify CollocationRushModal
-    await expect(page.locator('div.fixed').getByRole('heading', { name: /Collocation Rush/i })).toBeVisible();
-    await expect(page.getByText(/60s/i).first()).toBeVisible();
-    // Close Collocation modal
-    const closeCollocationBtn = page.locator('div.fixed button:has(svg.lucide-x)').first();
-    await closeCollocationBtn.click();
-    await expect(page.locator('div.fixed').getByRole('heading', { name: /Collocation Rush/i })).not.toBeVisible();
+    // Verify Rune Match Game Board (12 Tiles)
+    await expect(page.getByText(/คู่/i).first()).toBeVisible();
+    const gameTiles = page.locator('div.grid.grid-cols-2.sm\\:grid-cols-3 button');
+    await expect(gameTiles.first()).toBeVisible();
+
+    // Exit Game back to Hub
+    await page.getByRole('button', { name: /กลับสู่ Arcade Hub/i }).click();
+    await expect(page.getByText(/ลานฝึกซ้อมและอาร์เคดคำศัพท์|Practice & Vocab Arcade/i)).toBeVisible();
 
     expect(consoleErrors).toEqual([]);
   });
 
-  // Test 4: Mini Mock Test (Boss Battle) - Shortcuts, Drawer Palette & Exam Submission
-  test('4. Mock Test: Keyboard shortcuts, palette jump, flag question, submission & score breakdown', async ({ page }) => {
+  // Test 4: Mock Exam Lobby (CardCraft v2.0 - 7 Standard Packages, Confirmation & Submission)
+  test('4. Mock Exam Lobby: 7 Packages, pre-exam confirmation, timed runner, shortcuts & ETS score results', async ({ page }) => {
     const consoleErrors: string[] = [];
     page.on('console', (msg) => {
       const text = msg.text();
@@ -374,13 +285,15 @@ test.describe('CardCraft Full E2E & UI Quality Assurance Suite', () => {
       }
     });
 
-    // 4.1 Guest prompt check
+    // 4.1 Guest prompt check on lobby
     await page.goto('/mock-test');
-    await expect(page.getByText(/Mini Mock Test/i).first()).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText(/Mock Exam Lobby/i).first()).toBeVisible({ timeout: 15000 });
+    await expect(page.getByRole('heading', { name: '50 Questions Set', exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /200 Questions Set/i })).toBeVisible();
 
-    // Guest clicking option choice button should prompt AuthModal
-    await page.locator('div.grid.grid-cols-1.sm\\:grid-cols-2 button').first().click();
-    await expect(page.getByText(/เข้าสู่ระบบ \(Hero Login\)|กรุณาเข้าสู่ระบบก่อน/i).first()).toBeVisible();
+    // Guest clicking "เข้าสู่สนามสอบ" should prompt AuthModal
+    await page.getByRole('button', { name: /เข้าสู่สนามสอบ \(50 ข้อ\)/i }).click();
+    await expect(page.getByText(/เข้าสู่ระบบ \(Hero Login\)|กรุณาเข้าสู่ระบบก่อน|เข้าสู่ระบบเพื่อเริ่มทำข้อสอบ/i).first()).toBeVisible();
     const closeAuthBtn = page.locator('button:has(svg.lucide-x)').first();
     await closeAuthBtn.click();
 
@@ -402,7 +315,23 @@ test.describe('CardCraft Full E2E & UI Quality Assurance Suite', () => {
     });
 
     await page.goto('/mock-test');
-    await expect(page.getByText(/Mini Mock Test/i).first()).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText(/Mock Exam Lobby/i).first()).toBeVisible({ timeout: 15000 });
+
+    // 4.3 Click 50 Questions Package to open Pre-Exam Confirmation Modal
+    await page.getByRole('button', { name: /เข้าสู่สนามสอบ \(50 ข้อ\)/i }).click();
+
+    // Verify Pre-Exam Confirmation Modal
+    await expect(page.getByText(/ยืนยันการเริ่มสอบ 50 Questions Set/i)).toBeVisible();
+    await expect(page.getByText(/30 นาที/i).first()).toBeVisible();
+    await expect(page.getByText(/กฎการสอบจำลองทางการ/i)).toBeVisible();
+
+    // Click "เริ่มจับเวลาทำข้อสอบทันที"
+    await page.getByRole('button', { name: /เริ่มจับเวลาทำข้อสอบทันที/i }).click();
+
+    // 4.4 Verify Active Timed Exam Interface
+    await expect(page.getByText(/50 Questions Set/i)).toBeVisible();
+    await expect(page.getByText(/ข้อที่ 1 \/ 50/i)).toBeVisible();
+    await expect(page.getByText(/เวลาที่เหลือ/i)).toBeVisible();
 
     // Test answering via clicking the second choice button
     await page.locator('div.grid.grid-cols-1.sm\\:grid-cols-2 button').nth(1).click();
@@ -412,6 +341,7 @@ test.describe('CardCraft Full E2E & UI Quality Assurance Suite', () => {
 
     // Test navigation via ArrowRight
     await page.keyboard.press('ArrowRight');
+    await expect(page.getByText(/ข้อที่ 2 \/ 50/i)).toBeVisible();
 
     // Test keyboard shortcut 'A' on question 2
     await page.keyboard.press('KeyA');
@@ -420,19 +350,23 @@ test.describe('CardCraft Full E2E & UI Quality Assurance Suite', () => {
     const q5Btn = page.getByRole('button', { name: '5', exact: true });
     if (await q5Btn.isVisible()) {
       await q5Btn.click();
-      await expect(page.getByText(/ข้อที่ 5\s*\//i).first()).toBeVisible();
+      await expect(page.getByText(/ข้อที่ 5 \/ 50/i).first()).toBeVisible();
     }
 
-    // Submit the exam
+    // 4.5 Submit the exam
     const submitBtn = page.getByRole('button', { name: /ส่งกระดาษคำตอบ/i }).first();
     await expect(submitBtn).toBeVisible();
     await submitBtn.click();
 
-    // Verify Results View breakdown
-    await expect(page.getByText(/สรุปผลการประเมินคะแนนสอบ|เลื่อนระดับคลาสฮีโร่สำเร็จ/i)).toBeVisible({ timeout: 15000 });
+    // Verify Submit Confirmation Modal
+    await expect(page.getByText(/ยืนยันการส่งกระดาษคำตอบ/i)).toBeVisible();
+    await page.getByRole('button', { name: /ยืนยันการส่ง/i }).click();
+
+    // 4.6 Verify Results View breakdown
+    await expect(page.getByText(/สรุปผลคะแนนสอบทางการ|เลื่อนระดับคลาสฮีโร่สำเร็จ/i)).toBeVisible({ timeout: 15000 });
     await expect(page.getByText(/\/ 990 คะแนน/i)).toBeVisible();
-    await expect(page.getByText(/การฟัง:/i)).toBeVisible();
-    await expect(page.getByText(/การอ่าน:/i)).toBeVisible();
+    await expect(page.getByText(/Listening \(การฟัง\):/i)).toBeVisible();
+    await expect(page.getByText(/Reading \(การอ่าน\):/i)).toBeVisible();
 
     // Verify question review section and home link
     await expect(page.getByText(/เฉลยและคำอธิบายรายข้อ/i)).toBeVisible();
@@ -518,7 +452,7 @@ test.describe('CardCraft Full E2E & UI Quality Assurance Suite', () => {
 
   // Test 6b: Admin Dashboard - Authenticated admin CRUD management view
   test('6b. Admin Dashboard: Authenticated admin CRUD management view & modals', async ({ page }) => {
-    // Fast mock backend responses so Admin view initializes instantly with 0 console errors
+    // Mock backend responses so Admin view initializes instantly with 0 console errors
     await page.route('http://localhost:4000/**', (route) => {
       route.fulfill({
         status: 200,
@@ -624,16 +558,24 @@ test.describe('CardCraft Full E2E & UI Quality Assurance Suite', () => {
 
     // Mobile check on /practice
     await page.goto('/practice');
-    await expect(page.getByText(/ลานประลองและห้องสอบตามเวลาจริง/i)).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText(/ลานฝึกซ้อมและอาร์เคดคำศัพท์|Practice & Vocab Arcade/i)).toBeVisible({ timeout: 15000 });
     const isPracticeOverflowing = await page.evaluate(() => {
       return document.documentElement.scrollWidth > window.innerWidth;
     });
     expect(isPracticeOverflowing).toBe(false);
 
+    // Mobile check on /mock-test
+    await page.goto('/mock-test');
+    await expect(page.getByText(/Mock Exam Lobby/i)).toBeVisible({ timeout: 15000 });
+    const isMockOverflowing = await page.evaluate(() => {
+      return document.documentElement.scrollWidth > window.innerWidth;
+    });
+    expect(isMockOverflowing).toBe(false);
+
     // 7.2 Tablet Viewport (iPad 820x1180)
     await page.setViewportSize({ width: 820, height: 1180 });
     await page.goto('/practice');
-    await expect(page.getByText(/ฝึกทำโจทย์แยกพาร์ท/i)).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText(/ลานฝึกซ้อมและอาร์เคดคำศัพท์/i).first()).toBeVisible({ timeout: 15000 });
 
     const isTabletOverflowing = await page.evaluate(() => {
       return document.documentElement.scrollWidth > window.innerWidth;

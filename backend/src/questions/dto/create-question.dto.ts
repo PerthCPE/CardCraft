@@ -24,11 +24,11 @@ export class CreateQuestionDto {
 
   @ApiProperty({
     example: 5,
-    enum: [1, 2, 5, 7],
-    description: 'หมายเลขพาร์ทของ TOEIC (1, 2, 5, หรือ 7)',
+    enum: [1, 2, 3, 4, 5, 6, 7],
+    description: 'หมายเลขพาร์ทของ TOEIC (1 ถึง 7)',
   })
   @IsInt()
-  @IsIn([1, 2, 5, 7])
+  @IsIn([1, 2, 3, 4, 5, 6, 7])
   part: number;
 
   @ApiPropertyOptional({

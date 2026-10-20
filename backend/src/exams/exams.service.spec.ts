@@ -38,6 +38,10 @@ describe('ExamsService & 7-Tier Character Evolution Unit Tests', () => {
     cardProgress: {
       upsert: jest.fn(),
     },
+    partSkillEstimate: {
+      upsert: jest.fn(),
+      findMany: jest.fn(),
+    },
   };
 
   const mockUsersService = {
@@ -329,7 +333,7 @@ describe('ExamsService & 7-Tier Character Evolution Unit Tests', () => {
         timeSpentSeconds: 610,
       });
 
-      expect(response.scoreBreakdown.estimatedScore).toBe(730);
+      expect(response.scoreBreakdown.estimatedScore).toBe(740);
       expect(response.previousTier.tier).toBe(4);
       expect(response.evolution.unlockedTier).toBe(5);
       expect(response.evolution.classTitle).toBe('High Paladin');

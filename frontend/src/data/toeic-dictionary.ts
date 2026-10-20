@@ -32,7 +32,7 @@ export interface FlashcardItem {
 export interface QuestionItem {
   id: string;
   section: 'LISTENING' | 'READING';
-  part: 1 | 2 | 5 | 7;
+  part: 1 | 2 | 3 | 4 | 5 | 6 | 7;
   audioUrl?: string | null;
   imageUrl?: string | null;
   passageText?: string | null;

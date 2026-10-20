@@ -86,7 +86,15 @@ if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
 /**
  * Speak English text with a natural, human-like cadence and speed.
  */
-export function speakEnglish(text: string, options?: SpeakOptions): boolean {
+export function speakEnglish(
+  text: string,
+  optionsOrRate?: SpeakOptions | number,
+): boolean {
+  const options: SpeakOptions | undefined =
+    typeof optionsOrRate === 'number'
+      ? { rate: optionsOrRate }
+      : optionsOrRate;
+
   if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
     options?.onError?.();
     return false;
