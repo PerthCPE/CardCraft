@@ -420,7 +420,7 @@ export default function BossBattleMockTestPage() {
                 สนามสอบจำลองจับเวลา (Mini Mock Test)
               </h1>
               <p className="text-sm text-slate-300 mt-0.5">
-                ทำข้อสอบรวม 15 ข้อ เพื่อคำนวณคะแนนสเกล 10–990 และปลดล็อกคลาสใหม่
+                ทำข้อสอบรวม 56 ข้อ เพื่อคำนวณคะแนนสเกล 10–990 และปลดล็อกคลาสใหม่
               </p>
             </div>
           </div>

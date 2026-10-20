@@ -51,7 +51,7 @@ export class AuthService {
         password: hashedPassword,
         name: displayName,
         targetScore: dto.targetScore ?? 700,
-        currentEstimatedScore: 350, // ค่าเริ่มต้นสำหรับผู้เล่นใหม่ (Tier 2: Word Scout)
+        currentEstimatedScore: 0, // ผู้เล่นใหม่เริ่มต้นที่ 0 คะแนน (Tier 1: Novice Villager)
       },
     });
 

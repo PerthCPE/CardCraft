@@ -154,7 +154,7 @@ export async function fetchDashboardSummary(
     };
   } catch {
     // โหมด Guest เริ่มต้น หรือกรณี Backend กำลัง Boot
-    const guestEvolution = getCharacterEvolution(10, 700);
+    const guestEvolution = getCharacterEvolution(0, 700);
 
     return {
       user: null,

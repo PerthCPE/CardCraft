@@ -3,8 +3,9 @@
 // ============================================================================
 // frontend/src/app/page.tsx
 // CardCraft Release v1.0: หน้าหลัก Hero Dashboard & 7-Stage Character Evolution Roadmap
-// - รองรับ Guest Mode อย่างเป็นทางการ (แสดงคำเชิญชวนเข้าสู่ระบบเพื่อบันทึกสถิติ)
-// - แสดงข้อมูลและสถิติของผู้เล่นจริงเมื่อเข้าสู่ระบบ
+// - รองรับ Guest Mode เริ่มต้น คะแนนเริ่มต้นที่ 0
+// - เลือกระดับเป้าหมายคะแนน (Target Goal: 600, 700, 800, 900) ได้จริง และบันทึกเข้าสู่โปรไฟล์
+// - ป้าย GOAL บน Roadmap ปรับตามเป้าหมายที่ User เลือก
 // - สไตล์ Neo-Brutalist & Pixel Art ไร้รอยต่อ
 // ============================================================================
 
@@ -14,8 +15,8 @@ import {
   CheckCircle2,
   Crosshair,
   Lock,
-  Sliders,
   Sparkles,
+  Target,
 } from 'lucide-react';
 import {
   DashboardSummaryResponse,
@@ -26,57 +27,52 @@ import { PixelCharacterAvatar } from '@/components/PixelCharacterAvatar';
 import { getCharacterEvolution } from '@/utils/character-evolution.util';
 import { useAuth } from '@/context/AuthContext';
 
-const DEMO_SCORE_PRESETS = [
-  { label: '180', score: 180 },
-  { label: '310', score: 310 },
-  { label: '485', score: 485 },
-  { label: '625', score: 625 },
-  { label: '745', score: 745 },
-  { label: '845', score: 845 },
-  { label: '955', score: 955 },
-];
+const TARGET_GOAL_OPTIONS = [600, 700, 800, 900];
 
 export default function DashboardPage() {
-  const { user: authUser, refreshUser, openAuthModal, requireAuth } = useAuth();
+  const { user: authUser, refreshUser, openAuthModal } = useAuth();
   const [dashboard, setDashboard] = useState<DashboardSummaryResponse | null>(
     null,
   );
-  const [isSimulating, setIsSimulating] = useState(false);
+  const [guestTargetScore, setGuestTargetScore] = useState<number>(700);
+  const [isUpdatingTarget, setIsUpdatingTarget] = useState(false);
 
   useEffect(() => {
     fetchDashboardSummary(authUser?.id).then(setDashboard);
   }, [authUser?.id]);
 
-  const handleSimulateScore = async (newScore: number) => {
+  const currentTargetScore =
+    authUser?.targetScore || dashboard?.user?.targetScore || guestTargetScore;
+
+  const handleUpdateTargetScore = async (newTarget: number) => {
     if (!dashboard) return;
-    if (!authUser) {
-      requireAuth(
-        undefined,
-        'กรุณาเข้าสู่ระบบก่อน เพื่อทดสอบเปลี่ยนระดับคะแนนและบันทึกสถิติฮีโร่ของคุณ',
-      );
-      return;
-    }
-    setIsSimulating(true);
-    try {
-      const updated = await updateHeroProfile(
-        {
-          currentEstimatedScore: newScore,
-        },
-        authUser?.id,
-      );
+
+    if (authUser) {
+      setIsUpdatingTarget(true);
+      try {
+        const updated = await updateHeroProfile(
+          { targetScore: newTarget },
+          authUser.id,
+        );
+        const currentScore = updated.user.currentEstimatedScore;
+        setDashboard({
+          ...dashboard,
+          user: updated.user,
+          evolution: getCharacterEvolution(currentScore, newTarget),
+        });
+        await refreshUser();
+      } catch {
+        // ignore
+      } finally {
+        setIsUpdatingTarget(false);
+      }
+    } else {
+      // โหมด Guest: อัปเดต state ในเครื่อง
+      setGuestTargetScore(newTarget);
       setDashboard({
         ...dashboard,
-        user: updated.user,
-        evolution: getCharacterEvolution(
-          updated.user.currentEstimatedScore,
-          updated.user.targetScore,
-        ),
+        evolution: getCharacterEvolution(0, newTarget),
       });
-      await refreshUser();
-    } catch {
-      // ignore
-    } finally {
-      setIsSimulating(false);
     }
   };
 
@@ -93,6 +89,12 @@ export default function DashboardPage() {
     stats.totalFlashcards > 0
       ? Math.round((stats.masteredCards / stats.totalFlashcards) * 100)
       : 0;
+
+  const pointsToTarget = Math.max(
+    0,
+    currentTargetScore - evolution.estimatedScore,
+  );
+  const isTargetAchieved = evolution.estimatedScore >= currentTargetScore;
 
   return (
     <div className="space-y-8">
@@ -182,7 +184,7 @@ export default function DashboardPage() {
                 คะแนนประเมินปัจจุบัน
               </span>
               <span className="text-xs text-amber-300 font-medium">
-                เป้าหมาย {user?.targetScore || 700} คะแนน
+                เป้าหมาย {currentTargetScore} คะแนน
               </span>
             </div>
 
@@ -195,13 +197,13 @@ export default function DashboardPage() {
               </span>
             </div>
 
-            {/* Target 700+ Progress Meter */}
+            {/* Target Progress Meter */}
             <div className="space-y-1.5">
               <div className="w-full h-3 bg-slate-800 border border-slate-700 overflow-hidden relative">
                 <div
                   className="h-full bg-emerald-400 transition-all duration-300"
                   style={{
-                    width: `${Math.min(100, Math.round((evolution.estimatedScore / (user?.targetScore || 700)) * 100))}%`,
+                    width: `${Math.min(100, Math.round((evolution.estimatedScore / currentTargetScore) * 100))}%`,
                   }}
                 />
               </div>
@@ -209,19 +211,19 @@ export default function DashboardPage() {
 
             <div className="flex items-center justify-between text-xs text-slate-300 pt-1">
               <div className="flex items-center gap-1.5">
-                {evolution.isPassedTarget ? (
+                {isTargetAchieved ? (
                   <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
                 ) : (
                   <Crosshair className="w-4 h-4 text-amber-400 shrink-0" />
                 )}
                 <span>
-                  {evolution.isPassedTarget
-                    ? 'ผ่านเกณฑ์เป้าหมาย 700+ (High Paladin) แล้ว'
-                    : `ห่างจากเป้าหมาย 700 คะแนนอีก ${evolution.pointsToTarget700} คะแนน`}
+                  {isTargetAchieved
+                    ? `ผ่านเกณฑ์เป้าหมาย ${currentTargetScore}+ แล้ว`
+                    : `ห่างจากเป้าหมาย ${currentTargetScore} คะแนนอีก ${pointsToTarget} คะแนน`}
                 </span>
               </div>
               <span className="font-pixel text-[10px]">
-                {user?.targetScore || 700}
+                {currentTargetScore}
               </span>
             </div>
           </div>
@@ -242,26 +244,27 @@ export default function DashboardPage() {
             </p>
           </div>
 
-          {/* Compact Score Simulator for Presentation */}
-          <div className="flex flex-wrap items-center gap-1.5 bg-slate-100 border border-slate-300 px-3 py-1.5">
-            <Sliders className="w-3.5 h-3.5 text-slate-600 mr-1" />
-            <span className="text-xs text-slate-600 mr-1">ทดลองเปลี่ยนคะแนน:</span>
-            {DEMO_SCORE_PRESETS.map((preset) => {
-              const active =
-                Math.abs(evolution.estimatedScore - preset.score) < 20;
+          {/* Target Goal Selector (เปลี่ยนเป้าหมายคะแนนได้จริง) */}
+          <div className="flex flex-wrap items-center gap-2 bg-slate-100 border-2 border-slate-900 px-3 py-2 shadow-pixel-sm">
+            <span className="text-xs font-bold font-display text-slate-900 flex items-center gap-1.5">
+              <Target className="w-3.5 h-3.5 text-emerald-600" />
+              เลือกเป้าหมายคะแนน:
+            </span>
+            {TARGET_GOAL_OPTIONS.map((score) => {
+              const active = currentTargetScore === score;
               return (
                 <button
-                  key={preset.score}
+                  key={score}
                   type="button"
-                  disabled={isSimulating}
-                  onClick={() => handleSimulateScore(preset.score)}
-                  className={`px-2 py-0.5 font-pixel text-[10px] border transition-colors ${
+                  disabled={isUpdatingTarget}
+                  onClick={() => handleUpdateTargetScore(score)}
+                  className={`px-3 py-1 font-pixel text-xs border-2 transition-all active:translate-y-[1px] ${
                     active
-                      ? 'bg-slate-900 text-amber-300 border-slate-900'
+                      ? 'bg-emerald-400 text-slate-950 border-slate-950 font-bold shadow-[2px_2px_0px_0px_#020617]'
                       : 'bg-white text-slate-700 border-slate-300 hover:border-slate-900'
                   }`}
                 >
-                  {preset.label}
+                  {score}+
                 </button>
               );
             })}
@@ -271,7 +274,10 @@ export default function DashboardPage() {
         {/* 7-Tier Timeline Track */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
           {evolution.roadmap.map((tier) => {
-            const isTarget700 = tier.tier === 5;
+            // คำนวณว่า Tier นี้ตรงกับเป้าหมายที่เลือกไว้หรือไม่
+            const isTargetGoal =
+              currentTargetScore >= tier.minScore &&
+              (tier.nextTierScore === null || currentTargetScore < tier.nextTierScore);
 
             return (
               <div
@@ -284,10 +290,10 @@ export default function DashboardPage() {
                       : 'border-slate-200 bg-slate-50 opacity-60'
                 }`}
               >
-                {/* Milestone Badge for Target 700+ */}
-                {isTarget700 && (
-                  <span className="absolute -top-2.5 px-1.5 py-0.2 bg-emerald-500 text-slate-950 font-pixel text-[9px] border border-slate-900">
-                    GOAL 700+
+                {/* Dynamic Goal Badge based on User's Selected Target */}
+                {isTargetGoal && (
+                  <span className="absolute -top-3 px-2 py-0.5 bg-emerald-400 text-slate-950 font-pixel text-[9px] font-bold border-2 border-slate-950 shadow-[1px_1px_0px_0px_#020617] select-none">
+                    GOAL {currentTargetScore}+
                   </span>
                 )}
 
@@ -343,7 +349,7 @@ export default function DashboardPage() {
               ลานฝึกฝนหลัก (Training Grounds)
             </h2>
             <p className="text-sm text-slate-600 mt-0.5">
-              ระบบฝึกฝน 3 เสาหลักเพื่อยกระดับคะแนน Listening และ Reading สู่เป้าหมาย 700+
+              ระบบฝึกฝน 3 เสาหลักเพื่อยกระดับคะแนน Listening และ Reading สู่เป้าหมาย {currentTargetScore}+
             </p>
           </div>
 

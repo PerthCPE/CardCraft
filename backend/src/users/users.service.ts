@@ -62,7 +62,7 @@ export class UsersService {
 
     // โหมด Guest เริ่มต้น
     if (!user) {
-      const guestEvolution = getCharacterEvolution(10, 700);
+      const guestEvolution = getCharacterEvolution(0, 700);
       return {
         user: null,
         isGuest: true,

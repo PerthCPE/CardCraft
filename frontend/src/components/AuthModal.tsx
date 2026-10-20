@@ -8,6 +8,7 @@
 // ============================================================================
 
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   AlertCircle,
   CheckCircle2,
@@ -32,6 +33,7 @@ export default function AuthModal() {
     register,
     logout,
   } = useAuth();
+  const router = useRouter();
 
   const [tab, setTab] = useState<'LOGIN' | 'REGISTER'>('LOGIN');
   const [username, setUsername] = useState<string>('');
@@ -71,6 +73,7 @@ export default function AuthModal() {
       }
       setTimeout(() => {
         closeAuthModal();
+        router.push('/');
       }, 700);
     } catch (err: any) {
       setErrorMsg(err.message || 'เกิดข้อผิดพลาดในการดำเนินการ กรุณาลองใหม่อีกครั้ง');
