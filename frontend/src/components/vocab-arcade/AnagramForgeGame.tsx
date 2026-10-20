@@ -42,7 +42,8 @@ export default function AnagramForgeGame({
 
   // Active word forging state
   const [letterTiles, setLetterTiles] = useState<LetterTile[]>([]);
-  const [placedTiles, setPlacedTiles] = useState<LetterTile[]>([]);
+  const [slots, setSlots] = useState<(LetterTile | null)[]>([]);
+  const [isHinted, setIsHinted] = useState<boolean[]>([]);
   const [isSuccess, setIsSuccess] = useState<boolean>(false);
   const [isError, setIsError] = useState<boolean>(false);
 
@@ -71,6 +72,7 @@ export default function AnagramForgeGame({
   // Set up letters for current word
   useEffect(() => {
     if (!currentWord) return;
+    const len = currentWord.word.length;
     const upper = currentWord.word.toUpperCase();
     const chars = upper.split('').map((char, idx) => ({
       id: `tile-${idx}-${char}`,
@@ -81,57 +83,171 @@ export default function AnagramForgeGame({
     // Shuffle letter tiles
     const shuffled = [...chars].sort(() => Math.random() - 0.5);
     setLetterTiles(shuffled);
-    setPlacedTiles([]);
+    setSlots(new Array(len).fill(null));
+    setIsHinted(new Array(len).fill(false));
     setIsSuccess(false);
     setIsError(false);
   }, [currentWord]);
 
-  // Handle tile click
+  const triggerSuccess = useCallback(() => {
+    if (!currentWord) return;
+    setIsSuccess(true);
+    setScore((s) => s + 1);
+    speakEnglish(currentWord.word, 0.95);
+
+    setTimeout(() => {
+      if (currentIndex + 1 < questions.length) {
+        setCurrentIndex((i) => i + 1);
+      } else {
+        setIsGameOver(true);
+      }
+    }, 1000);
+  }, [currentWord, currentIndex, questions.length]);
+
+  const triggerError = useCallback(
+    (currentSlots: (LetterTile | null)[]) => {
+      setIsError(true);
+      setTimeout(() => {
+        setIsError(false);
+        // Clear only non-hinted slots
+        const clearedSlots = currentSlots.map((s, idx) => (isHinted[idx] ? s : null));
+        const keptIds = new Set(clearedSlots.filter(Boolean).map((s) => s!.id));
+
+        setSlots(clearedSlots);
+        setLetterTiles((prev) =>
+          prev.map((t) => ({
+            ...t,
+            isUsed: keptIds.has(t.id),
+          })),
+        );
+      }, 800);
+    },
+    [isHinted],
+  );
+
+  // Handle tile click or keyboard keypress
   const handlePickTile = (tile: LetterTile) => {
     if (tile.isUsed || isSuccess) return;
 
-    const nextPlaced = [...placedTiles, tile];
-    setPlacedTiles(nextPlaced);
+    // Find the first empty slot
+    const emptyIndex = slots.findIndex((s) => s === null);
+    if (emptyIndex === -1) return;
+
+    const nextSlots = [...slots];
+    nextSlots[emptyIndex] = tile;
+    setSlots(nextSlots);
+
     setLetterTiles((prev) =>
       prev.map((t) => (t.id === tile.id ? { ...t, isUsed: true } : t)),
     );
 
     // Check if fully placed
-    if (currentWord && nextPlaced.length === currentWord.word.length) {
-      const spelled = nextPlaced.map((t) => t.char).join('');
+    if (currentWord && nextSlots.every((s) => s !== null)) {
+      const spelled = nextSlots.map((s) => s!.char).join('');
       if (spelled === currentWord.word.toUpperCase()) {
-        setIsSuccess(true);
-        setScore((s) => s + 1);
-        speakEnglish(currentWord.word, 0.95);
-
-        setTimeout(() => {
-          if (currentIndex + 1 < questions.length) {
-            setCurrentIndex((i) => i + 1);
-          } else {
-            setIsGameOver(true);
-          }
-        }, 1000);
+        triggerSuccess();
       } else {
-        setIsError(true);
-        setTimeout(() => {
-          setIsError(false);
-          // Return tiles
-          setLetterTiles((prev) => prev.map((t) => ({ ...t, isUsed: false })));
-          setPlacedTiles([]);
-        }, 800);
+        triggerError(nextSlots);
       }
     }
   };
 
   // Undo last placed letter
   const handleUndoLast = useCallback(() => {
-    if (placedTiles.length === 0 || isSuccess) return;
-    const last = placedTiles[placedTiles.length - 1];
-    setPlacedTiles((prev) => prev.slice(0, prev.length - 1));
+    if (isSuccess) return;
+    // Find rightmost filled slot that is not hinted
+    let lastFilledIdx = -1;
+    for (let i = slots.length - 1; i >= 0; i--) {
+      if (slots[i] !== null && !isHinted[i]) {
+        lastFilledIdx = i;
+        break;
+      }
+    }
+    if (lastFilledIdx === -1) return;
+
+    const tileToReturn = slots[lastFilledIdx]!;
+    const nextSlots = [...slots];
+    nextSlots[lastFilledIdx] = null;
+    setSlots(nextSlots);
+
     setLetterTiles((prev) =>
-      prev.map((t) => (t.id === last.id ? { ...t, isUsed: false } : t)),
+      prev.map((t) => (t.id === tileToReturn.id ? { ...t, isUsed: false } : t)),
     );
-  }, [placedTiles, isSuccess]);
+  }, [slots, isHinted, isSuccess]);
+
+  // สุ่มเติมช่วยทีละ 1 ตัว (Random Assist Hint)
+  const handleRandomAssist = () => {
+    if (!currentWord || isSuccess) return;
+    const upperWord = currentWord.word.toUpperCase();
+
+    // Find slots that are empty or currently hold a wrong letter
+    const candidateIndices: number[] = [];
+    for (let i = 0; i < upperWord.length; i++) {
+      if (slots[i] === null || slots[i]?.char !== upperWord[i]) {
+        candidateIndices.push(i);
+      }
+    }
+
+    if (candidateIndices.length === 0) return;
+
+    // Pick a random candidate position
+    const randomSlotIdx =
+      candidateIndices[Math.floor(Math.random() * candidateIndices.length)];
+    const targetChar = upperWord[randomSlotIdx];
+
+    // If target slot currently has a wrong tile, return it
+    const currentWrongTile = slots[randomSlotIdx];
+    let workingLetterTiles = [...letterTiles];
+    if (currentWrongTile) {
+      workingLetterTiles = workingLetterTiles.map((t) =>
+        t.id === currentWrongTile.id ? { ...t, isUsed: false } : t,
+      );
+    }
+
+    // Find an unused tile matching targetChar
+    let matchingTile = workingLetterTiles.find(
+      (t) => t.char === targetChar && !t.isUsed,
+    );
+
+    // If none unused, reclaim from another incorrect slot
+    if (!matchingTile) {
+      for (let j = 0; j < slots.length; j++) {
+        if (
+          j !== randomSlotIdx &&
+          slots[j]?.char === targetChar &&
+          slots[j]?.char !== upperWord[j]
+        ) {
+          matchingTile = slots[j]!;
+          slots[j] = null;
+          break;
+        }
+      }
+    }
+
+    if (!matchingTile) return;
+
+    const nextSlots = [...slots];
+    nextSlots[randomSlotIdx] = matchingTile;
+
+    const nextHinted = [...isHinted];
+    nextHinted[randomSlotIdx] = true;
+
+    setSlots(nextSlots);
+    setIsHinted(nextHinted);
+    setLetterTiles(
+      workingLetterTiles.map((t) =>
+        t.id === matchingTile!.id ? { ...t, isUsed: true } : t,
+      ),
+    );
+
+    // Check if this assist completes the word
+    if (nextSlots.every((s) => s !== null)) {
+      const spelled = nextSlots.map((s) => s!.char).join('');
+      if (spelled === upperWord) {
+        triggerSuccess();
+      }
+    }
+  };
 
   // Physical keyboard typing support
   useEffect(() => {
@@ -157,7 +273,7 @@ export default function AnagramForgeGame({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [letterTiles, isGameOver, isSuccess, handleUndoLast]);
+  }, [letterTiles, slots, isGameOver, isSuccess, handleUndoLast]);
 
   // Timer
   useEffect(() => {
@@ -252,30 +368,54 @@ export default function AnagramForgeGame({
               }`}
             >
               {Array.from({ length: currentWord.word.length }).map((_, idx) => {
-                const placed = placedTiles[idx];
+                const placed = slots[idx];
+                const hinted = isHinted[idx];
                 return (
                   <div
                     key={idx}
-                    className={`w-11 h-12 sm:w-12 sm:h-14 border-2 border-slate-900 rounded flex items-center justify-center font-display font-bold text-xl sm:text-2xl select-none transition-all ${
+                    className={`w-11 h-12 sm:w-12 sm:h-14 border-2 rounded flex items-center justify-center font-display font-bold text-xl sm:text-2xl select-none transition-all relative ${
                       placed
                         ? isSuccess
-                          ? 'bg-emerald-300 text-emerald-950 shadow-[2px_2px_0px_0px_#065f46]'
-                          : 'bg-white text-slate-950 shadow-[2px_3px_0px_0px_#0f172a]'
+                          ? 'bg-emerald-300 text-emerald-950 border-emerald-900 shadow-[2px_2px_0px_0px_#065f46]'
+                          : hinted
+                          ? 'bg-amber-100 text-amber-950 border-amber-500 shadow-[2px_3px_0px_0px_#b45309]'
+                          : 'bg-white text-slate-950 border-slate-900 shadow-[2px_3px_0px_0px_#0f172a]'
                         : 'bg-slate-200/50 border-dashed border-slate-400 text-transparent'
                     }`}
                   >
                     {placed ? placed.char : ''}
+                    {hinted && !isSuccess && (
+                      <span className="absolute -top-1.5 -right-1.5 w-3.5 h-3.5 bg-amber-400 rounded-full border border-slate-900 flex items-center justify-center">
+                        <Sparkles className="w-2 h-2 text-slate-950" />
+                      </span>
+                    )}
                   </div>
                 );
               })}
             </div>
 
-            <div className="flex justify-center">
+            {/* Action Buttons: Assist Hint & Undo */}
+            <div className="flex flex-wrap items-center justify-center gap-3">
               <button
                 type="button"
-                disabled={placedTiles.length === 0 || isSuccess}
+                disabled={
+                  isSuccess ||
+                  slots.every((s, i) => s?.char === currentWord.word[i].toUpperCase())
+                }
+                onClick={handleRandomAssist}
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-amber-400 hover:bg-amber-300 disabled:opacity-40 text-slate-950 text-xs font-display font-bold border-2 border-slate-900 shadow-arcade-sm active:translate-x-[1px] active:translate-y-[1px]"
+              >
+                <Sparkles className="w-3.5 h-3.5 text-amber-900" />
+                สุ่มเติมช่วย 1 ตัว (Forge Spark)
+              </button>
+
+              <button
+                type="button"
+                disabled={
+                  !slots.some((s, idx) => s !== null && !isHinted[idx]) || isSuccess
+                }
                 onClick={handleUndoLast}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 disabled:opacity-40 text-slate-700 text-xs font-bold border-2 border-slate-900 active:translate-x-[1px] active:translate-y-[1px]"
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-slate-100 hover:bg-slate-200 disabled:opacity-40 text-slate-700 text-xs font-bold border-2 border-slate-900 active:translate-x-[1px] active:translate-y-[1px]"
               >
                 <Undo2 className="w-3.5 h-3.5" />
                 ลบตัวอักษรล่าสุด (Backspace)

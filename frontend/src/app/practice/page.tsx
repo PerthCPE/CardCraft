@@ -36,7 +36,12 @@ import {
   XCircle,
   Zap,
 } from 'lucide-react';
-import { FlashcardItem, QuestionItem, TOEIC_CATEGORIES } from '@/data/toeic-dictionary';
+import {
+  FlashcardItem,
+  QuestionItem,
+  TOEIC_CATEGORIES,
+  TOEIC_INITIAL_QUESTIONS,
+} from '@/data/toeic-dictionary';
 import { fetchFlashcards, fetchQuestions, submitPracticePart } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
 import {
@@ -240,6 +245,7 @@ export default function PracticeHubPage() {
   const [selectedAnswers, setSelectedAnswers] = useState<Record<string, 'A' | 'B' | 'C' | 'D'>>({});
   const [drillTimeLeft, setDrillTimeLeft] = useState<number>(900);
   const [isPlayingAudio, setIsPlayingAudio] = useState<boolean>(false);
+  const [showTranscript, setShowTranscript] = useState<boolean>(false);
 
   // Drill Result State
   const [drillResult, setDrillResult] = useState<{
@@ -277,8 +283,11 @@ export default function PracticeHubPage() {
   };
 
   const startPartDrill = () => {
-    // Filter questions for the selected part
-    const pool = allQuestions.filter((q) => q.part === configuredPart);
+    // Filter questions for the selected part with guaranteed fallback to static pool
+    let pool = allQuestions.filter((q) => q.part === configuredPart);
+    if (pool.length === 0) {
+      pool = TOEIC_INITIAL_QUESTIONS.filter((q) => q.part === configuredPart);
+    }
     if (pool.length === 0) return;
 
     // Shuffle pool and slice or duplicate if needed to reach partQuestionCount
@@ -295,6 +304,7 @@ export default function PracticeHubPage() {
     setDrillQuestions(chosen);
     setShuffledMap(buildShuffledQuestionsMap(chosen));
     setCurrentQuestionIndex(0);
+    setShowTranscript(false);
     setSelectedAnswers({});
     setDrillTimeLeft(partTimeLimitMinutes * 60);
     setViewState('DRILL_ACTIVE');
@@ -315,15 +325,26 @@ export default function PracticeHubPage() {
     return () => clearInterval(timer);
   }, [viewState, drillTimeLeft]);
 
-  // Audio Playback
-  const handlePlayAudio = (text: string) => {
+  // Audio Playback for Listening
+  const handlePlayAudio = (q: QuestionItem) => {
     if (isPlayingAudio) {
       cancelSpeech();
       setIsPlayingAudio(false);
       return;
     }
     setIsPlayingAudio(true);
-    speakEnglish(text, {
+
+    let textToSpeak = q.questionText;
+    if (q.part === 2) {
+      textToSpeak = `${q.questionText}. Choice A: ${q.optionA}. Choice B: ${q.optionB}. Choice C: ${q.optionC}.`;
+    } else if (q.part === 3 || q.part === 4) {
+      const cleanDialogue = q.passageText
+        ? q.passageText.replace(/\[Audio.*?\]/gi, '').trim()
+        : '';
+      textToSpeak = `${cleanDialogue}. Question: ${q.questionText}`;
+    }
+
+    speakEnglish(textToSpeak, {
       rate: 0.85,
       onEnd: () => setIsPlayingAudio(false),
       onError: () => setIsPlayingAudio(false),
@@ -986,33 +1007,60 @@ export default function PracticeHubPage() {
               </div>
             )}
 
-            {/* Listening Audio Button */}
+            {/* Listening Audio Controls (Part 1 to 4) */}
             {currentQ.part <= 4 && (
-              <div className="flex items-center justify-between p-3 bg-amber-50 border-2 border-slate-900 rounded">
-                <div className="flex items-center gap-2">
-                  <Volume2 className="w-5 h-5 text-amber-700" />
-                  <span className="text-xs font-bold text-slate-800">
-                    เสียงข้อสอบ Listening (กดเพื่อฟังเสียงข้อสอบจริง)
-                  </span>
+              <div className="p-3 bg-amber-50 border-2 border-slate-900 rounded space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Volume2 className="w-5 h-5 text-amber-700" />
+                    <span className="text-xs font-bold text-slate-800">
+                      {currentQ.part === 1 && 'ฟังเสียงตัวเลือกรูปภาพ'}
+                      {currentQ.part === 2 && 'ฟังคำถามและตัวเลือก A, B, C'}
+                      {currentQ.part === 3 && 'ฟังบทสนทนา (Conversation Dialogue)'}
+                      {currentQ.part === 4 && 'ฟังบทประกาศหรือบรรยาย (Short Talk)'}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handlePlayAudio(currentQ)}
+                    className={`px-3 py-1.5 font-display font-bold text-xs border-2 border-slate-900 shadow-arcade-sm flex items-center gap-1.5 ${
+                      isPlayingAudio
+                        ? 'bg-rose-400 text-slate-950 animate-pulse'
+                        : 'bg-amber-400 text-slate-950 hover:bg-amber-300'
+                    }`}
+                  >
+                    <Volume2 className="w-3.5 h-3.5" />
+                    {isPlayingAudio ? 'กำลังเล่นเสียง...' : 'ฟังเสียงข้อสอบ'}
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => handlePlayAudio(currentQ.questionText)}
-                  className={`px-3 py-1.5 font-display font-bold text-xs border-2 border-slate-900 shadow-arcade-sm flex items-center gap-1.5 ${
-                    isPlayingAudio
-                      ? 'bg-rose-400 text-slate-950 animate-pulse'
-                      : 'bg-amber-400 text-slate-950'
-                  }`}
-                >
-                  <Volume2 className="w-3.5 h-3.5" />
-                  {isPlayingAudio ? 'กำลังเล่นเสียง...' : 'ฟังเสียงโจทย์'}
-                </button>
+
+                {/* Optional Transcript toggle for Part 3 & 4 (listening practice) */}
+                {(currentQ.part === 3 || currentQ.part === 4) && currentQ.passageText && (
+                  <div className="pt-2 border-t border-amber-200 flex flex-col gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setShowTranscript((prev) => !prev)}
+                      className="self-start text-[11px] font-bold text-amber-900 hover:text-amber-950 underline flex items-center gap-1"
+                    >
+                      <HelpCircle className="w-3.5 h-3.5 text-amber-700" />
+                      {showTranscript ? 'ซ่อนบทสนทนา (Hide Transcript)' : 'ดูบทสนทนาสำหรับทบทวน (View Transcript)'}
+                    </button>
+                    {showTranscript && (
+                      <div className="bg-white border border-amber-300 p-3 rounded text-xs text-slate-800 font-sans leading-relaxed whitespace-pre-line">
+                        {currentQ.passageText}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
 
             {/* Reading Passages (Part 6 & 7) */}
-            {currentQ.passageText && (
-              <div className="bg-[#F8F5EC] border-2 border-slate-900 p-5 rounded font-sans text-sm text-slate-900 leading-relaxed max-w-[70ch] whitespace-pre-line">
+            {currentQ.part >= 6 && currentQ.passageText && (
+              <div className="bg-[#F8F5EC] border-2 border-slate-900 p-5 rounded font-sans text-sm sm:text-base text-slate-900 leading-relaxed max-w-[70ch] whitespace-pre-line shadow-arcade-sm">
+                <div className="text-xs font-mono font-bold text-slate-600 mb-2 pb-1 border-b border-slate-300">
+                  {currentQ.part === 6 ? 'PART 6 • TEXT COMPLETION PASSAGE' : 'PART 7 • READING PASSAGE'}
+                </div>
                 {currentQ.passageText}
               </div>
             )}
@@ -1066,6 +1114,7 @@ export default function PracticeHubPage() {
                 onClick={() => {
                   cancelSpeech();
                   setIsPlayingAudio(false);
+                  setShowTranscript(false);
                   setCurrentQuestionIndex((prev) => Math.max(0, prev - 1));
                 }}
                 className="inline-flex items-center gap-1.5 px-4 py-2 bg-slate-100 hover:bg-slate-200 disabled:opacity-40 text-slate-800 text-xs font-bold border-2 border-slate-900 active:translate-x-[1px] active:translate-y-[1px]"
@@ -1089,6 +1138,7 @@ export default function PracticeHubPage() {
                   onClick={() => {
                     cancelSpeech();
                     setIsPlayingAudio(false);
+                    setShowTranscript(false);
                     setCurrentQuestionIndex((prev) =>
                       Math.min(drillQuestions.length - 1, prev + 1),
                     );

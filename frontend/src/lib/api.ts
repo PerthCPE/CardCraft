@@ -360,7 +360,21 @@ export async function fetchQuestions(
       cache: 'no-store',
     });
     if (!res.ok) throw new Error('Backend fetchQuestions failed');
-    return await res.json();
+    const backendData: QuestionItem[] = await res.json();
+    if (Array.isArray(backendData) && backendData.length > 0) {
+      if (part) {
+        const matching = backendData.filter((q) => q.part === part);
+        if (matching.length > 0) return matching;
+        return TOEIC_INITIAL_QUESTIONS.filter((q) => q.part === part);
+      }
+      // Guarantee all 7 parts are available even if backend DB was seeded before Parts 3, 4, 6 were added
+      const backendParts = new Set(backendData.map((q) => q.part));
+      const missingPartsFallback = TOEIC_INITIAL_QUESTIONS.filter(
+        (q) => !backendParts.has(q.part),
+      );
+      return [...backendData, ...missingPartsFallback];
+    }
+    return TOEIC_INITIAL_QUESTIONS;
   } catch {
     let list = TOEIC_INITIAL_QUESTIONS;
     if (section && section !== 'ALL') {

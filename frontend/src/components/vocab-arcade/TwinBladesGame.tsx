@@ -11,6 +11,11 @@ import React, { useEffect, useState } from 'react';
 import { ArrowLeft, Clock, Sparkles, CheckCircle2, XCircle, RotateCcw, Swords, Flame } from 'lucide-react';
 import { FlashcardItem } from '@/data/toeic-dictionary';
 import { speakEnglish } from '@/utils/speech-synthesis.util';
+import {
+  getEnglishSynonym,
+  hasEnglishSynonym,
+  buildEnglishSynonymChoices,
+} from '@/utils/toeic-synonyms.util';
 
 interface TwinBladesGameProps {
   cards: FlashcardItem[];
@@ -43,61 +48,36 @@ export default function TwinBladesGame({
   const [selectedChoice, setSelectedChoice] = useState<string | null>(null);
   const [isAnswering, setIsAnswering] = useState<boolean>(false);
 
-  // Common TOEIC Synonyms dictionary map
-  const SYNONYMS_MAP: Record<string, string[]> = {
-    stipulate: ['specify', 'require', 'state', 'mandate'],
-    expedite: ['accelerate', 'hasten', 'speed up', 'quicken'],
-    scrutinize: ['examine', 'inspect', 'audit', 'analyze'],
-    comply: ['adhere', 'obey', 'conform', 'follow'],
-    reimburse: ['refund', 'compensate', 'repay', 'remunerate'],
-    commence: ['begin', 'start', 'initiate', 'launch'],
-    terminate: ['end', 'conclude', 'cease', 'cancel'],
-    allocate: ['distribute', 'assign', 'apportion', 'allot'],
-    subsidize: ['fund', 'finance', 'sponsor', 'underwrite'],
-    consolidate: ['combine', 'merge', 'unite', 'integrate'],
-    procure: ['acquire', 'obtain', 'purchase', 'secure'],
-    feasible: ['viable', 'achievable', 'practical', 'possible'],
-    mandatory: ['obligatory', 'required', 'compulsory', 'essential'],
-    lucrative: ['profitable', 'rewarding', 'gainful', 'prosperous'],
-    subsequent: ['following', 'succeeding', 'later', 'ensuing'],
-  };
-
   useEffect(() => {
-    const filtered =
+    // 1. กรองเฉพาะคำศัพท์ที่มีคำพ้องความหมายภาษาอังกฤษ (English Synonyms)
+    const categoryCards =
       category === 'ALL'
         ? cards
         : cards.filter((c) => c.category === category);
-    const pool = filtered.length >= 4 ? filtered : cards;
-    const shuffled = [...pool].sort(() => Math.random() - 0.5).slice(0, wordCount);
+
+    const cardsWithSynonyms = categoryCards.filter((c) => hasEnglishSynonym(c.word));
+    // หากหมวดนั้นมีคำที่มี synonym ไม่พอ ให้ดึงจากคลังคำทั้งหมดที่มี synonym เสริม
+    const allCardsWithSynonyms = cards.filter((c) => hasEnglishSynonym(c.word));
+    const targetPool =
+      cardsWithSynonyms.length >= wordCount
+        ? cardsWithSynonyms
+        : allCardsWithSynonyms.length >= wordCount
+        ? allCardsWithSynonyms
+        : cardsWithSynonyms.length > 0
+        ? cardsWithSynonyms
+        : cards;
+
+    const shuffled = [...targetPool].sort(() => Math.random() - 0.5).slice(0, wordCount);
+    const poolWords = cards.map((c) => c.word);
 
     const generated: SynonymQuestion[] = shuffled.map((target) => {
-      const lower = target.word.toLowerCase();
-      let synonym = target.meaningTh; // fallback
-      if (SYNONYMS_MAP[lower] && SYNONYMS_MAP[lower].length > 0) {
-        synonym = SYNONYMS_MAP[lower][0];
-      }
+      // ดึงคำพ้องความหมายภาษาอังกฤษแท้ (English Synonym) เสมอ
+      const rawSynonym = getEnglishSynonym(target.word) || 'similar';
+      const synonym = rawSynonym.toLowerCase().trim();
 
-      // 3 case-insensitively unique distractors from other words in pool
-      const seen = new Set<string>([synonym.toLowerCase()]);
-      const distractors: string[] = [];
-      const others = pool
-        .filter((c) => c.word.toLowerCase() !== target.word.toLowerCase())
-        .sort(() => Math.random() - 0.5);
-
-      for (const card of others) {
-        if (distractors.length >= 3) break;
-        const l = card.word.toLowerCase();
-        const distWord =
-          SYNONYMS_MAP[l] && SYNONYMS_MAP[l].length > 0
-            ? SYNONYMS_MAP[l][0]
-            : card.meaningTh;
-        if (!seen.has(distWord.toLowerCase())) {
-          seen.add(distWord.toLowerCase());
-          distractors.push(distWord);
-        }
-      }
-
-      const choices = [synonym, ...distractors].sort(() => Math.random() - 0.5);
+      // สร้าง 4 ตัวเลือกภาษาอังกฤษล้วนที่ไม่ซ้ำกัน 100%
+      const rawChoices = buildEnglishSynonymChoices(target.word, synonym, poolWords);
+      const choices = [...rawChoices].sort(() => Math.random() - 0.5);
 
       return {
         target,

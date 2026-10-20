@@ -8,7 +8,16 @@
 // ============================================================================
 
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, Clock, Sparkles, CheckCircle2, XCircle, RotateCcw, FileText } from 'lucide-react';
+import {
+  ArrowLeft,
+  Clock,
+  Sparkles,
+  CheckCircle2,
+  XCircle,
+  RotateCcw,
+  FileText,
+  HelpCircle,
+} from 'lucide-react';
 import { FlashcardItem } from '@/data/toeic-dictionary';
 import { speakEnglish } from '@/utils/speech-synthesis.util';
 
@@ -40,6 +49,7 @@ export default function ContextClozeGame({
   const [isGameOver, setIsGameOver] = useState<boolean>(false);
   const [selectedChoice, setSelectedChoice] = useState<string | null>(null);
   const [isAnswering, setIsAnswering] = useState<boolean>(false);
+  const [showHint, setShowHint] = useState<boolean>(false);
 
   useEffect(() => {
     const filtered =
@@ -123,6 +133,7 @@ export default function ContextClozeGame({
       if (currentIndex + 1 < questions.length) {
         setCurrentIndex((i) => i + 1);
         setSelectedChoice(null);
+        setShowHint(false);
         setIsAnswering(false);
       } else {
         setIsGameOver(true);
@@ -189,9 +200,27 @@ export default function ContextClozeGame({
               {currentQ.sentenceWithBlank}
             </p>
 
-            <div className="flex items-center justify-between text-xs text-slate-600 pt-2 border-t border-slate-300">
-              <span>คำใบ้ความหมาย: <strong>{currentQ.target.meaningTh}</strong></span>
-              <span className="font-mono text-teal-800 font-bold">[{currentQ.target.partOfSpeech}]</span>
+            <div className="flex items-center justify-between text-xs text-slate-600 pt-3 border-t border-slate-300">
+              {showHint || selectedChoice ? (
+                <div className="flex items-center gap-1.5 text-slate-800 bg-amber-50 px-2.5 py-1 border border-amber-300 rounded animate-fadeIn">
+                  <HelpCircle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                  <span>
+                    คำใบ้ความหมาย: <strong className="text-slate-950">{currentQ.target.meaningTh}</strong>
+                  </span>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setShowHint(true)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-100 hover:bg-amber-200 text-slate-900 text-xs font-bold border border-slate-900 shadow-arcade-sm transition-all active:translate-x-[1px] active:translate-y-[1px]"
+                >
+                  <HelpCircle className="w-3.5 h-3.5 text-amber-700" />
+                  กดเพื่อเปิดดูคำใบ้ความหมาย (Hint)
+                </button>
+              )}
+              <span className="font-mono text-teal-800 font-bold">
+                [{currentQ.target.partOfSpeech}]
+              </span>
             </div>
           </div>
 
@@ -270,6 +299,7 @@ export default function ContextClozeGame({
                 setTimeLeft(timeLimitSeconds);
                 setIsGameOver(false);
                 setSelectedChoice(null);
+                setShowHint(false);
               }}
               className="inline-flex items-center gap-2 px-5 py-2.5 bg-amber-400 hover:bg-amber-300 text-slate-950 font-display font-bold text-sm border-2 border-slate-900 shadow-pixel active:translate-x-[1px] active:translate-y-[1px]"
             >
