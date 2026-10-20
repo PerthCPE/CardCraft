@@ -44,11 +44,6 @@ const NAV_ITEMS: NavItem[] = [
     label: 'จำลองสอบ',
     pixelIcon: '/icons/icon-boss-gate.png',
   },
-  {
-    href: '/admin',
-    label: 'คลังข้อมูล',
-    pixelIcon: '/icons/icon-hud-mana.png',
-  },
 ];
 
 export function Navbar() {

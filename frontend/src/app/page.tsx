@@ -503,23 +503,28 @@ export default function DashboardPage() {
             )}
           </div>
 
-          {/* Admin Guild CRUD Card */}
-          <div className="bg-slate-900 text-slate-100 border-2 border-slate-950 shadow-arcade p-5 flex items-center justify-between gap-4">
-            <div className="space-y-1">
-              <h3 className="font-bold text-sm text-amber-400">
-                ระบบจัดการฐานข้อมูล (CRUD Manager)
-              </h3>
-              <p className="text-xs text-slate-300">
-                เพิ่ม แก้ไข หรือลบรายการคำศัพท์ ({stats.totalFlashcards.toLocaleString()} คำ) และข้อสอบ ({stats.totalQuestions} ข้อ)
-              </p>
+          {/* Admin Guild CRUD Card (Visible ONLY to Admin) */}
+          {user && (user.username === 'admin' || user.email?.includes('admin')) && (
+            <div className="bg-slate-900 text-slate-100 border-2 border-slate-950 shadow-arcade p-5 flex items-center justify-between gap-4">
+              <div className="space-y-1">
+                <div className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-amber-400 text-slate-950 text-[10px] font-bold font-mono">
+                  ADMIN ONLY
+                </div>
+                <h3 className="font-bold text-sm text-amber-400">
+                  ระบบจัดการฐานข้อมูล (CRUD Manager)
+                </h3>
+                <p className="text-xs text-slate-300">
+                  เพิ่ม แก้ไข หรือลบรายการคำศัพท์ ({stats.totalFlashcards.toLocaleString()} คำ) และข้อสอบ ({stats.totalQuestions} ข้อ)
+                </p>
+              </div>
+              <Link
+                href="/admin"
+                className="shrink-0 px-3.5 py-2 bg-emerald-400 text-slate-950 font-display font-bold text-xs border-2 border-slate-950 shadow-[2px_2px_0px_0px_#020617]"
+              >
+                จัดการข้อมูล
+              </Link>
             </div>
-            <Link
-              href="/admin"
-              className="shrink-0 px-3.5 py-2 bg-emerald-400 text-slate-950 font-display font-bold text-xs border-2 border-slate-950 shadow-[2px_2px_0px_0px_#020617]"
-            >
-              จัดการข้อมูล
-            </Link>
-          </div>
+          )}
         </div>
       </section>
     </div>
