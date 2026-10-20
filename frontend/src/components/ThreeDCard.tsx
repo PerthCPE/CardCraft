@@ -3,13 +3,17 @@
 // ============================================================================
 // frontend/src/components/ThreeDCard.tsx
 // 3D Trading Card Flip Component (Yu-Gi-Oh / Magic Spell Style)
-// ปรับปรุงการพลิกการ์ด (Card Flipping) และการปัดการ์ด (Card Swiping):
-// 1. การพลิกการ์ด (Card Flip): เกิดขึ้นเฉพาะการแตะหรือคลิก (Tap/Click) และปุ่ม Space
-// 2. การปัดการ์ด (Card Swipe): ปัดซ้าย (ทบทวน) / ปัดขวา (จำแม่นแล้ว) แยกขาดจากการพลิก
-//    โดยเมื่อเริ่ม Drag จะไม่มีการสั่ง Flip การ์ดโดยเด็ดขาด (ป้องกัน Gesture ตีกัน)
-// 3. แก้ไขภาพหน้า-หลังทับซ้อนกันบนมือถือ (Mobile 3D Overlap Bug):
-//    สลับ Visibility / Opacity / zIndex ที่จังหวะกึ่งกลางของการหมุน (90 องศา)
-//    ทำให้เบราว์เซอร์มือถือ (WebKit/iOS Safari/Android) ไม่เรนเดอร์ภาพหน้าและหลังทับซ้อนกัน
+// ปรับปรุงระบบ Gesture และ Design ตามหลัก frontend-design & cardcraft-pixel-ui:
+// 1. การปัดการ์ด (Swipe): สำหรับเลือกซ้าย (ทบทวน) / ขวา (จำแม่นแล้ว) ในทุก device
+//    - การปัดขยับ (เคลื่อนที่ > 6px) ห้ามทำให้การ์ดพลิกโดยเด็ดขาด 100%
+//    - มี Swipe Active Shield (400ms) ป้องกันไม่ให้การปล่อยนิ้วหลังปัดไปทริกเกอร์การพลิก
+// 2. การกดปุ่มออกเสียงข้อความ (Audio Button):
+//    - Shield ทุก Pointer/Touch/Click Event และ closest('button') ห้ามทำให้การ์ดพลิกโดยเด็ดขาด
+// 3. การพลิกการ์ด (Flip):
+//    - เกิดขึ้นเฉพาะการแตะ/คลิกอยู่กับที่ (เคลื่อนที่ไม่เกิน 6px) หรือปุ่ม Space / พลิกดูคำแปล
+// 4. แก้ปัญหาหน้า-หลังทับซ้อนกันบนมือถือ (Mobile 3D Overlap):
+//    - สลับการเรนเดอร์ด้วย display: none / flex ที่มุม 90 องศา (200ms)
+//    - translateZ(1px) แยกมิติความลึก ป้องกัน WebKit Composite Bleed-through
 // ============================================================================
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -157,27 +161,85 @@ export default function ThreeDCard({
   const theme = CATEGORY_THEMES[card.category] || DEFAULT_THEME;
   const cardArtSrc = CATEGORY_CARD_ARTS[card.category] || '/icons/card-back.png';
 
-  // State to toggle front/back face rendering at the 90-degree flip edge (220ms)
+  // Toggle front/back face rendering at the 90-degree flip edge (200ms)
   // This completely solves the mobile WebKit/Android bug where front and back overlap
   const [showBackFace, setShowBackFace] = useState(isFlipped);
 
   useEffect(() => {
     const timer = setTimeout(() => {
       setShowBackFace(isFlipped);
-    }, 220);
+    }, 200);
     return () => clearTimeout(timer);
   }, [isFlipped]);
+
+  // =========================================================================
+  // GESTURE ISOLATION ENGINE (STRICT SEPARATION OF SWIPE VS FLIP VS AUDIO):
+  // =========================================================================
+  const pointerStartPosRef = useRef<{ x: number; y: number } | null>(null);
+  const isSwipeActiveRef = useRef(false);
+  const lastFlipTimeRef = useRef(0);
+
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if ((e.target as HTMLElement).closest('button')) {
+      return;
+    }
+    pointerStartPosRef.current = { x: e.clientX, y: e.clientY };
+    isSwipeActiveRef.current = false;
+  };
+
+  const handleDragStart = () => {
+    isSwipeActiveRef.current = true;
+  };
+
+  const handleDrag = () => {
+    isSwipeActiveRef.current = true;
+  };
 
   const handleCustomDragEnd = (event: any, info: any) => {
     const dx = Math.abs(info.offset.x);
     const dy = Math.abs(info.offset.y);
-    // Only trigger swipe if user actually dragged
-    if ((dx > 10 || dy > 10) && onDragEnd) {
-      onDragEnd(event, info);
+    const wasRealDrag = dx > 8 || dy > 8;
+
+    if (wasRealDrag) {
+      isSwipeActiveRef.current = true;
+      if (onDragEnd) {
+        onDragEnd(event, info);
+      }
     }
+
+    // Keep isSwipeActiveRef = true for 400ms to block any synthetic click/tap after a drag
+    setTimeout(() => {
+      isSwipeActiveRef.current = false;
+    }, 400);
   };
 
-  const handleTap = () => {
+  const handleCardClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    // 1. If clicked inside any button (e.g. sound button), NEVER FLIP!
+    if ((e.target as HTMLElement).closest('button')) {
+      return;
+    }
+
+    // 2. If a drag/swipe gesture is active or recently occurred, NEVER FLIP!
+    if (isSwipeActiveRef.current) {
+      return;
+    }
+
+    // 3. If pointer moved > 6px since pointerdown, it was a drag, NEVER FLIP!
+    if (pointerStartPosRef.current) {
+      const dx = Math.abs(e.clientX - pointerStartPosRef.current.x);
+      const dy = Math.abs(e.clientY - pointerStartPosRef.current.y);
+      if (dx > 6 || dy > 6) {
+        return;
+      }
+    }
+
+    // 4. Debounce to prevent rapid double-clicks
+    const now = Date.now();
+    if (now - lastFlipTimeRef.current < 250) {
+      return;
+    }
+    lastFlipTimeRef.current = now;
+
     onFlip();
   };
 
@@ -195,8 +257,11 @@ export default function ThreeDCard({
         drag="x"
         dragConstraints={{ left: 0, right: 0 }}
         dragElastic={0.8}
+        onDragStart={handleDragStart}
+        onDrag={handleDrag}
         onDragEnd={handleCustomDragEnd}
-        onTap={handleTap}
+        onPointerDown={handlePointerDown}
+        onClick={handleCardClick}
         style={{
           x: dragX,
           rotateZ: rotateZ || 0,
@@ -307,15 +372,22 @@ export default function ThreeDCard({
                 </div>
               </div>
 
-              {/* Pronunciation Button */}
-              <div className="relative z-10 mt-1.5">
+              {/* Pronunciation Button (Shielded against card flip) */}
+              <div className="relative z-10 mt-2">
                 <button
                   type="button"
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onPointerUp={(e) => e.stopPropagation()}
+                  onTouchStart={(e) => e.stopPropagation()}
+                  onTouchEnd={(e) => e.stopPropagation()}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onMouseUp={(e) => e.stopPropagation()}
                   onClick={(e) => {
+                    e.preventDefault();
                     e.stopPropagation();
                     onSpeak(card.word, e);
                   }}
-                  className="inline-flex items-center gap-1.5 px-3 py-1 bg-gradient-to-r from-sky-500 to-blue-600 text-white text-xs font-semibold rounded border border-sky-300 shadow-[0_2px_4px_rgba(0,0,0,0.5)] hover:from-sky-400 hover:to-blue-500 active:scale-95 transition-all"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-sky-500 hover:bg-sky-400 text-white text-xs font-bold rounded border border-sky-300 shadow-[0_2px_4px_rgba(0,0,0,0.5)] active:translate-x-[1px] active:translate-y-[1px] transition-all cursor-pointer"
                 >
                   <Volume2 className="w-3.5 h-3.5" />
                   ฟังเสียงอ่าน
@@ -323,10 +395,10 @@ export default function ThreeDCard({
               </div>
             </div>
 
-            {/* Bottom Card Footer */}
-            <div className="relative z-10 bg-slate-950/90 border border-amber-400/40 rounded px-2.5 py-1.5 flex items-center justify-between text-xs text-amber-200/80">
+            {/* Bottom Card Footer: Explicit flip signpost */}
+            <div className="relative z-10 bg-slate-950/90 border border-amber-400/40 rounded px-2.5 py-1.5 flex items-center justify-between text-xs text-amber-200/80 cursor-pointer hover:bg-slate-900 transition-colors">
               <span className="inline-flex items-center gap-1.5 text-[11px]">
-                <RotateCcw className="w-3 h-3 text-amber-400" />
+                <RotateCcw className="w-3.5 h-3.5 text-amber-400" />
                 แตะหรือคลิกเพื่อพลิกดูคำแปล
               </span>
               <kbd className="px-1.5 py-0.5 text-[10px] font-mono font-bold bg-amber-400 text-slate-950 rounded border border-amber-200 shadow-sm">
@@ -348,7 +420,7 @@ export default function ThreeDCard({
             }}
             className="absolute inset-0 w-full h-full rounded-xl bg-gradient-to-b from-[#1c132b] via-[#100d1c] to-[#08050e] p-3 sm:p-3.5 border-4 border-amber-400 shadow-[0_20px_40px_rgba(0,0,0,0.6),0_0_0_2px_#020617,inset_0_0_12px_rgba(251,191,36,0.3)] flex-col justify-between select-none"
           >
-            {/* Top Bar: Word Header & Speech Button */}
+            {/* Top Bar: Word Header & Speech Button (Shielded against card flip) */}
             <div className="flex items-center justify-between bg-slate-950/80 border-2 border-amber-400/60 px-3 py-1.5 rounded shadow-sm">
               <div className="flex items-baseline gap-2">
                 <span className="font-sans text-lg sm:text-xl font-bold text-amber-300">
@@ -360,11 +432,18 @@ export default function ThreeDCard({
               </div>
               <button
                 type="button"
+                onPointerDown={(e) => e.stopPropagation()}
+                onPointerUp={(e) => e.stopPropagation()}
+                onTouchStart={(e) => e.stopPropagation()}
+                onTouchEnd={(e) => e.stopPropagation()}
+                onMouseDown={(e) => e.stopPropagation()}
+                onMouseUp={(e) => e.stopPropagation()}
                 onClick={(e) => {
+                  e.preventDefault();
                   e.stopPropagation();
                   onSpeak(`${card.word}. ${card.exampleEn}`, e);
                 }}
-                className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-800 text-amber-300 text-xs rounded border border-slate-700 hover:bg-slate-750 active:scale-95 transition-all"
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-800 hover:bg-slate-750 text-amber-300 text-xs font-bold rounded border border-amber-400/40 active:translate-x-[1px] active:translate-y-[1px] transition-all cursor-pointer"
               >
                 <Volume2 className="w-3.5 h-3.5" />
                 ฟังประโยค
@@ -374,9 +453,9 @@ export default function ThreeDCard({
             {/* Middle: Thai Meaning & TOEIC Sentence Context */}
             <div className="my-auto space-y-3 px-2 py-1">
               <div className="bg-slate-900/80 border-2 border-amber-300/40 rounded-lg p-3 sm:p-4 text-center shadow-inner">
-                <span className="text-[10px] uppercase tracking-wider text-amber-400 font-bold block mb-1">
+                <div className="text-[11px] text-amber-300 font-medium mb-1">
                   ความหมายภาษาไทย
-                </span>
+                </div>
                 <p className="text-xl sm:text-2xl font-bold text-white leading-snug">
                   {card.meaningTh}
                 </p>
@@ -387,9 +466,11 @@ export default function ThreeDCard({
               </div>
             </div>
 
-            {/* Bottom: Swipe Guidance */}
-            <div className="bg-slate-950/90 border border-amber-400/40 rounded px-2.5 py-1.5 flex items-center justify-between text-xs text-slate-400">
-              <span className="text-[11px]">ปัดขวาเมื่อจำได้ หรือปัดซ้ายเพื่อทบทวน</span>
+            {/* Bottom: Swipe Guidance & Flip Signpost */}
+            <div className="bg-slate-950/90 border border-amber-400/40 rounded px-2.5 py-1.5 flex items-center justify-between text-xs text-slate-400 cursor-pointer hover:bg-slate-900 transition-colors">
+              <span className="text-[11px] text-amber-200/90">
+                ปัดขวาเมื่อจำได้ หรือปัดซ้ายเพื่อทบทวน
+              </span>
               <kbd className="px-1.5 py-0.5 text-[10px] font-mono bg-slate-800 text-amber-300 rounded border border-slate-700">
                 SPACE
               </kbd>

@@ -59,6 +59,25 @@ test.describe('CardCraft Full E2E Test Suite', () => {
     await flipButton.click();
     await expect(page.getByText(/แตะหรือคลิกเพื่อพลิกดูคำแปล/i)).toBeVisible();
 
+    // Verify pressing audio button on Front DOES NOT flip the card
+    const speakWordBtn = page.getByRole('button', { name: /ฟังเสียงอ่าน/i });
+    await expect(speakWordBtn).toBeVisible();
+    await speakWordBtn.click();
+    // Card must remain on the FRONT face
+    await expect(page.getByText(/แตะหรือคลิกเพื่อพลิกดูคำแปล/i)).toBeVisible();
+    await expect(page.getByText(/ความหมายภาษาไทย/i)).not.toBeVisible();
+
+    // Flip to back and verify pressing audio button on Back DOES NOT flip the card
+    await flipButton.click();
+    await expect(page.getByText(/ความหมายภาษาไทย/i)).toBeVisible();
+    const speakSentenceBtn = page.getByRole('button', { name: /ฟังประโยค/i });
+    await expect(speakSentenceBtn).toBeVisible();
+    await speakSentenceBtn.click();
+    // Card must remain on the BACK face
+    await expect(page.getByText(/ความหมายภาษาไทย/i)).toBeVisible();
+    await flipButton.click();
+    await expect(page.getByText(/แตะหรือคลิกเพื่อพลิกดูคำแปล/i)).toBeVisible();
+
     // Open Custom Deck / Card Set Selector Modal if button exists
     const manageSetBtn = page.getByRole('button', { name: /เปลี่ยนชุด|เลือกชุดการ์ด|สร้างชุดสุ่มใหม่/i }).first();
     if (await manageSetBtn.isVisible()) {

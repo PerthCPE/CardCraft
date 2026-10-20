@@ -652,17 +652,17 @@ export default function FlashcardsPage() {
                 />
 
                 {/* Tactile Controls */}
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-3 gap-2 sm:gap-3">
                   <button
                     type="button"
                     onClick={() => handleSwipe(false)}
-                    className="py-2.5 px-3 bg-white text-slate-900 border-2 border-slate-900 shadow-arcade hover:bg-rose-50 active:translate-x-[2px] active:translate-y-[2px] active:shadow-arcade-sm transition-all flex items-center justify-between"
+                    className="py-2.5 px-2 sm:px-3 bg-white text-slate-900 border-2 border-slate-900 shadow-arcade hover:bg-rose-50 active:translate-x-[2px] active:translate-y-[2px] active:shadow-arcade-sm transition-all flex items-center justify-between cursor-pointer"
                   >
-                    <span className="inline-flex items-center gap-1.5 font-display font-bold text-xs text-rose-700">
-                      <ArrowLeft className="w-4 h-4" />
+                    <span className="inline-flex items-center gap-1 sm:gap-1.5 font-display font-bold text-[11px] sm:text-xs text-rose-700">
+                      <ArrowLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
                       ทบทวนซ้ำ
                     </span>
-                    <kbd className="px-1.5 py-0.5 text-[10px] font-mono bg-slate-100 border border-slate-900">
+                    <kbd className="hidden sm:inline-block px-1.5 py-0.5 text-[10px] font-mono bg-slate-100 border border-slate-900">
                       ←
                     </kbd>
                   </button>
@@ -670,12 +670,12 @@ export default function FlashcardsPage() {
                   <button
                     type="button"
                     onClick={() => setIsFlipped((prev) => !prev)}
-                    className="py-2.5 px-3 bg-amber-400 text-slate-950 border-2 border-slate-900 shadow-arcade active:translate-x-[2px] active:translate-y-[2px] active:shadow-arcade-sm transition-all flex items-center justify-between"
+                    className="py-2.5 px-2 sm:px-3 bg-amber-400 text-slate-950 border-2 border-slate-900 shadow-arcade hover:bg-amber-300 active:translate-x-[2px] active:translate-y-[2px] active:shadow-arcade-sm transition-all flex items-center justify-center sm:justify-between cursor-pointer"
                   >
-                    <span className="font-display font-bold text-xs">
+                    <span className="font-display font-bold text-[11px] sm:text-xs truncate">
                       พลิกดูคำแปล
                     </span>
-                    <kbd className="px-1.5 py-0.5 text-[10px] font-mono bg-white border border-slate-900">
+                    <kbd className="hidden sm:inline-block px-1.5 py-0.5 text-[10px] font-mono bg-white border border-slate-900">
                       SPACE
                     </kbd>
                   </button>
@@ -683,13 +683,13 @@ export default function FlashcardsPage() {
                   <button
                     type="button"
                     onClick={() => handleSwipe(true)}
-                    className="py-2.5 px-3 bg-emerald-400 text-slate-950 border-2 border-slate-900 shadow-arcade active:translate-x-[2px] active:translate-y-[2px] active:shadow-arcade-sm transition-all flex items-center justify-between"
+                    className="py-2.5 px-2 sm:px-3 bg-emerald-400 text-slate-950 border-2 border-slate-900 shadow-arcade hover:bg-emerald-300 active:translate-x-[2px] active:translate-y-[2px] active:shadow-arcade-sm transition-all flex items-center justify-between cursor-pointer"
                   >
-                    <span className="inline-flex items-center gap-1.5 font-display font-bold text-xs">
+                    <span className="inline-flex items-center gap-1 sm:gap-1.5 font-display font-bold text-[11px] sm:text-xs text-slate-950">
                       จำแม่นแล้ว
-                      <ArrowRight className="w-4 h-4" />
+                      <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
                     </span>
-                    <kbd className="px-1.5 py-0.5 text-[10px] font-mono bg-white border border-slate-900">
+                    <kbd className="hidden sm:inline-block px-1.5 py-0.5 text-[10px] font-mono bg-white border border-slate-900">
                       →
                     </kbd>
                   </button>
