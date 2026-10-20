@@ -22,6 +22,7 @@ import {
   domAnimation,
   m,
   PanInfo,
+  animate,
   useMotionValue,
   useTransform,
 } from 'framer-motion';
@@ -126,6 +127,7 @@ export default function FlashcardsPage() {
 
   // Ref สำหรับบันทึก timestamp การปัดการ์ด เพื่อป้องกันไม่ให้การปัดกลายเป็นการพลิกการ์ด (Shield synthetic clicks)
   const lastSwipeTimeRef = React.useRef<number>(0);
+  const isSwipingRef = React.useRef<boolean>(false);
 
   const { data: flashcardsData } = useFlashcards(undefined, authUser?.id);
   const { invalidateDashboard } = useCardCraftQueryHelpers();
@@ -290,74 +292,85 @@ export default function FlashcardsPage() {
 
   // ฟังก์ชันพลิกการ์ด (มี Shield ป้องกันไม่ให้การปัดกลายเป็นการพลิกการ์ดเด็ดขาด)
   const handleFlip = useCallback(() => {
-    if (Date.now() - lastSwipeTimeRef.current < 600) {
+    if (Date.now() - lastSwipeTimeRef.current < 600 || isSwipingRef.current) {
       return;
     }
     setIsFlipped((prev) => !prev);
   }, []);
 
-  // ฟังก์ชันการปัดการ์ด (ซ้าย = ทบทวนซ้ำ, ขวา = จำแม่นแล้ว)
-  const handleSwipe = useCallback(
-    async (isKnown: boolean) => {
+  // แอนิเมชันปัดการ์ดบินออกนอกจอ (Fly-out) ทั้งซ้าย/ขวา อย่างลื่นไหล 60 FPS
+  const triggerSwipeAnimation = useCallback(
+    (isKnown: boolean) => {
+      if (isSwipingRef.current || !activeCard) return;
+      isSwipingRef.current = true;
       lastSwipeTimeRef.current = Date.now();
-      if (!authUser) {
-        dragX.set(0);
-        requireAuth(
-          undefined,
-          'กรุณาเข้าสู่ระบบก่อน เพื่อบันทึกคำศัพท์ที่คุณจำได้แล้วและสะสมค่าประสบการณ์ฮีโร่',
-        );
-        return;
-      }
-      if (!activeCard) return;
-      const swipedCard = activeCard;
 
+      const flyTargetX = isKnown ? 580 : -580;
+
+      // แสดง Feedback Badge ทันที
       setSwipeFeedback({
         type: isKnown ? 'MASTERED' : 'LEARNING',
-        word: swipedCard.word,
-      });
-      setIsFlipped(false);
-      dragX.set(0);
-
-      const nextSwipeCount = (swipedCard.progress?.swipeCount ?? 0) + 1;
-      locallySwipedCardsRef.current.set(swipedCard.id, {
-        isKnown,
-        swipeCount: nextSwipeCount,
+        word: activeCard.word,
       });
 
-      setCards((prev) =>
-        prev.map((c) =>
-          c.id === swipedCard.id
-            ? {
-                ...c,
-                progress: {
-                  ...c.progress,
-                  isKnown,
-                  swipeCount: nextSwipeCount,
-                },
-              }
-            : c,
-        ),
-      );
+      // แอนิเมชันบินออกนอกจอ (240ms) พร้อม fade-out
+      animate(dragX, flyTargetX, {
+        duration: 0.24,
+        ease: 'easeOut',
+        onComplete: async () => {
+          const swipedCard = activeCard;
+          setIsFlipped(false);
+          dragX.set(0);
 
-      setCurrentIndex((prev) => prev + 1);
-      await recordCardSwipe(swipedCard.id, isKnown, authUser?.id);
-      invalidateDashboard(authUser?.id);
+          const nextSwipeCount = (swipedCard.progress?.swipeCount ?? 0) + 1;
+          locallySwipedCardsRef.current.set(swipedCard.id, {
+            isKnown,
+            swipeCount: nextSwipeCount,
+          });
 
-      setTimeout(() => {
-        setSwipeFeedback(null);
-      }, 1000);
+          setCards((prev) =>
+            prev.map((c) =>
+              c.id === swipedCard.id
+                ? {
+                    ...c,
+                    progress: {
+                      ...c.progress,
+                      isKnown,
+                      swipeCount: nextSwipeCount,
+                    },
+                  }
+                : c,
+            ),
+          );
+
+          setCurrentIndex((prev) => prev + 1);
+          isSwipingRef.current = false;
+
+          // บันทึกลงเซิร์ฟเวอร์ (Guest ใช้งานได้ทันที หากล็อกอินจะบันทึกขึ้น Cloud)
+          await recordCardSwipe(swipedCard.id, isKnown, authUser?.id);
+          if (authUser?.id) {
+            invalidateDashboard(authUser.id);
+          }
+
+          setTimeout(() => {
+            setSwipeFeedback(null);
+          }, 800);
+        },
+      });
     },
-    [activeCard, dragX, authUser, requireAuth, invalidateDashboard],
+    [activeCard, dragX, authUser, invalidateDashboard],
   );
 
   const handleDragEnd = (
     _event: MouseEvent | TouchEvent | PointerEvent,
     info: PanInfo,
   ) => {
+    if (isSwipingRef.current) return;
+
     const threshold = 65;
     const isSwipeRight =
       info.offset.x > threshold ||
-      (info.offset.x > 25 && info.velocity.x > 220);
+      (info.offset.x > 25 && info.velocity.x > 200);
     const isSwipeLeft =
       info.offset.x < -threshold ||
       (info.offset.x < -25 && info.velocity.x < -220);
@@ -366,11 +379,12 @@ export default function FlashcardsPage() {
     lastSwipeTimeRef.current = Date.now();
 
     if (isSwipeRight) {
-      handleSwipe(true);
+      triggerSwipeAnimation(true);
     } else if (isSwipeLeft) {
-      handleSwipe(false);
+      triggerSwipeAnimation(false);
     } else {
-      dragX.set(0);
+      // ไม่ถึงระยะที่กำหนด ให้เด้งกลับตรงกลางอย่างนุ่มนวล
+      animate(dragX, 0, { type: 'spring', stiffness: 500, damping: 32 });
     }
   };
 
@@ -383,19 +397,19 @@ export default function FlashcardsPage() {
 
       if (e.code === 'Space') {
         e.preventDefault();
-        setIsFlipped((prev) => !prev);
+        handleFlip();
       } else if (e.code === 'ArrowRight') {
         e.preventDefault();
-        handleSwipe(true);
+        triggerSwipeAnimation(true);
       } else if (e.code === 'ArrowLeft') {
         e.preventDefault();
-        handleSwipe(false);
+        triggerSwipeAnimation(false);
       }
     };
 
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [viewMode, handleSwipe]);
+  }, [viewMode, handleFlip, triggerSwipeAnimation]);
 
   // การคำนวณ Pagination สำหรับพจนานุกรม
   const totalDictPages = Math.max(
@@ -849,7 +863,7 @@ export default function FlashcardsPage() {
                     <div className="grid grid-cols-3 gap-2.5 sm:gap-4">
                       <button
                         type="button"
-                        onClick={() => handleSwipe(false)}
+                        onClick={() => triggerSwipeAnimation(false)}
                         className="min-h-[48px] py-3 px-2 sm:px-3.5 bg-white text-slate-900 border-2 border-slate-900 shadow-[3px_3px_0px_0px_#0f172a] hover:bg-rose-50 active:translate-x-[2px] active:translate-y-[2px] active:shadow-[1px_1px_0px_0px_#0f172a] transition-all flex items-center justify-between cursor-pointer"
                       >
                         <span className="inline-flex items-center gap-1 sm:gap-1.5 font-display font-bold text-[11px] sm:text-xs text-rose-700">
@@ -876,7 +890,7 @@ export default function FlashcardsPage() {
 
                       <button
                         type="button"
-                        onClick={() => handleSwipe(true)}
+                        onClick={() => triggerSwipeAnimation(true)}
                         className="min-h-[48px] py-3 px-2 sm:px-3.5 bg-emerald-400 text-slate-950 border-2 border-slate-900 shadow-[3px_3px_0px_0px_#0f172a] hover:bg-emerald-300 active:translate-x-[2px] active:translate-y-[2px] active:shadow-[1px_1px_0px_0px_#0f172a] transition-all flex items-center justify-between cursor-pointer"
                       >
                         <span className="inline-flex items-center gap-1 sm:gap-1.5 font-display font-bold text-[11px] sm:text-xs text-slate-950">

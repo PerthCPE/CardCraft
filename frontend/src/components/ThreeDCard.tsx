@@ -5,8 +5,9 @@
 // 3D Trading Card Flip Component (Yu-Gi-Oh / Magic Spell Style)
 // ปรับปรุงระบบ Gesture, Animation และ Shadow ตามหลัก frontend-design & cardcraft-pixel-ui:
 // 1. การปัดการ์ด (Swipe):
-//    - ปัดซ้าย (ทบทวนซ้ำ) / ปัดขวา (จำแม่นแล้ว)
+//    - ปัดซ้าย (ทบทวนซ้ำ) / ปัดขวา (จำแม่นแล้ว) ได้อย่างอิสระและลื่นไหล
 //    - การปัดขยับ (drag > 5px) ห้ามทำให้การ์ดพลิกเด็ดขาด 100% พร้อมระบบ Drag Shield ป้องกัน Synthetic Click
+//    - ปลดล็อก dragConstraints เพื่อให้แอนิเมชันปัดบินออกนอกจอ (Fly-out) ทำงานได้อย่างสมบูรณ์แบบ
 // 2. การพลิกการ์ด (Flip):
 //    - แยก 3D Tilt Container (รับการขยับเมาส์บน PC) ออกจาก 3D Flip Container (รับ 0/180 องศา)
 //    - แก้บั๊กการ์ดหายบน PC 100%: เมื่อพลิกหน้าการ์ดแล้วขยับเมาส์ การ์ดจะไม่หายหรือถูก override ค่า rotateY
@@ -142,6 +143,13 @@ export default function ThreeDCard({
     stiffness: 280,
   });
 
+  // จางความสว่างการ์ดลงเมื่อถูกปัดบินออกนอกจอ
+  const cardOpacity = useTransform(
+    dragX || 0,
+    [-450, -180, 0, 180, 450],
+    [0, 1, 1, 1, 0],
+  );
+
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!canHover) return;
     const rect = e.currentTarget.getBoundingClientRect();
@@ -202,13 +210,10 @@ export default function ThreeDCard({
   };
 
   const handleCustomDragEnd = (event: any, info: any) => {
-    const dist = Math.hypot(info.offset.x, info.offset.y);
-    const wasRealDrag = dist > 6;
-
     lastDragEndTimeRef.current = Date.now();
     isDraggingRef.current = true;
 
-    if (wasRealDrag && onDragEnd) {
+    if (onDragEnd) {
       onDragEnd(event, info);
     }
 
@@ -270,13 +275,15 @@ export default function ThreeDCard({
       }}
       onMouseLeave={handleMouseLeave}
     >
+      {/* Background Deck Stack Silhouette (Tactile physical card deck shadow underneath) */}
+      <div className="pointer-events-none absolute inset-x-2 bottom-0 top-3 rounded-2xl bg-amber-400/20 border-2 border-slate-900/40 shadow-[4px_6px_0px_0px_#0f172a] transform translate-y-2 -z-10" />
+
       {/* ===================================================================== */}
-      {/* LAYER 1: SWIPE & DRAG CONTAINER (รองรับการปัดซ้าย/ขวา พร้อมหมุนเอียงเล็กน้อย) */}
+      {/* LAYER 1: SWIPE & DRAG CONTAINER (รองรับการปัดซ้าย/ขวา พร้อมหมุนเอียงและบินออกนอกจอ) */}
       {/* ===================================================================== */}
       <m.div
         drag="x"
-        dragConstraints={{ left: 0, right: 0 }}
-        dragElastic={0.75}
+        dragElastic={1}
         onDragStart={handleDragStart}
         onDrag={handleDrag}
         onDragEnd={handleCustomDragEnd}
@@ -285,6 +292,7 @@ export default function ThreeDCard({
         style={{
           x: dragX,
           rotateZ: rotateZ || 0,
+          opacity: cardOpacity,
         }}
         className="w-full h-full cursor-grab active:cursor-grabbing select-none"
       >
