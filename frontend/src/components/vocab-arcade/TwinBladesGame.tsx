@@ -77,17 +77,25 @@ export default function TwinBladesGame({
         synonym = SYNONYMS_MAP[lower][0];
       }
 
-      // 3 distractors from other words in pool
-      const distractors = pool
-        .filter((c) => c.id !== target.id)
-        .sort(() => Math.random() - 0.5)
-        .slice(0, 3)
-        .map((c) => {
-          const l = c.word.toLowerCase();
-          return SYNONYMS_MAP[l] && SYNONYMS_MAP[l].length > 0
+      // 3 case-insensitively unique distractors from other words in pool
+      const seen = new Set<string>([synonym.toLowerCase()]);
+      const distractors: string[] = [];
+      const others = pool
+        .filter((c) => c.word.toLowerCase() !== target.word.toLowerCase())
+        .sort(() => Math.random() - 0.5);
+
+      for (const card of others) {
+        if (distractors.length >= 3) break;
+        const l = card.word.toLowerCase();
+        const distWord =
+          SYNONYMS_MAP[l] && SYNONYMS_MAP[l].length > 0
             ? SYNONYMS_MAP[l][0]
-            : c.meaningTh;
-        });
+            : card.meaningTh;
+        if (!seen.has(distWord.toLowerCase())) {
+          seen.add(distWord.toLowerCase());
+          distractors.push(distWord);
+        }
+      }
 
       const choices = [synonym, ...distractors].sort(() => Math.random() - 0.5);
 

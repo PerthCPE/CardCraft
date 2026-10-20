@@ -5,11 +5,14 @@
 // มินิเกม 3: แปรธาตุชนิดของคำ (Word Alchemist - Part of Speech Drill)
 // - ทดสอบการวิเคราะห์โครงสร้างประโยคไวยากรณ์ (Noun, Verb, Adjective, Adverb)
 // - เจาะจงฝึกการตัดช้อยส์รูปคำ (Word Family & Derivatives) ในข้อสอบ TOEIC
+// - GUARANTEE: ตัวเลือกทั้ง 4 ช้อยส์ต้องแตกต่างกัน 100% (Case-Insensitively Unique)
+//   และมีรูปแบบตัวพิมพ์ที่สอดคล้องเท่าเทียมกัน ไม่มีช้อยส์ซ้ำที่ต่างแค่ตัวพิมพ์เล็ก/ใหญ่
 // ============================================================================
 
 import React, { useEffect, useState } from 'react';
 import { ArrowLeft, Clock, Sparkles, CheckCircle2, XCircle, RotateCcw, Zap } from 'lucide-react';
 import { FlashcardItem } from '@/data/toeic-dictionary';
+import { buildAlchemistChoices } from '@/utils/word-alchemist.util';
 
 interface WordAlchemistGameProps {
   cards: FlashcardItem[];
@@ -44,41 +47,6 @@ export default function WordAlchemistGame({
   const [selectedChoice, setSelectedChoice] = useState<string | null>(null);
   const [isAnswering, setIsAnswering] = useState<boolean>(false);
 
-  // Helper to derive Word Family variants from a root word
-  const deriveWordFamily = (word: string, pos: string) => {
-    const clean = word.toLowerCase().trim();
-    const root = clean.replace(/(tion|ing|ed|ly|able|ive|al|ment|ize|ise|ity|ness)$/, '');
-
-    let noun = `${root}ion`;
-    let verb = `${root}ize`;
-    let adj = `${root}ive`;
-    let adv = `${root}ively`;
-
-    if (pos.includes('v')) {
-      verb = clean;
-      noun = `${root}tion`;
-      adj = `${root}able`;
-      adv = `${root}ably`;
-    } else if (pos.includes('n')) {
-      noun = clean;
-      verb = `${root}ify`;
-      adj = `${root}al`;
-      adv = `${root}ally`;
-    } else if (pos.includes('adj')) {
-      adj = clean;
-      noun = `${root}ness`;
-      adv = `${clean}ly`;
-      verb = `${root}ize`;
-    } else if (pos.includes('adv')) {
-      adv = clean;
-      adj = clean.replace(/ly$/, '');
-      noun = `${adj}ness`;
-      verb = `${adj}ize`;
-    }
-
-    return { noun, verb, adj, adv };
-  };
-
   useEffect(() => {
     const filtered =
       category === 'ALL'
@@ -97,7 +65,9 @@ export default function WordAlchemistGame({
         sentence = `The supervisor asked the department to _______ the current project timeline.`;
       }
 
-      const family = deriveWordFamily(c.word, c.partOfSpeech);
+      // Check whether blank is at sentence start or inside
+      const isStartOfSentence = sentence.trim().startsWith('_______');
+
       const isVerb = c.partOfSpeech.includes('v');
       const isNoun = c.partOfSpeech.includes('n');
       const isAdj = c.partOfSpeech.includes('adj');
@@ -120,17 +90,28 @@ export default function WordAlchemistGame({
         explanation = `ตำแหน่งช่องว่างต้องการคำกริยาวิเศษณ์ (Adverb) เพื่อขยายกริยาหรือภาพรวมของประโยค`;
       }
 
-      // 4 choices
-      const rawChoices = Array.from(new Set([c.word, family.noun, family.verb, family.adj, family.adv])).slice(0, 4);
-      while (rawChoices.length < 4) {
-        rawChoices.push(`${c.word.toLowerCase()}ly`);
-      }
-      const choices = rawChoices.sort(() => Math.random() - 0.5);
+      // Format correct word uniformly
+      const formattedCorrectWord = isStartOfSentence
+        ? c.word.charAt(0).toUpperCase() + c.word.slice(1).toLowerCase()
+        : c.word.toLowerCase();
+
+      // =======================================================================
+      // STRICT GUARANTEE: Exactly 4 distinct choices (Case-Insensitively Unique)
+      // ป้องกันช่องโหว่คำซ้ำกันที่ต่างแค่ตัวพิมพ์เล็ก/ใหญ่ 100%
+      // =======================================================================
+      const poolWords = pool.map((p) => p.word);
+      const rawChoices = buildAlchemistChoices(
+        c.word,
+        c.partOfSpeech,
+        isStartOfSentence,
+        poolWords,
+      );
+      const choices = [...rawChoices].sort(() => Math.random() - 0.5);
 
       return {
         card: c,
         sentenceWithBlank: sentence,
-        correctWord: c.word,
+        correctWord: formattedCorrectWord,
         correctPosNameTh,
         correctPosTag,
         distractorChoices: choices,
@@ -244,12 +225,16 @@ export default function WordAlchemistGame({
             </p>
 
             <div className="flex items-center justify-between text-xs text-slate-600 pt-2 border-t border-slate-300">
-              <span>ความหมายภาษาไทย: <strong>{currentItem.card.meaningTh}</strong></span>
-              <span className="font-mono text-purple-700 font-bold">ต้องการ: {currentItem.correctPosNameTh}</span>
+              <span>
+                ความหมายภาษาไทย: <strong>{currentItem.card.meaningTh}</strong>
+              </span>
+              <span className="font-mono text-purple-700 font-bold">
+                ต้องการ: {currentItem.correctPosNameTh}
+              </span>
             </div>
           </div>
 
-          {/* 4 Word Family Choices */}
+          {/* 4 Word Family Choices (Guaranteed Distinct) */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {currentItem.distractorChoices.map((choice, idx) => {
               const letter = ['A', 'B', 'C', 'D'][idx];
@@ -271,7 +256,7 @@ export default function WordAlchemistGame({
 
               return (
                 <button
-                  key={choice}
+                  key={`${choice}-${idx}`}
                   type="button"
                   disabled={isAnswering}
                   onClick={() => handleSelect(choice)}
@@ -318,45 +303,35 @@ export default function WordAlchemistGame({
               จบการแปรธาตุชนิดของคำ!
             </h3>
             <p className="text-sm text-slate-600">
-              คุณสามารถระบุชนิดของคำได้อย่างถูกต้อง{' '}
-              <span className="font-bold text-purple-600 font-pixel text-base">
-                {score}
-              </span>{' '}
-              จากทั้งหมด {items.length} ข้อ
+              คุณทำคะแนนได้{' '}
+              <strong className="text-slate-950 font-pixel text-base">
+                {score} / {items.length}
+              </strong>{' '}
+              ข้อ
             </p>
           </div>
 
-          <div className="flex justify-center gap-3 pt-2">
+          <div className="pt-2 flex justify-center gap-3">
             <button
               type="button"
               onClick={() => {
-                const filtered =
-                  category === 'ALL'
-                    ? cards
-                    : cards.filter((c) => c.category === category);
-                const pool = filtered.length >= 4 ? filtered : cards;
-                const shuffled = [...pool]
-                  .sort(() => Math.random() - 0.5)
-                  .slice(0, wordCount);
-                // regenerate items
                 setCurrentIndex(0);
                 setScore(0);
                 setTimeLeft(timeLimitSeconds);
                 setIsGameOver(false);
                 setSelectedChoice(null);
+                setIsAnswering(false);
               }}
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-amber-400 hover:bg-amber-300 text-slate-950 font-display font-bold text-sm border-2 border-slate-900 shadow-pixel active:translate-x-[1px] active:translate-y-[1px]"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-amber-400 hover:bg-amber-300 text-slate-950 font-display font-bold text-xs border-2 border-slate-900 shadow-arcade-sm"
             >
               <RotateCcw className="w-4 h-4" />
               เล่นใหม่อีกครั้ง
             </button>
-
             <button
               type="button"
               onClick={onExit}
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-display font-bold text-sm border-2 border-slate-900 shadow-pixel active:translate-x-[1px] active:translate-y-[1px]"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-display font-bold text-xs border-2 border-slate-900 shadow-arcade-sm"
             >
-              <ArrowLeft className="w-4 h-4" />
               กลับสู่ Arcade Hub
             </button>
           </div>

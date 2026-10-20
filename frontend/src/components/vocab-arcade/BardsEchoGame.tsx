@@ -50,12 +50,21 @@ export default function BardsEchoGame({
     const shuffled = [...pool].sort(() => Math.random() - 0.5).slice(0, wordCount);
 
     const generated = shuffled.map((target) => {
-      // Pick 3 distractors
-      const distractors = pool
-        .filter((c) => c.id !== target.id)
-        .sort(() => Math.random() - 0.5)
-        .slice(0, 3)
-        .map((c) => c.word);
+      // Pick 3 case-insensitively unique distractors
+      const seen = new Set<string>([target.word.toLowerCase()]);
+      const distractors: string[] = [];
+      const others = pool
+        .filter((c) => c.word.toLowerCase() !== target.word.toLowerCase())
+        .sort(() => Math.random() - 0.5);
+
+      for (const card of others) {
+        if (distractors.length >= 3) break;
+        const low = card.word.toLowerCase();
+        if (!seen.has(low)) {
+          seen.add(low);
+          distractors.push(card.word);
+        }
+      }
 
       const choices = [target.word, ...distractors].sort(() => Math.random() - 0.5);
       return { target, choices };
