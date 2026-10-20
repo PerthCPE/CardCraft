@@ -16,69 +16,75 @@ interface CharacterTierConfig {
   prompt: string;
 }
 
+// ============================================================================
+// Hero's Evolution Design DNA (Medieval High-Fantasy RPG)
+// Base Anchor: Young swordsman hero with messy silver-blond hair, resolute blue eyes,
+// south-facing heroic 3/4 battle stance, crisp pixel edges, transparent background,
+// highly detailed Octopath Traveler / Golden Sun aesthetic.
+// ============================================================================
 const CHARACTER_TIERS: CharacterTierConfig[] = [
-  // {
-  //   tier: 1,
-  //   name: 'Novice Villager',
-  //   scoreRange: '0 – 245 คะแนน',
-  //   filename: 'tier-1-novice.png',
-  //   aliasFilename: 'tier-1.png',
-  //   prompt:
-  //     '16-bit pixel art medieval RPG sprite, young male knight with messy blond hair, determined expression, standing south-facing idle battle stance, wearing simple brown peasant linen tunic, leather arm guards, plain brown boots, holding a rustic wooden sword in right hand and a small worn dictionary booklet in left hand, clean silhouette, no magic effects, transparent background, crisp pixel edges',
-  // },
-  // {
-  //   tier: 2,
-  //   name: 'Word Scout',
-  //   scoreRange: '250 – 395 คะแนน (+150)',
-  //   filename: 'tier-2-scout.png',
-  //   aliasFilename: 'tier-2.png',
-  //   prompt:
-  //     '16-bit pixel art medieval RPG sprite, same young male knight with messy blond hair, determined expression, standing south-facing idle battle stance, upgraded to reinforced boiled leather armor with navy blue cloth lining, studded leather boots, holding a polished iron shortsword in right hand and a glowing parchment card scroll in left hand, faint blue spark particles, transparent background, crisp pixel edges',
-  // },
-  // {
-  //   tier: 3,
-  //   name: 'Spell Squire',
-  //   scoreRange: '400 – 595 คะแนน (+200)',
-  //   filename: 'tier-3-squire.png',
-  //   aliasFilename: 'tier-3.png',
-  //   prompt:
-  //     '16-bit pixel art medieval RPG sprite, same young male knight with messy blond hair, determined expression, standing south-facing idle battle stance, wearing polished steel chestplate armor, steel gauntlets, and a short royal blue cape, holding a gleaming steel longsword in right hand and a floating glowing blue spell card in left hand, swirling mana vapor aura around feet, transparent background, crisp pixel edges',
-  // },
-  // {
-  //   tier: 4,
-  //   name: 'Rune Knight',
-  //   scoreRange: '600 – 695 คะแนน (+100 - หน้าด่านก่อน 700)',
-  //   filename: 'tier-4-knight.png',
-  //   aliasFilename: 'tier-4.png',
-  //   prompt:
-  //     '16-bit pixel art medieval RPG sprite, same young male knight with messy blond hair, determined expression, standing south-facing idle battle stance, wearing full ornate silver knight plate armor engraved with glowing cyan runes, flowing royal blue cape, holding a massive rune-carved broadsword glowing with electric blue energy in right hand, three floating glowing rune cards orbiting left hand, intense glowing blue particle aura, transparent background, crisp pixel edges',
-  // },
-  // {
-  //   tier: 5,
-  //   name: 'High Paladin (Goal 700+)',
-  //   scoreRange: '700 – 795 คะแนน (+100 - 🎯 เป้าหมาย 700+)',
-  //   filename: 'tier-5-paladin.png',
-  //   aliasFilename: 'tier-5.png',
-  //   prompt:
-  //     '16-bit pixel art medieval RPG sprite, same young male knight with messy blond hair, triumphant heroic expression, standing south-facing idle battle stance, wearing shining white-gold paladin plate armor, majestic emerald-green royal velvet cape with gold trims, holding a glowing golden holy grandsword in right hand, four radiant golden cards hovering around left hand, vibrant emerald green and gold victory aura radiating from beneath feet, transparent background, crisp pixel edges',
-  // },
-  // {
-  //   tier: 6,
-  //   name: 'Grand Archon',
-  //   scoreRange: '800 – 895 คะแนน (+100)',
-  //   filename: 'tier-6-archmage.png',
-  //   aliasFilename: 'tier-6.png',
-  //   prompt:
-  //     '16-bit pixel art medieval RPG sprite, same young male knight with messy blond hair, transcendent expression, hovering slightly above ground in south-facing battle stance, wearing intricate gold and midnight-blue enchanted celestial plate armor, dramatic flowing dual-layered cape, holding a crystalline energy blade in right hand, a spinning circular ring of six radiant spell cards and an intricate glowing golden magic circle behind his back, bursting holy light rays, transparent background, crisp pixel edges',
-  // },
+  {
+    tier: 1,
+    name: 'Wandering Page',
+    scoreRange: '0 – 245 คะแนน',
+    filename: 'tier-1-novice.png',
+    aliasFilename: 'tier-1.png',
+    prompt:
+      '16-bit pixel art medieval fantasy RPG character sprite, same young swordsman hero with messy silver-blond hair and resolute blue eyes, south-facing heroic battle stance, wearing humble brown traveler linen tunic with leather arm bracers and worn sturdy leather boots, holding a rustic wooden practice sword in right hand and a small leather-bound spellbook in left hand, tiny magical dust particles floating around, crisp pixel edges, transparent background, highly detailed octopath traveler style',
+  },
+  {
+    tier: 2,
+    name: 'Rune Scout',
+    scoreRange: '250 – 395 คะแนน (+150)',
+    filename: 'tier-2-scout.png',
+    aliasFilename: 'tier-2.png',
+    prompt:
+      '16-bit pixel art medieval fantasy RPG character sprite, same young swordsman hero with messy silver-blond hair and resolute blue eyes, south-facing heroic battle stance, wearing reinforced boiled leather scout armor with navy cloth lining and steel knee guards, short emerald green hooded capelet, wielding a sharp polished steel shortsword in right hand and a glowing parchment card scroll in left hand, subtle cyan wind aura swirl around boots, crisp pixel edges, transparent background, highly detailed octopath traveler style',
+  },
+  {
+    tier: 3,
+    name: 'Spell Squire',
+    scoreRange: '400 – 595 คะแนน (+200)',
+    filename: 'tier-3-squire.png',
+    aliasFilename: 'tier-3.png',
+    prompt:
+      '16-bit pixel art medieval fantasy RPG character sprite, same young swordsman hero with messy silver-blond hair and resolute blue eyes, south-facing heroic battle stance, wearing gleaming polished iron knight chestplate, steel gauntlets, and a royal blue velvet cape, wielding a sharp steel arming sword glowing with blue mana runes in right hand, holding an open floating ancient grimoire with a levitating blue spell card in left hand, rising mana spark vapor, crisp pixel edges, transparent background, highly detailed octopath traveler style',
+  },
+  {
+    tier: 4,
+    name: 'Rune Vanguard',
+    scoreRange: '600 – 695 คะแนน (+100 - หน้าด่านก่อน 700)',
+    filename: 'tier-4-knight.png',
+    aliasFilename: 'tier-4.png',
+    prompt:
+      '16-bit pixel art medieval fantasy RPG character sprite, same young swordsman hero with messy silver-blond hair and resolute blue eyes, south-facing heroic battle stance, wearing ornate silver and indigo knight plate armor intricately etched with glowing cyan power runes, billowing royal blue cape, wielding a majestic rune broadsword enveloped in crackling cyan lightning energy, three floating glowing magic rune cards orbiting around, radiant blue shockwave particle aura, crisp pixel edges, transparent background, highly detailed octopath traveler style',
+  },
+  {
+    tier: 5,
+    name: 'High Paladin (Goal 700+)',
+    scoreRange: '700 – 795 คะแนน (+100 - 🎯 เป้าหมาย 700+)',
+    filename: 'tier-5-paladin.png',
+    aliasFilename: 'tier-5.png',
+    prompt:
+      '16-bit pixel art medieval fantasy RPG character sprite, same young swordsman hero with messy silver-blond hair and resolute blue eyes, south-facing victorious battle stance, wearing radiant white-gold paladin plate armor with emerald gemstone inlays, magnificent royal emerald-green velvet cape trimmed with golden embroidery, wielding a dazzling golden holy excalibur sword in right hand, ornate golden lion crest aegis shield in left hand, four glowing golden magic cards floating around, pillar of brilliant golden holy light rays bursting at feet, crisp pixel edges, transparent background, highly detailed octopath traveler style',
+  },
+  {
+    tier: 6,
+    name: 'Grand Astral Archon',
+    scoreRange: '800 – 895 คะแนน (+100)',
+    filename: 'tier-6-archmage.png',
+    aliasFilename: 'tier-6.png',
+    prompt:
+      '16-bit pixel art medieval fantasy RPG character sprite, same young swordsman hero with messy silver-blond hair and resolute blue eyes, transcendent expression, hovering levitating slightly above ground in south-facing majestic battle stance, wearing mythical midnight-blue and royal gold celestial knight plate armor, dramatic flowing dual-layered cape, wielding a blazing crystalline cosmic rune blade in right hand, an intricate spinning golden magical summoning circle and six radiant floating spell cards orbiting behind his back, cosmic star stardust sparkles, crisp pixel edges, transparent background, highly detailed octopath traveler style',
+  },
   {
     tier: 7,
-    name: 'CardCraft Deity',
+    name: 'CardCraft Sovereign Deity',
     scoreRange: '900 – 990 คะแนน (+100 - ร่างเทพสูงสุด)',
     filename: 'tier-7-deity.png',
     aliasFilename: 'tier-7.png',
     prompt:
-      '16-bit pixel art medieval fantasy RPG character sprite, supreme ascended deity of knowledge, legendary grand sovereign knight levitating above ground in south-facing majestic battle stance, wearing ornate sacred gold and polished white-diamond plate armor with glowing cyan runes, dramatic flowing royal white cape with gold embroidery, massive majestic glowing pixel archangel wings made of golden celestial light unfurled from back, radiant sunburst halo orbiting with eight glowing golden magic spell cards and cosmic star particles, holding a magnificent glowing divine holy sword crackling with golden light beams in right hand, glowing celestial aegis shield in left hand, swirling holy golden victory aura around feet, ultimate max-level god tier, crisp pixel edges, transparent background, highly detailed octopath traveler style',
+      '16-bit pixel art medieval fantasy RPG character sprite, supreme ascended deity of knowledge, same young swordsman hero ascended to godhood with radiant silver-blond hair, levitating high above ground in majestic south-facing sovereign stance, wearing ornate sacred gold and polished white-diamond plate armor with glowing cyan runes, royal white cape with gold embroidery, massive majestic glowing pixel archangel wings made of golden celestial light unfurled from back, radiant sunburst halo orbiting with eight glowing golden magic spell cards and cosmic star particles, holding a magnificent glowing divine holy sword crackling with golden light beams in right hand, glowing celestial aegis shield in left hand, swirling holy golden victory aura around feet, ultimate max-level god tier, crisp pixel edges, transparent background, highly detailed octopath traveler style',
   },
 ];
 
@@ -97,14 +103,14 @@ interface PixelLabImageResponse {
 /**
  * Generate a single character sprite using PixelLab API
  */
-async function generateCharacterSprite(config: CharacterTierConfig, retries = 2): Promise<Buffer> {
+async function generateCharacterSprite(config: CharacterTierConfig, retries = 3): Promise<Buffer> {
   const client = axios.create({
     baseURL: PIXELLAB_BASE_URL,
     headers: {
       Authorization: `Bearer ${PIXELLAB_API_KEY}`,
       'Content-Type': 'application/json',
     },
-    timeout: 300000, // 3 minutes timeout for image generation
+    timeout: 300000, // 5 minutes timeout for image generation
   });
 
   const requestBody: Record<string, unknown> = {
@@ -117,14 +123,12 @@ async function generateCharacterSprite(config: CharacterTierConfig, retries = 2)
     detail: 'highly detailed',
   };
 
-  for (let attempt = 1; attempt <= retries + 1; attempt++) {
+  for (let attempt = 1; attempt <= retries; attempt++) {
     try {
-      console.log(`\n🎨 [Tier ${config.tier}] Generating ${config.name}... (Attempt ${attempt}/${retries + 1})`);
-      console.log(`   Prompt: "${config.prompt.substring(0, 80)}..."`);
+      console.log(`\n🎨 [Tier ${config.tier}] Generating ${config.name}... (Attempt ${attempt}/${retries})`);
+      console.log(`   Prompt: "${config.prompt.substring(0, 85)}..."`);
 
-      const endpoint = requestBody.init_image ? '/create-image-pixflux' : '/create-image-pixen';
-      console.log(`   Calling endpoint: ${endpoint}`);
-      const response = await client.post<PixelLabImageResponse>(endpoint, requestBody);
+      const response = await client.post<PixelLabImageResponse>('/create-image-pixen', requestBody);
 
       if (response.data?.image?.base64) {
         const imageBuffer = Buffer.from(response.data.image.base64, 'base64');
@@ -149,11 +153,13 @@ async function generateCharacterSprite(config: CharacterTierConfig, retries = 2)
 
       console.error(`❌ [Tier ${config.tier}] Attempt ${attempt} failed: ${errorMsg}`);
 
-      if (attempt <= retries) {
-        console.log(`⏳ Waiting 10 seconds before retrying...`);
-        await new Promise((resolve) => setTimeout(resolve, 10000));
+      if (attempt < retries) {
+        const isConcurrency = errorMsg.includes('concurrent');
+        const waitMs = isConcurrency ? 10000 : 6000;
+        console.log(`⏳ Waiting ${waitMs / 1000} seconds before retrying...`);
+        await new Promise((resolve) => setTimeout(resolve, waitMs));
       } else {
-        throw new Error(`Failed to generate Tier ${config.tier} sprite after ${retries + 1} attempts: ${errorMsg}`);
+        throw new Error(`Failed to generate Tier ${config.tier} sprite after ${retries} attempts: ${errorMsg}`);
       }
     }
   }
@@ -166,18 +172,16 @@ async function generateCharacterSprite(config: CharacterTierConfig, retries = 2)
  */
 async function main() {
   console.log('=====================================================');
-  console.log('🎮 CardCraft: PixelLab Character Sprite Generator');
+  console.log('⚔️  CardCraft: Hero\'s Evolution 7-Tier Character Generator');
   console.log('=====================================================');
   console.log(`Target directory: ${OUTPUT_DIR}`);
   console.log(`API Base URL:     ${PIXELLAB_BASE_URL}`);
 
-  // Ensure output directory exists
   if (!fs.existsSync(OUTPUT_DIR)) {
     console.log(`📁 Creating directory: ${OUTPUT_DIR}`);
     fs.mkdirSync(OUTPUT_DIR, { recursive: true });
   }
 
-  // Parse optional command line args (e.g., --tier=1 or --force)
   const args = process.argv.slice(2);
   const specificTierArg = args.find((a) => a.startsWith('--tier='));
   const targetTier = specificTierArg ? parseInt(specificTierArg.split('=')[1], 10) : null;
@@ -193,18 +197,17 @@ async function main() {
 
   const results: { tier: number; name: string; file: string; status: 'SUCCESS' | 'FAILED'; error?: string }[] = [];
 
-  for (const tierConfig of tiersToProcess) {
+  for (let i = 0; i < tiersToProcess.length; i++) {
+    const tierConfig = tiersToProcess[i];
     const primaryFilePath = path.join(OUTPUT_DIR, tierConfig.filename);
     const aliasFilePath = path.join(OUTPUT_DIR, tierConfig.aliasFilename);
 
     try {
       const buffer = await generateCharacterSprite(tierConfig);
 
-      // Save primary file (e.g. tier-1-novice.png)
       fs.writeFileSync(primaryFilePath, buffer);
       console.log(`💾 Saved: ${primaryFilePath} (${buffer.length} bytes)`);
 
-      // Save alias file (e.g. tier-1.png)
       fs.writeFileSync(aliasFilePath, buffer);
       console.log(`💾 Saved Alias: ${aliasFilePath}`);
 
@@ -215,9 +218,10 @@ async function main() {
         status: 'SUCCESS',
       });
 
-      // Cooldown delay for PixelLab API concurrency limit
-      console.log('⏳ Cooldown 6s for next generation...');
-      await new Promise((resolve) => setTimeout(resolve, 6000));
+      if (i < tiersToProcess.length - 1) {
+        console.log('⏳ Cooldown 8s for next generation...');
+        await new Promise((resolve) => setTimeout(resolve, 8000));
+      }
     } catch (err: unknown) {
       const errMsg = err instanceof Error ? err.message : String(err);
       results.push({
@@ -243,7 +247,6 @@ async function main() {
   console.log('=====================================================\n');
 }
 
-// Execute
 main().catch((err) => {
   console.error('Fatal error:', err);
   process.exit(1);
