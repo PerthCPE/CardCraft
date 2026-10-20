@@ -127,6 +127,9 @@ export default function ContextClozeGame({
     if (isCorrect) {
       setScore((s) => s + 1);
       speakEnglish(currentQ.target.word, 0.95);
+    } else {
+      // เมื่อกดตอบแล้วผิด ให้อ่านคำตอบข้อที่ถูกเสมอ
+      speakEnglish(currentQ.target.word, 0.95);
     }
 
     setTimeout(() => {
@@ -138,7 +141,7 @@ export default function ContextClozeGame({
       } else {
         setIsGameOver(true);
       }
-    }, 900);
+    }, isCorrect ? 900 : 1200);
   };
 
   const minutes = Math.floor(timeLeft / 60);

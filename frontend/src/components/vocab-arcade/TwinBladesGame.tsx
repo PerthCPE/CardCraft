@@ -118,9 +118,6 @@ export default function TwinBladesGame({
     setIsAnswering(true);
     setSelectedChoice(choice);
 
-    // อ่านออกเสียงคำศัพท์ที่อยู่ในตัวเลือกคำตอบที่กดทันที
-    speakEnglish(choice);
-
     const isCorrect = choice === currentQ.synonym;
     if (isCorrect) {
       setScore((s) => s + 1);
@@ -129,8 +126,11 @@ export default function TwinBladesGame({
         if (next > maxCombo) setMaxCombo(next);
         return next;
       });
+      speakEnglish(choice);
     } else {
       setCombo(0);
+      // เมื่อกดตอบแล้วผิด ให้อ่านคำตอบข้อที่ถูกเสมอ
+      speakEnglish(currentQ.synonym);
     }
 
     setTimeout(() => {
@@ -141,7 +141,7 @@ export default function TwinBladesGame({
       } else {
         setIsGameOver(true);
       }
-    }, 850);
+    }, isCorrect ? 850 : 1200);
   };
 
   const minutes = Math.floor(timeLeft / 60);

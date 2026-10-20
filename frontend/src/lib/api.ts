@@ -390,7 +390,14 @@ export async function fetchQuestions(
       }
       return merged;
     }
-    return TOEIC_INITIAL_QUESTIONS;
+    let fallback = TOEIC_INITIAL_QUESTIONS;
+    if (section && section !== 'ALL') {
+      fallback = fallback.filter((q) => q.section === section);
+    }
+    if (part) {
+      fallback = fallback.filter((q) => q.part === part);
+    }
+    return fallback;
   } catch {
     let list = TOEIC_INITIAL_QUESTIONS;
     if (section && section !== 'ALL') {

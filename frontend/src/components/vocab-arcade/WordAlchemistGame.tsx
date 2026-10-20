@@ -13,6 +13,7 @@ import React, { useEffect, useState } from 'react';
 import { ArrowLeft, Clock, Sparkles, CheckCircle2, XCircle, RotateCcw, Zap, HelpCircle } from 'lucide-react';
 import { FlashcardItem } from '@/data/toeic-dictionary';
 import { buildAlchemistChoices } from '@/utils/word-alchemist.util';
+import { speakEnglish } from '@/utils/speech-synthesis.util';
 
 interface WordAlchemistGameProps {
   cards: FlashcardItem[];
@@ -154,6 +155,10 @@ export default function WordAlchemistGame({
     const isCorrect = choice.toLowerCase() === currentItem.correctWord.toLowerCase();
     if (isCorrect) {
       setScore((s) => s + 1);
+      speakEnglish(currentItem.correctWord);
+    } else {
+      // เมื่อกดตอบแล้วผิด ให้อ่านคำตอบข้อที่ถูกเสมอ
+      speakEnglish(currentItem.correctWord);
     }
 
     setTimeout(() => {

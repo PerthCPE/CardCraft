@@ -117,18 +117,15 @@ export default function BossBattleMockTestPage() {
   const { user: authUser, requireAuth, openAuthModal, refreshUser } = useAuth();
   const { invalidateDashboard } = useCardCraftQueryHelpers();
 
-  const { data: questionsData } = useQuestions();
-  const { data: dashboardData } = useDashboardSummary(authUser?.id);
-
-  // Raw question bank from TanStack Query with instant fallback
-  const rawQuestions: QuestionItem[] = questionsData || TOEIC_INITIAL_QUESTIONS;
-  const dashboard: DashboardSummaryResponse | null = dashboardData || null;
-
   // Selection Lobby & Configuration State
   const [selectedPackage, setSelectedPackage] =
     useState<MockExamPackageInfo | null>(null);
   const [pendingConfirmPackage, setPendingConfirmPackage] =
     useState<MockExamPackageInfo | null>(null);
+
+  // Results & Evolution State
+  const [examResult, setExamResult] = useState<SubmitExamResponse | null>(null);
+  const [showRankUpModal, setShowRankUpModal] = useState<boolean>(false);
 
   // Active Timed Exam State
   const [activeQuestions, setActiveQuestions] = useState<QuestionItem[]>([]);
@@ -146,9 +143,16 @@ export default function BossBattleMockTestPage() {
   const [showSubmitConfirm, setShowSubmitConfirm] = useState<boolean>(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState<boolean>(false);
 
-  // Results & Evolution State
-  const [examResult, setExamResult] = useState<SubmitExamResponse | null>(null);
-  const [showRankUpModal, setShowRankUpModal] = useState<boolean>(false);
+  // ล็อกไม่ให้ Query Refetch กลางคันขณะทำข้อสอบ ป้องกันลำดับข้อหรือช้อยส์เปลี่ยนระหว่างสอบ
+  const isExamInProgress = !!selectedPackage && !examResult;
+  const { data: questionsData } = useQuestions(undefined, undefined, {
+    enabled: !isExamInProgress,
+  });
+  const { data: dashboardData } = useDashboardSummary(authUser?.id);
+
+  // Raw question bank from TanStack Query with instant fallback
+  const rawQuestions: QuestionItem[] = questionsData || TOEIC_INITIAL_QUESTIONS;
+  const dashboard: DashboardSummaryResponse | null = dashboardData || null;
 
   // Audio Player State
   const [isPlayingAudio, setIsPlayingAudio] = useState<boolean>(false);

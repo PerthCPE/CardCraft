@@ -474,6 +474,7 @@ export default function PracticeHubPage() {
               onClick={() => setActiveTab('VOCAB_ARCADE')}
               onMouseEnter={() => prefetchFlashcards()}
               onFocus={() => prefetchFlashcards()}
+              onTouchStart={() => prefetchFlashcards()}
               className={`inline-flex items-center gap-2 px-4 py-2 font-display font-bold text-sm border-2 border-slate-950 transition-all ${
                 activeTab === 'VOCAB_ARCADE'
                   ? 'bg-sky-400 text-slate-950 shadow-[2px_2px_0px_0px_#020617]'
@@ -508,6 +509,7 @@ export default function PracticeHubPage() {
                     key={meta.part}
                     onMouseEnter={() => prefetchQuestions(meta.part)}
                     onFocus={() => prefetchQuestions(meta.part)}
+                    onTouchStart={() => prefetchQuestions(meta.part)}
                     className="bg-[#FFFDF7] border-2 border-slate-900 shadow-[4px_4px_0px_0px_#0f172a] p-5 flex flex-col justify-between hover:translate-x-[-1px] hover:translate-y-[-1px] transition-all"
                   >
                     <div className="space-y-3">
@@ -551,6 +553,7 @@ export default function PracticeHubPage() {
                         onClick={() => openPartConfig(meta.part)}
                         onMouseEnter={() => prefetchQuestions(meta.part)}
                         onFocus={() => prefetchQuestions(meta.part)}
+                        onTouchStart={() => prefetchQuestions(meta.part)}
                         className="w-full inline-flex items-center justify-center gap-2 py-2.5 bg-amber-400 hover:bg-amber-300 text-slate-950 font-display font-bold text-xs border-2 border-slate-900 shadow-arcade-sm active:translate-x-[1px] active:translate-y-[1px]"
                       >
                         <Sliders className="w-3.5 h-3.5" />
