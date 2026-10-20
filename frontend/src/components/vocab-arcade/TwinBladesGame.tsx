@@ -8,7 +8,7 @@
 // ============================================================================
 
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, Clock, Sparkles, CheckCircle2, XCircle, RotateCcw, Swords, Flame } from 'lucide-react';
+import { ArrowLeft, Clock, Sparkles, CheckCircle2, XCircle, RotateCcw, Swords, Flame, Volume2 } from 'lucide-react';
 import { FlashcardItem } from '@/data/toeic-dictionary';
 import { speakEnglish } from '@/utils/speech-synthesis.util';
 import {
@@ -118,6 +118,9 @@ export default function TwinBladesGame({
     setIsAnswering(true);
     setSelectedChoice(choice);
 
+    // อ่านออกเสียงคำศัพท์ที่อยู่ในตัวเลือกคำตอบที่กดทันที
+    speakEnglish(choice);
+
     const isCorrect = choice === currentQ.synonym;
     if (isCorrect) {
       setScore((s) => s + 1);
@@ -126,7 +129,6 @@ export default function TwinBladesGame({
         if (next > maxCombo) setMaxCombo(next);
         return next;
       });
-      speakEnglish(currentQ.target.word, 1.0);
     } else {
       setCombo(0);
     }
@@ -139,7 +141,7 @@ export default function TwinBladesGame({
       } else {
         setIsGameOver(true);
       }
-    }, 700);
+    }, 850);
   };
 
   const minutes = Math.floor(timeLeft / 60);
@@ -207,8 +209,19 @@ export default function TwinBladesGame({
             <span className="text-xs font-mono font-bold text-slate-400 block uppercase tracking-wider">
               TARGET WORD • [{currentQ.target.partOfSpeech}]
             </span>
-            <div className="text-3xl sm:text-4xl font-bold font-display text-white tracking-wide">
-              {currentQ.target.word}
+            <div className="flex items-center justify-center gap-2.5">
+              <div className="text-3xl sm:text-4xl font-bold font-display text-white tracking-wide">
+                {currentQ.target.word}
+              </div>
+              <button
+                type="button"
+                onClick={() => speakEnglish(currentQ.target.word)}
+                className="p-1.5 rounded bg-slate-800 hover:bg-slate-700 text-amber-400 border border-slate-700 transition-colors"
+                title="ฟังเสียงคำศัพท์เป้าหมาย"
+                aria-label="Listen to target word"
+              >
+                <Volume2 className="w-5 h-5" />
+              </button>
             </div>
             <p className="text-xs text-slate-300">
               บริบทภาษาไทย: {currentQ.target.meaningTh}

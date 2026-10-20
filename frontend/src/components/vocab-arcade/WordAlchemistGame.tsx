@@ -10,7 +10,7 @@
 // ============================================================================
 
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, Clock, Sparkles, CheckCircle2, XCircle, RotateCcw, Zap } from 'lucide-react';
+import { ArrowLeft, Clock, Sparkles, CheckCircle2, XCircle, RotateCcw, Zap, HelpCircle } from 'lucide-react';
 import { FlashcardItem } from '@/data/toeic-dictionary';
 import { buildAlchemistChoices } from '@/utils/word-alchemist.util';
 
@@ -46,6 +46,7 @@ export default function WordAlchemistGame({
   const [isGameOver, setIsGameOver] = useState<boolean>(false);
   const [selectedChoice, setSelectedChoice] = useState<string | null>(null);
   const [isAnswering, setIsAnswering] = useState<boolean>(false);
+  const [showHint, setShowHint] = useState<boolean>(false);
 
   useEffect(() => {
     const filtered =
@@ -125,6 +126,7 @@ export default function WordAlchemistGame({
     setTimeLeft(timeLimitSeconds);
     setIsGameOver(false);
     setSelectedChoice(null);
+    setShowHint(false);
   }, [cards, category, wordCount, timeLimitSeconds]);
 
   const currentItem = items[currentIndex];
@@ -158,6 +160,7 @@ export default function WordAlchemistGame({
       if (currentIndex + 1 < items.length) {
         setCurrentIndex((i) => i + 1);
         setSelectedChoice(null);
+        setShowHint(false);
         setIsAnswering(false);
       } else {
         setIsGameOver(true);
@@ -224,13 +227,34 @@ export default function WordAlchemistGame({
               {currentItem.sentenceWithBlank}
             </p>
 
-            <div className="flex items-center justify-between text-xs text-slate-600 pt-2 border-t border-slate-300">
-              <span>
-                ความหมายภาษาไทย: <strong>{currentItem.card.meaningTh}</strong>
-              </span>
-              <span className="font-mono text-purple-700 font-bold">
-                ต้องการ: {currentItem.correctPosNameTh}
-              </span>
+            <div className="flex items-center justify-between text-xs text-slate-600 pt-3 border-t border-slate-300">
+              {showHint || selectedChoice ? (
+                <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-800 bg-amber-50 px-2.5 py-1.5 border border-amber-300 rounded w-full animate-fadeIn">
+                  <div className="flex items-center gap-1.5">
+                    <HelpCircle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                    <span>
+                      ความหมายภาษาไทย: <strong className="text-slate-950">{currentItem.card.meaningTh}</strong>
+                    </span>
+                  </div>
+                  <span className="font-mono text-purple-700 font-bold">
+                    ต้องการ: {currentItem.correctPosNameTh}
+                  </span>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between w-full">
+                  <button
+                    type="button"
+                    onClick={() => setShowHint(true)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-100 hover:bg-amber-200 text-slate-900 text-xs font-bold border border-slate-900 shadow-arcade-sm transition-all active:translate-x-[1px] active:translate-y-[1px]"
+                  >
+                    <HelpCircle className="w-3.5 h-3.5 text-amber-700" />
+                    กดเพื่อเปิดดูคำใบ้ (Hint)
+                  </button>
+                  <span className="text-[11px] text-slate-500 font-mono">
+                    วิเคราะห์รูปคำจากบริบท
+                  </span>
+                </div>
+              )}
             </div>
           </div>
 
@@ -320,6 +344,7 @@ export default function WordAlchemistGame({
                 setTimeLeft(timeLimitSeconds);
                 setIsGameOver(false);
                 setSelectedChoice(null);
+                setShowHint(false);
                 setIsAnswering(false);
               }}
               className="inline-flex items-center gap-2 px-4 py-2 bg-amber-400 hover:bg-amber-300 text-slate-950 font-display font-bold text-xs border-2 border-slate-900 shadow-arcade-sm"

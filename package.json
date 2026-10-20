@@ -7,6 +7,7 @@
     "generate:sprites": "tsx scripts/generate-sprites.ts",
     "generate:icons": "tsx scripts/generate-icons.ts",
     "generate:all": "tsx scripts/generate-sprites.ts && tsx scripts/generate-icons.ts",
+    "measure:perf": "node scripts/measure-perf.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
