@@ -39,6 +39,24 @@ test.describe('CardCraft Full E2E Test Suite', () => {
     await expect(page.getByText('ตารางพจนานุกรม')).toBeVisible();
 
     // Verify card flip helper text
+    const flipHelper = page.getByText(/แตะหรือคลิกเพื่อพลิกดูคำแปล/i);
+    await expect(flipHelper).toBeVisible();
+
+    // Test card flip interaction via click/tap
+    await flipHelper.click();
+    await expect(page.getByText(/ความหมายภาษาไทย/i)).toBeVisible({ timeout: 3000 });
+    await expect(page.getByText(/ปัดขวาเมื่อจำได้ หรือปัดซ้ายเพื่อทบทวน/i)).toBeVisible();
+
+    // Flip back via click/tap
+    await page.getByText(/ปัดขวาเมื่อจำได้ หรือปัดซ้ายเพื่อทบทวน/i).click();
+    await expect(page.getByText(/แตะหรือคลิกเพื่อพลิกดูคำแปล/i)).toBeVisible({ timeout: 3000 });
+
+    // Verify tactile flip button also flips smoothly
+    const flipButton = page.getByRole('button', { name: /พลิกดูคำแปล/i });
+    await expect(flipButton).toBeVisible();
+    await flipButton.click();
+    await expect(page.getByText(/ความหมายภาษาไทย/i)).toBeVisible();
+    await flipButton.click();
     await expect(page.getByText(/แตะหรือคลิกเพื่อพลิกดูคำแปล/i)).toBeVisible();
 
     // Open Custom Deck / Card Set Selector Modal if button exists

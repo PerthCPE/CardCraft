@@ -3,14 +3,16 @@
 // ============================================================================
 // frontend/src/components/ThreeDCard.tsx
 // 3D Trading Card Flip Component (Yu-Gi-Oh / Magic Spell Style)
-// ปรับปรุงการพลิกการ์ด (Card Flipping) ให้รองรับทุกเบราว์เซอร์และทุกอุปกรณ์:
-// - รองรับทั้ง onTap (Framer Motion Mobile Touch), onClick, และ Space Key
-// - ป้องกัน Drag gesture กลืน Tap บนหน้าจอสัมผัส (iOS/Android)
-// - เพิ่ม WebKit 3D prefix (-webkit-backface-visibility, -webkit-transform-style)
-//   แก้ปัญหาการ์ดไม่พลิกหรือจอกระพริบใน Safari บน iPhone / iPad
+// ปรับปรุงการพลิกการ์ด (Card Flipping) และการปัดการ์ด (Card Swiping):
+// 1. การพลิกการ์ด (Card Flip): เกิดขึ้นเฉพาะการแตะหรือคลิก (Tap/Click) และปุ่ม Space
+// 2. การปัดการ์ด (Card Swipe): ปัดซ้าย (ทบทวน) / ปัดขวา (จำแม่นแล้ว) แยกขาดจากการพลิก
+//    โดยเมื่อเริ่ม Drag จะไม่มีการสั่ง Flip การ์ดโดยเด็ดขาด (ป้องกัน Gesture ตีกัน)
+// 3. แก้ไขภาพหน้า-หลังทับซ้อนกันบนมือถือ (Mobile 3D Overlap Bug):
+//    สลับ Visibility / Opacity / zIndex ที่จังหวะกึ่งกลางของการหมุน (90 องศา)
+//    ทำให้เบราว์เซอร์มือถือ (WebKit/iOS Safari/Android) ไม่เรนเดอร์ภาพหน้าและหลังทับซ้อนกัน
 // ============================================================================
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion';
 import { Volume2, RotateCcw } from 'lucide-react';
 import { FlashcardItem } from '@/data/toeic-dictionary';
@@ -110,6 +112,20 @@ export default function ThreeDCard({
   rightBadgeOpacity,
   leftBadgeOpacity,
 }: ThreeDCardProps) {
+  // Check if device supports true hover (Desktop PC with mouse, not touch devices)
+  const [canHover, setCanHover] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const mq = window.matchMedia('(hover: hover) and (pointer: fine)');
+      setCanHover(mq.matches);
+      const listener = (e: MediaQueryListEvent) => setCanHover(e.matches);
+      mq.addEventListener('change', listener);
+      return () => mq.removeEventListener('change', listener);
+    }
+  }, []);
+
   const mouseX = useMotionValue(0);
   const mouseY = useMotionValue(0);
 
@@ -122,9 +138,8 @@ export default function ThreeDCard({
     stiffness: 250,
   });
 
-  const [isHovered, setIsHovered] = useState(false);
-
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!canHover) return;
     const rect = e.currentTarget.getBoundingClientRect();
     const xPct = (e.clientX - rect.left) / rect.width - 0.5;
     const yPct = (e.clientY - rect.top) / rect.height - 0.5;
@@ -133,6 +148,7 @@ export default function ThreeDCard({
   };
 
   const handleMouseLeave = () => {
+    if (!canHover) return;
     setIsHovered(false);
     mouseX.set(0);
     mouseY.set(0);
@@ -141,15 +157,28 @@ export default function ThreeDCard({
   const theme = CATEGORY_THEMES[card.category] || DEFAULT_THEME;
   const cardArtSrc = CATEGORY_CARD_ARTS[card.category] || '/icons/card-back.png';
 
+  // State to toggle front/back face rendering at the 90-degree flip edge (220ms)
+  // This completely solves the mobile WebKit/Android bug where front and back overlap
+  const [showBackFace, setShowBackFace] = useState(isFlipped);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowBackFace(isFlipped);
+    }, 220);
+    return () => clearTimeout(timer);
+  }, [isFlipped]);
+
   const handleCustomDragEnd = (event: any, info: any) => {
-    // หากลากน้อยมาก (< 12px) ถือเป็นการ Tap/Click เพื่อพลิกการ์ด
-    if (Math.abs(info.offset.x) < 12 && Math.abs(info.offset.y) < 12) {
-      onFlip();
-      return;
-    }
-    if (onDragEnd) {
+    const dx = Math.abs(info.offset.x);
+    const dy = Math.abs(info.offset.y);
+    // Only trigger swipe if user actually dragged
+    if ((dx > 10 || dy > 10) && onDragEnd) {
       onDragEnd(event, info);
     }
+  };
+
+  const handleTap = () => {
+    onFlip();
   };
 
   return (
@@ -157,23 +186,21 @@ export default function ThreeDCard({
       className="relative perspective-1000 w-full h-[430px] sm:h-[460px] touch-pan-y"
       style={{ perspective: 1000, WebkitPerspective: 1000 }}
       onMouseMove={handleMouseMove}
-      onMouseEnter={() => setIsHovered(true)}
+      onMouseEnter={() => {
+        if (canHover) setIsHovered(true);
+      }}
       onMouseLeave={handleMouseLeave}
     >
       <motion.div
         drag="x"
         dragConstraints={{ left: 0, right: 0 }}
+        dragElastic={0.8}
+        onDragEnd={handleCustomDragEnd}
+        onTap={handleTap}
         style={{
           x: dragX,
           rotateZ: rotateZ || 0,
-          rotateX: isHovered ? rotateXSpring : 0,
-          rotateY: isHovered ? rotateYSpring : 0,
-          transformStyle: 'preserve-3d',
-          WebkitTransformStyle: 'preserve-3d',
         }}
-        onDragEnd={handleCustomDragEnd}
-        onTap={onFlip}
-        onClick={onFlip}
         className="w-full h-full cursor-grab active:cursor-grabbing select-none"
       >
         {/* Swipe Feedback Badges */}
@@ -208,10 +235,12 @@ export default function ThreeDCard({
         {/* 3D Flipping Card Container */}
         <motion.div
           animate={{ rotateY: isFlipped ? 180 : 0 }}
-          transition={{ duration: 0.55, type: 'spring', damping: 18, stiffness: 120 }}
+          transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1] }}
           style={{
             transformStyle: 'preserve-3d',
             WebkitTransformStyle: 'preserve-3d',
+            rotateX: canHover && isHovered ? rotateXSpring : 0,
+            rotateY: canHover && isHovered ? rotateYSpring : 0,
           }}
           className="relative w-full h-full preserve-3d"
         >
@@ -222,12 +251,14 @@ export default function ThreeDCard({
             style={{
               backfaceVisibility: 'hidden',
               WebkitBackfaceVisibility: 'hidden',
-              pointerEvents: isFlipped ? 'none' : 'auto',
+              transform: 'rotateY(0deg) translateZ(1px)',
+              WebkitTransform: 'rotateY(0deg) translateZ(1px)',
+              display: showBackFace ? 'none' : 'flex',
             }}
-            className="absolute inset-0 w-full h-full rounded-xl bg-gradient-to-b from-[#2a1b40] via-[#161226] to-[#0c0914] p-3 sm:p-3.5 border-4 border-amber-400 shadow-[0_20px_40px_rgba(0,0,0,0.6),0_0_0_2px_#020617,inset_0_0_12px_rgba(251,191,36,0.3)] flex flex-col justify-between"
+            className="absolute inset-0 w-full h-full rounded-xl bg-gradient-to-b from-[#2a1b40] via-[#161226] to-[#0c0914] p-3 sm:p-3.5 border-4 border-amber-400 shadow-[0_20px_40px_rgba(0,0,0,0.6),0_0_0_2px_#020617,inset_0_0_12px_rgba(251,191,36,0.3)] flex-col justify-between select-none"
           >
-            {/* Holographic Sheen Overlay on Hover */}
-            {isHovered && (
+            {/* Holographic Sheen Overlay on Hover (Desktop only) */}
+            {canHover && isHovered && (
               <div className="pointer-events-none absolute inset-0 rounded-lg bg-gradient-to-tr from-transparent via-white/10 to-amber-200/20 mix-blend-overlay transition-opacity" />
             )}
 
@@ -311,11 +342,11 @@ export default function ThreeDCard({
             style={{
               backfaceVisibility: 'hidden',
               WebkitBackfaceVisibility: 'hidden',
-              transform: 'rotateY(180deg)',
-              WebkitTransform: 'rotateY(180deg)',
-              pointerEvents: isFlipped ? 'auto' : 'none',
+              transform: 'rotateY(180deg) translateZ(1px)',
+              WebkitTransform: 'rotateY(180deg) translateZ(1px)',
+              display: showBackFace ? 'flex' : 'none',
             }}
-            className="absolute inset-0 w-full h-full rounded-xl bg-gradient-to-b from-[#1c132b] via-[#100d1c] to-[#08050e] p-3 sm:p-3.5 border-4 border-amber-400 shadow-[0_20px_40px_rgba(0,0,0,0.6),0_0_0_2px_#020617,inset_0_0_12px_rgba(251,191,36,0.3)] flex flex-col justify-between"
+            className="absolute inset-0 w-full h-full rounded-xl bg-gradient-to-b from-[#1c132b] via-[#100d1c] to-[#08050e] p-3 sm:p-3.5 border-4 border-amber-400 shadow-[0_20px_40px_rgba(0,0,0,0.6),0_0_0_2px_#020617,inset_0_0_12px_rgba(251,191,36,0.3)] flex-col justify-between select-none"
           >
             {/* Top Bar: Word Header & Speech Button */}
             <div className="flex items-center justify-between bg-slate-950/80 border-2 border-amber-400/60 px-3 py-1.5 rounded shadow-sm">

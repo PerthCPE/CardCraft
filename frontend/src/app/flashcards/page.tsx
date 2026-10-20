@@ -227,10 +227,17 @@ export default function FlashcardsPage() {
     _event: MouseEvent | TouchEvent | PointerEvent,
     info: PanInfo,
   ) => {
-    const threshold = 95;
-    if (info.offset.x > threshold) {
+    const threshold = 75;
+    const isSwipeRight =
+      info.offset.x > threshold ||
+      (info.offset.x > 30 && info.velocity.x > 280);
+    const isSwipeLeft =
+      info.offset.x < -threshold ||
+      (info.offset.x < -30 && info.velocity.x < -280);
+
+    if (isSwipeRight) {
       handleSwipe(true);
-    } else if (info.offset.x < -threshold) {
+    } else if (isSwipeLeft) {
       handleSwipe(false);
     } else {
       dragX.set(0);
