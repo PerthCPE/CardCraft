@@ -106,7 +106,7 @@
     "optionA": "By five o’clock this Friday afternoon.",
     "optionB": "Yes, I audited the accounting ledger yesterday.",
     "optionC": "In the third-floor conference room.",
-    "optionD": null,
+    "optionD": "The board members had a productive conference.",
     "correctOption": "A",
     "explanationTh": "เทคนิค Part 2 (When Question): คำถามขึ้นต้นด้วย \"When\" (เมื่อไร) คำตอบต้องเป็นเวลา/วันกำหนดส่ง เช่น \"By five o’clock this Friday\" ข้อ (B) มี Yes ผิดกฎห้ามตอบ Yes/No กับ Wh-Questions ส่วนข้อ (C) ตอบสถานที่ (Where)",
     "tag": "Part 2 - Wh-Question (When)"
@@ -122,7 +122,7 @@
     "optionA": "Mr. Henderson in the event planning department.",
     "optionB": "No, the speech was rescheduled for next month.",
     "optionC": "At the international departure terminal gate.",
-    "optionD": null,
+    "optionD": "A rental shuttle was arranged for tomorrow.",
     "correctOption": "A",
     "explanationTh": "เทคนิค Part 2 (Who Question): คำถามขึ้นต้นด้วย \"Who\" ต้องการระบุตัวบุคคลหรือแผนก (\"Mr. Henderson in event planning\") ข้อ (B) ผิดเพราะ Wh-Question ห้ามตอบ No",
     "tag": "Part 2 - Wh-Question (Who)"
@@ -138,7 +138,7 @@
     "optionA": "I would be glad to help once I finish this invoice.",
     "optionB": "A black and white laser cartridge.",
     "optionC": "Turn left at the next security checkpoint.",
-    "optionD": null,
+    "optionD": "The wireless router is located in the breakroom.",
     "correctOption": "A",
     "explanationTh": "เทคนิค Part 2 (Polite Request): คำขอความช่วยเหลือ \"Could you help me...\" ตอบรับอย่างสุภาพด้วย \"I would be glad to help once I finish this invoice\"",
     "tag": "Part 2 - Polite Request"
@@ -154,7 +154,7 @@
     "optionA": "I take the rapid transit express train from Central Station.",
     "optionB": "About forty-five dollars per month.",
     "optionC": "Yes, our downtown branch is quite modern.",
-    "optionD": null,
+    "optionD": "My department head approved the relocation.",
     "correctOption": "A",
     "explanationTh": "เทคนิค Part 2 (How Question - ยานพาหนะ): ถามวิธีเดินทาง \"How do you commute...\" คำตอบคือบอกยานพาหนะ \"I take the rapid transit express train\"",
     "tag": "Part 2 - Wh-Question (How)"
@@ -170,7 +170,7 @@
     "optionA": "Let’s wait until our attorney reviews the indemnity clause.",
     "optionB": "Yes, the contract was signed in black ink.",
     "optionC": "Thirty thousand dollars annually.",
-    "optionD": null,
+    "optionD": "We purchased three new office workstations.",
     "correctOption": "A",
     "explanationTh": "เทคนิค Part 2 (Alternative Or-Question): คำถามให้เลือกระหว่าง A หรือ B (\"sign now, or wait\") ห้ามตอบ Yes/No! ต้องเลือกข้างใดข้างหนึ่ง (\"Let’s wait until our attorney reviews...\")",
     "tag": "Part 2 - Alternative Question"
@@ -186,7 +186,7 @@
     "optionA": "I will ask maintenance to adjust the temperature right away.",
     "optionB": "No, the concert starts at eight tonight.",
     "optionC": "Fifteen degrees north of the harbor.",
-    "optionD": null,
+    "optionD": "The quarterly budget meeting was postponed.",
     "correctOption": "A",
     "explanationTh": "เทคนิค Part 2 (Negative Question / Statement): ประโยคเชิงทักท้วงเรื่องแอร์หนาวเกินไป ตอบด้วยการแก้ไขปัญหาเชิงรุก \"I will ask maintenance to adjust...\"",
     "tag": "Part 2 - Negative Question"
@@ -202,7 +202,7 @@
     "optionA": "In the green storage container behind the registration table.",
     "optionB": "Over eighty delegates registered online.",
     "optionC": "Yes, everyone wore a security badge.",
-    "optionD": null,
+    "optionD": "The keynote presentation starts at nine o’clock.",
     "correctOption": "A",
     "explanationTh": "เทคนิค Part 2 (Where Question): ถามหาสถานที่ที่เก็บป้ายชื่อ คำตอบต้องเป็นตำแหน่งระบุชัดเจน (\"In the green storage container...\")",
     "tag": "Part 2 - Wh-Question (Where)"
@@ -218,7 +218,7 @@
     "optionA": "Elena saved a copy on the shared cloud directory.",
     "optionB": "The prescription medication was approved by inspectors.",
     "optionC": "At least twelve international participants.",
-    "optionD": null,
+    "optionD": "Our marketing team launched the campaign last spring.",
     "correctOption": "A",
     "explanationTh": "เทคนิค Part 2 (Yes/No Question with Indirect Answer): ข้อสอบ TOEIC ปัจจุบันนิยมเฉลยด้วยคำตอบทางอ้อม (Indirect Response) โดยบอกว่าใครเป็นคนเก็บไฟล์ไว้ (\"Elena saved a copy on the cloud...\")",
     "tag": "Part 2 - Indirect Response"

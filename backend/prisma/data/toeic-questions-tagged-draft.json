@@ -74,7 +74,8 @@
     "vocabId": "card-0037",
     "matchedWord": "Audit",
     "matchSource": "questionStem",
-    "questionSummary": "When will the final audit report be submitted to the board?..."
+    "questionSummary": "When will the final audit report be submitted to the board?...",
+    "optionD": "The board members had a productive conference."
   },
   {
     "index": 8,
@@ -85,7 +86,8 @@
     "vocabId": "card-0284",
     "matchedWord": "Keynote speaker",
     "matchSource": "questionStem",
-    "questionSummary": "Who is responsible for organizing the keynote speaker’s transportation?..."
+    "questionSummary": "Who is responsible for organizing the keynote speaker’s transportation?...",
+    "optionD": "A rental shuttle was arranged for tomorrow."
   },
   {
     "index": 9,
@@ -96,7 +98,8 @@
     "vocabId": "card-1041",
     "matchedWord": "Issue",
     "matchSource": "questionStem",
-    "questionSummary": "Could you help me troubleshoot this network connection issue?..."
+    "questionSummary": "Could you help me troubleshoot this network connection issue?...",
+    "optionD": "The wireless router is located in the breakroom."
   },
   {
     "index": 10,
@@ -107,7 +110,8 @@
     "vocabId": "card-0264",
     "matchedWord": "Commute",
     "matchSource": "questionStem",
-    "questionSummary": "How do you usually commute to the downtown regional office?..."
+    "questionSummary": "How do you usually commute to the downtown regional office?...",
+    "optionD": "My department head approved the relocation."
   },
   {
     "index": 11,
@@ -118,7 +122,8 @@
     "vocabId": "card-0166",
     "matchedWord": "Vendor",
     "matchSource": "questionStem",
-    "questionSummary": "Should we sign the vendor agreement now, or wait for legal counsel?..."
+    "questionSummary": "Should we sign the vendor agreement now, or wait for legal counsel?...",
+    "optionD": "We purchased three new office workstations."
   },
   {
     "index": 12,
@@ -129,7 +134,8 @@
     "vocabId": "card-0183",
     "matchedWord": "Maintenance",
     "matchSource": "questionStem",
-    "questionSummary": "Isn’t the thermostat set a bit too cold in this auditorium?..."
+    "questionSummary": "Isn’t the thermostat set a bit too cold in this auditorium?...",
+    "optionD": "The quarterly budget meeting was postponed."
   },
   {
     "index": 13,
@@ -140,7 +146,8 @@
     "vocabId": "card-0114",
     "matchedWord": "Leave of absence",
     "matchSource": "questionStem",
-    "questionSummary": "Where did you leave the extra badges for the symposium attendees?..."
+    "questionSummary": "Where did you leave the extra badges for the symposium attendees?...",
+    "optionD": "The keynote presentation starts at nine o’clock."
   },
   {
     "index": 14,
@@ -151,7 +158,8 @@
     "vocabId": "card-0649",
     "matchedWord": "Draft",
     "matchSource": "questionStem",
-    "questionSummary": "Has anyone seen the draft presentation for the pharmaceutical launch?..."
+    "questionSummary": "Has anyone seen the draft presentation for the pharmaceutical launch?...",
+    "optionD": "Our marketing team launched the campaign last spring."
   },
   {
     "index": 15,

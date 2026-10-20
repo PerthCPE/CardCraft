@@ -137,26 +137,26 @@ export default function CardSetSelectorModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
-      <div className="relative w-full max-w-2xl bg-white border-2 border-slate-900 shadow-[8px_8px_0px_0px_#0f172a] rounded-none overflow-hidden max-h-[92vh] flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/80 backdrop-blur-sm animate-fade-in">
+      <div className="relative w-full max-w-2xl bg-white border-2 border-slate-900 shadow-[8px_8px_0px_0px_#0f172a] rounded-none overflow-hidden max-h-[96vh] sm:max-h-[92vh] flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 bg-amber-400 border-b-2 border-slate-900">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded border-2 border-slate-900 bg-white flex items-center justify-center shadow-pixel-sm">
-              <Layers className="w-5 h-5 text-slate-900" />
+        <div className="flex items-center justify-between px-3.5 sm:px-6 py-3 sm:py-4 bg-amber-400 border-b-2 border-slate-900">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded border-2 border-slate-900 bg-white flex items-center justify-center shadow-pixel-sm shrink-0">
+              <Layers className="w-4 h-4 sm:w-5 sm:h-5 text-slate-900" />
             </div>
-            <div>
-              <h2 className="text-xl font-bold font-display text-slate-950">
+            <div className="min-w-0">
+              <h2 className="text-base sm:text-xl font-bold font-display text-slate-950 truncate">
                 จัดการและสร้างชุดคำศัพท์ (Deck Manager)
               </h2>
-              <p className="text-xs text-slate-800 font-medium">
+              <p className="text-[11px] sm:text-xs text-slate-800 font-medium truncate hidden sm:block">
                 สร้างชุดการ์ดใหม่ กำหนดจำนวนการ์ดอิสระ และบันทึก/สลับชุดสำหรับปัดการ์ด
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 text-slate-900 hover:bg-white border-2 border-transparent hover:border-slate-900 transition-colors"
+            className="p-1.5 text-slate-900 hover:bg-white border-2 border-transparent hover:border-slate-900 transition-colors shrink-0"
           >
             <X className="w-5 h-5" />
           </button>
@@ -210,7 +210,7 @@ export default function CardSetSelectorModal({
         )}
 
         {/* Content Body */}
-        <div className="p-6 overflow-y-auto space-y-5 flex-1">
+        <div className="p-4 sm:p-6 overflow-y-auto space-y-4 sm:space-y-5 flex-1">
           {/* TAB 1: CREATE NEW DECK */}
           {tab === 'CREATE' && (
             <div className="space-y-5">

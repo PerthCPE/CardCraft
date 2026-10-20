@@ -38,7 +38,7 @@ import {
 import { fetchFlashcards, recordCardSwipe } from '@/lib/api';
 import CardSetSelectorModal from '@/components/CardSetSelectorModal';
 import VocabBlitzGame from '@/components/VocabBlitzGame';
-import { CardSet, getStoredActiveSet } from '@/utils/card-sets';
+import { CardSet, getStoredActiveSet, saveActiveSet } from '@/utils/card-sets';
 import { useAuth } from '@/context/AuthContext';
 import ThreeDCard from '@/components/ThreeDCard';
 
@@ -79,6 +79,26 @@ export default function FlashcardsPage() {
       setCurrentIndex(0);
     });
   }, [authUser?.id]);
+
+  // Real-time synchronization for active card set updates across components & tabs
+  useEffect(() => {
+    const handleActiveSetChanged = (e: Event) => {
+      const customEvent = e as CustomEvent<CardSet>;
+      if (customEvent.detail) {
+        setActiveSet(customEvent.detail);
+        setCurrentIndex(0);
+        setIsFlipped(false);
+        setSelectedCategory('ALL');
+        setStatusFilter('ALL');
+        setSearchQuery('');
+      }
+    };
+
+    window.addEventListener('cardcraft:active-set-changed', handleActiveSetChanged);
+    return () => {
+      window.removeEventListener('cardcraft:active-set-changed', handleActiveSetChanged);
+    };
+  }, []);
 
   const filteredCards = useMemo(() => {
     // หากอยู่ในโหมด SWIPE_DECK และมี activeSet ให้คงลำดับการ์ดตาม cardIds ของชุดนั้น
@@ -886,8 +906,13 @@ export default function FlashcardsPage() {
           activeSet={activeSet}
           initialTab={modalTab}
           onSelectSet={(newSet) => {
+            saveActiveSet(newSet);
             setActiveSet(newSet);
+            setSelectedCategory('ALL');
+            setStatusFilter('ALL');
+            setSearchQuery('');
             setCurrentIndex(0);
+            setIsFlipped(false);
           }}
         />
       )}

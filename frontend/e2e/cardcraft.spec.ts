@@ -1,7 +1,7 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('CardCraft Full E2E Test Suite', () => {
-  test('1. Homepage loads, displays CardCraft brand, stats and navigation', async ({ page }) => {
+  test('1. Homepage loads, displays CardCraft brand, stats and updated roadmap description', async ({ page }) => {
     await page.goto('/');
 
     // Check title / brand
@@ -19,9 +19,14 @@ test.describe('CardCraft Full E2E Test Suite', () => {
     // Check brand logo & text
     await expect(page.getByText('CardCraft').first()).toBeVisible();
     await expect(page.getByText('700+').first()).toBeVisible();
+
+    // Verify updated evolution roadmap description (does NOT contain "150, 200 และ 100 คะแนน")
+    await expect(page.getByText(/ปลดล็อกรูปลักษณ์และฉายาใหม่/i)).toBeVisible();
+    const oldScoreRangeText = page.getByText(/150, 200 และ 100 คะแนน/i);
+    await expect(oldScoreRangeText).not.toBeVisible();
   });
 
-  test('2. Flashcards Spaced Repetition, Custom Deck Builder & 3000+ words', async ({ page }) => {
+  test('2. Flashcards Spaced Repetition, 3D Flip & Real-Time Set Synchronization', async ({ page }) => {
     await page.goto('/flashcards');
 
     // Wait for flashcard page elements
@@ -32,6 +37,9 @@ test.describe('CardCraft Full E2E Test Suite', () => {
     // Verify switch modes
     await expect(page.getByText('โหมดปัดการ์ด')).toBeVisible();
     await expect(page.getByText('ตารางพจนานุกรม')).toBeVisible();
+
+    // Verify card flip helper text
+    await expect(page.getByText(/แตะหรือคลิกเพื่อพลิกดูคำแปล/i)).toBeVisible();
 
     // Open Custom Deck / Card Set Selector Modal if button exists
     const manageSetBtn = page.getByRole('button', { name: /เปลี่ยนชุด|เลือกชุดการ์ด|สร้างชุดสุ่มใหม่/i }).first();
@@ -101,7 +109,7 @@ test.describe('CardCraft Full E2E Test Suite', () => {
     await expect(page.getByPlaceholder(/ค้นหาโจทย์ หรือ คำศัพท์/i)).toBeVisible();
   });
 
-  test('4. Practice Page renders all drill modes & timed arenas', async ({ page }) => {
+  test('4. Practice Page renders 4 choices across all parts including Part 2', async ({ page }) => {
     await page.goto('/practice');
 
     // Check practice header & timed modes
@@ -118,16 +126,43 @@ test.describe('CardCraft Full E2E Test Suite', () => {
     await expect(page.getByText('Part 2').first()).toBeVisible();
     await expect(page.getByText('Part 5').first()).toBeVisible();
     await expect(page.getByText('Part 7').first()).toBeVisible();
+
+    // Switch to Part 2 and verify 4 choices (A, B, C, D) are available
+    await page.getByRole('button', { name: /Part 2/i }).click();
+    await expect(page.getByText('D').first()).toBeVisible();
   });
 
-  test('5. Mock Test Page renders 56 questions mock interface', async ({ page }) => {
+  test('5. Mock Test Page renders 4 choices (A, B, C, D) and handles submission', async ({ page }) => {
     await page.goto('/mock-test');
 
     // Wait for Mock Test view
     await expect(page.getByText(/Mini Mock Test|คำถามที่|Part/i).first()).toBeVisible({ timeout: 15000 });
 
-    // Verify Option Choices A, B, C, D exist
+    // Verify Option Choices A, B, C, D all exist
     await expect(page.getByText('A').first()).toBeVisible();
     await expect(page.getByText('B').first()).toBeVisible();
+    await expect(page.getByText('C').first()).toBeVisible();
+    await expect(page.getByText('D').first()).toBeVisible();
+  });
+
+  test('6. Multi-Device Responsiveness (Mobile Phone & Tablet iPad)', async ({ page }) => {
+    // 6a. Mobile Viewport (iPhone 390x844)
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto('/');
+
+    // Hamburger menu button should be visible on mobile
+    const menuToggle = page.locator('button[aria-label="เปิดเมนูนำทาง"]');
+    await expect(menuToggle).toBeVisible();
+    await menuToggle.click();
+
+    // Check mobile drawer links (visible inside mobile drawer)
+    const mobileDrawer = page.locator('header').locator('div.lg\\:hidden');
+    await expect(mobileDrawer.getByText('ฝึกทำโจทย์')).toBeVisible();
+    await expect(mobileDrawer.getByText('คลังจุดอ่อน')).toBeVisible();
+
+    // 6b. Tablet Viewport (iPad 820x1180)
+    await page.setViewportSize({ width: 820, height: 1180 });
+    await page.goto('/practice');
+    await expect(page.getByText(/ฝึกทำโจทย์แยกพาร์ท/i)).toBeVisible({ timeout: 15000 });
   });
 });

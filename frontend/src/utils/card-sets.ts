@@ -246,6 +246,9 @@ export function saveActiveSet(set: CardSet): void {
   if (typeof window === 'undefined') return;
   try {
     localStorage.setItem(STORAGE_ACTIVE_SET_KEY, JSON.stringify(set));
+    window.dispatchEvent(
+      new CustomEvent('cardcraft:active-set-changed', { detail: set }),
+    );
   } catch (e) {
     console.error('Error saving active card set to localStorage:', e);
   }

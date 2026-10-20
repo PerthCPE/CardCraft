@@ -22,6 +22,10 @@ import {
 } from 'lucide-react';
 import { QuestionItem } from '@/data/toeic-dictionary';
 import { logSingleAnswer } from '@/lib/api';
+import {
+  buildShuffledQuestionsMap,
+  ShuffledQuestionWrapper,
+} from '@/utils/question-shuffle.util';
 
 interface BossSurvivalModalProps {
   isOpen: boolean;
@@ -49,7 +53,9 @@ export default function BossSurvivalModal({
     return [...questions].sort(() => 0.5 - Math.random());
   }, [questions]);
 
-  const currentQ = shuffledQuestions[currentIndex % shuffledQuestions.length];
+  const [shuffledMap, setShuffledMap] = useState<Map<string, ShuffledQuestionWrapper>>(
+    new Map(),
+  );
 
   const resetGame = () => {
     setBossHp(1000);
@@ -60,14 +66,21 @@ export default function BossSurvivalModal({
     setIsGameOver(false);
     setIsVictory(false);
     setLastAction(null);
+    setShuffledMap(buildShuffledQuestionsMap(questions));
   };
 
   useEffect(() => {
     if (isOpen) resetGame();
   }, [isOpen]);
 
+  const currentQ = shuffledQuestions[currentIndex % shuffledQuestions.length];
+  const currentShuffled = currentQ ? shuffledMap.get(currentQ.id) : null;
+
   const handleAnswer = (chosen: 'A' | 'B' | 'C' | 'D') => {
     if (isGameOver || isVictory || !currentQ) return;
+
+    const wrap = shuffledMap.get(currentQ.id);
+    const originalChosen = wrap ? wrap.displayToOriginalMap[chosen] : chosen;
 
     if (userId) {
       logSingleAnswer({
@@ -75,11 +88,11 @@ export default function BossSurvivalModal({
         questionId: currentQ.id,
         part: currentQ.part,
         mode: 'BOSS_GAUNTLET',
-        selectedOption: chosen,
+        selectedOption: originalChosen,
       });
     }
 
-    const isCorrect = chosen === currentQ.correctOption;
+    const isCorrect = originalChosen === currentQ.correctOption;
 
     if (isCorrect) {
       const nextStreak = streak + 1;
@@ -210,22 +223,23 @@ export default function BossSurvivalModal({
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-              {(
-                [
-                  { key: 'A', text: currentQ.optionA },
-                  { key: 'B', text: currentQ.optionB },
-                  { key: 'C', text: currentQ.optionC },
-                  ...(currentQ.optionD ? [{ key: 'D', text: currentQ.optionD }] : []),
-                ] as const
+              {(currentShuffled
+                ? currentShuffled.choices
+                : [
+                    { displayKey: 'A' as const, text: currentQ.optionA },
+                    { displayKey: 'B' as const, text: currentQ.optionB },
+                    { displayKey: 'C' as const, text: currentQ.optionC },
+                    ...(currentQ.optionD ? [{ displayKey: 'D' as const, text: currentQ.optionD }] : []),
+                  ]
               ).map((opt) => (
                 <button
-                  key={opt.key}
+                  key={opt.displayKey}
                   type="button"
-                  onClick={() => handleAnswer(opt.key as 'A' | 'B' | 'C' | 'D')}
+                  onClick={() => handleAnswer(opt.displayKey)}
                   className="p-3.5 border-2 border-slate-900 bg-white hover:bg-amber-50 text-left text-sm font-body transition-all flex items-start gap-2.5 shadow-pixel-sm active:translate-x-[1px] active:translate-y-[1px]"
                 >
                   <span className="px-2 py-0.5 text-xs font-pixel font-bold bg-slate-200 text-slate-800 rounded">
-                    {opt.key}
+                    {opt.displayKey}
                   </span>
                   <span className="flex-1 font-medium">{opt.text}</span>
                 </button>

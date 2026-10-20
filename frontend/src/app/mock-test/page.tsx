@@ -29,12 +29,19 @@ import {
 import { PixelCharacterAvatar } from '@/components/PixelCharacterAvatar';
 import RealTimeExamModal from '@/components/RealTimeExamModal';
 import { useAuth } from '@/context/AuthContext';
+import {
+  buildShuffledQuestionsMap,
+  ShuffledQuestionWrapper,
+} from '@/utils/question-shuffle.util';
 
 const EXAM_DURATION_SECONDS = 15 * 60;
 
 export default function BossBattleMockTestPage() {
   const { user: authUser, requireAuth, openAuthModal } = useAuth();
   const [questions, setQuestions] = useState<QuestionItem[]>([]);
+  const [shuffledMap, setShuffledMap] = useState<Map<string, ShuffledQuestionWrapper>>(
+    new Map(),
+  );
   const [isRealTimeMultiPartOpen, setIsRealTimeMultiPartOpen] = useState<boolean>(false);
   const [currentIdx, setCurrentIdx] = useState<number>(0);
   const [answers, setAnswers] = useState<Record<string, 'A' | 'B' | 'C' | 'D'>>(
@@ -49,6 +56,7 @@ export default function BossBattleMockTestPage() {
   useEffect(() => {
     fetchQuestions().then((data) => {
       setQuestions(data);
+      setShuffledMap(buildShuffledQuestionsMap(data));
     });
   }, []);
 
@@ -85,7 +93,6 @@ export default function BossBattleMockTestPage() {
         );
         return;
       }
-      if (part === 2 && opt === 'D') return;
       setAnswers((prev) => ({
         ...prev,
         [qId]: opt,
@@ -121,13 +128,17 @@ export default function BossBattleMockTestPage() {
     );
     const readingQuestions = questions.filter((q) => q.section === 'READING');
 
-    const listeningCorrect = listeningQuestions.filter(
-      (q) => answers[q.id] === q.correctOption,
-    ).length;
+    const listeningCorrect = listeningQuestions.filter((q) => {
+      const wrap = shuffledMap.get(q.id);
+      const originalOption = wrap && answers[q.id] ? wrap.displayToOriginalMap[answers[q.id]] : answers[q.id];
+      return originalOption === q.correctOption;
+    }).length;
 
-    const readingCorrect = readingQuestions.filter(
-      (q) => answers[q.id] === q.correctOption,
-    ).length;
+    const readingCorrect = readingQuestions.filter((q) => {
+      const wrap = shuffledMap.get(q.id);
+      const originalOption = wrap && answers[q.id] ? wrap.displayToOriginalMap[answers[q.id]] : answers[q.id];
+      return originalOption === q.correctOption;
+    }).length;
 
     const timeSpentSeconds = Math.max(
       15,
@@ -136,13 +147,17 @@ export default function BossBattleMockTestPage() {
 
     const formattedAnswers = questions
       .filter((q) => answers[q.id])
-      .map((q) => ({
-        questionId: q.id,
-        part: q.part,
-        selectedOption: answers[q.id],
-        flagged: Boolean(flaggedIds[q.id]),
-        timeSpentMs: 0,
-      }));
+      .map((q) => {
+        const wrap = shuffledMap.get(q.id);
+        const originalOption = wrap && answers[q.id] ? wrap.displayToOriginalMap[answers[q.id]] : answers[q.id];
+        return {
+          questionId: q.id,
+          part: q.part,
+          selectedOption: originalOption,
+          flagged: Boolean(flaggedIds[q.id]),
+          timeSpentMs: 0,
+        };
+      });
 
     const response = await submitExamAttempt({
       userId: authUser?.id,
@@ -168,21 +183,34 @@ export default function BossBattleMockTestPage() {
     }
 
     window.speechSynthesis.cancel();
-    const lines =
-      q.part === 1
-        ? [
-            'Listen to the four statements.',
-            `A: ${q.optionA}`,
-            `B: ${q.optionB}`,
-            `C: ${q.optionC}`,
-            `D: ${q.optionD || ''}`,
-          ]
-        : [
-            q.questionText,
-            `A: ${q.optionA}`,
-            `B: ${q.optionB}`,
-            `C: ${q.optionC}`,
-          ];
+    const wrap = shuffledMap.get(q.id);
+    const lines: string[] = [];
+
+    if (q.part === 1) {
+      lines.push('Listen to the four statements.');
+      if (wrap) {
+        wrap.choices.forEach((c) => lines.push(`${c.displayKey}: ${c.text}`));
+      } else {
+        lines.push(
+          `A: ${q.optionA}`,
+          `B: ${q.optionB}`,
+          `C: ${q.optionC}`,
+          `D: ${q.optionD || ''}`,
+        );
+      }
+    } else {
+      lines.push(q.questionText);
+      if (wrap) {
+        wrap.choices.forEach((c) => lines.push(`${c.displayKey}: ${c.text}`));
+      } else {
+        lines.push(
+          `A: ${q.optionA}`,
+          `B: ${q.optionB}`,
+          `C: ${q.optionC}`,
+          `D: ${q.optionD || ''}`,
+        );
+      }
+    }
 
     const utter = new SpeechSynthesisUtterance(lines.join(' ... '));
     utter.lang = 'en-US';
@@ -369,7 +397,10 @@ export default function BossBattleMockTestPage() {
           <div className="space-y-4">
             {questions.map((q, idx) => {
               const userAns = answers[q.id];
-              const isCorrect = userAns === q.correctOption;
+              const wrap = shuffledMap.get(q.id);
+              const originalUserChoice = wrap && userAns ? wrap.displayToOriginalMap[userAns] : userAns;
+              const isCorrect = originalUserChoice === q.correctOption;
+              const displayCorrect = wrap ? wrap.displayCorrectOption : q.correctOption;
 
               return (
                 <div
@@ -389,7 +420,7 @@ export default function BossBattleMockTestPage() {
                           : 'bg-rose-500 text-white'
                       }`}
                     >
-                      คุณตอบ: {userAns || 'ไม่ได้เลือก'} · เฉลย: {q.correctOption}
+                      คุณตอบ: {userAns || 'ไม่ได้เลือก'} · เฉลย: {displayCorrect}
                     </span>
                   </div>
                   <p className="font-sans text-sm font-bold text-slate-900 reading-measure">
@@ -594,49 +625,57 @@ export default function BossBattleMockTestPage() {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {(['A', 'B', 'C', 'D'] as const).map((optKey, idx) => {
-                if (currentQuestion.part === 2 && optKey === 'D') return null;
-                const text =
-                  optKey === 'A'
-                    ? currentQuestion.optionA
-                    : optKey === 'B'
-                      ? currentQuestion.optionB
-                      : optKey === 'C'
-                        ? currentQuestion.optionC
-                        : currentQuestion.optionD;
-                if (!text) return null;
+              {(() => {
+                const wrap = currentQuestion ? shuffledMap.get(currentQuestion.id) : null;
+                const choiceList = wrap
+                  ? wrap.choices
+                  : (['A', 'B', 'C', 'D'] as const).map((optKey) => ({
+                      displayKey: optKey,
+                      originalKey: optKey,
+                      text:
+                        optKey === 'A'
+                          ? currentQuestion.optionA
+                          : optKey === 'B'
+                            ? currentQuestion.optionB
+                            : optKey === 'C'
+                              ? currentQuestion.optionC
+                              : currentQuestion.optionD,
+                    }));
 
-                const isSelected = answers[currentQuestion.id] === optKey;
+                return choiceList.map((choice, idx) => {
+                  if (!choice.text) return null;
+                  const isSelected = answers[currentQuestion.id] === choice.displayKey;
 
-                return (
-                  <button
-                    key={optKey}
-                    type="button"
-                    onClick={() =>
-                      handleSelectAnswer(
-                        currentQuestion.id,
-                        optKey,
-                        currentQuestion.part,
-                      )
-                    }
-                    className={`p-3.5 text-left border-2 border-slate-900 shadow-arcade-sm flex items-center justify-between gap-2 transition-all ${
-                      isSelected
-                        ? 'bg-amber-400 text-slate-950 font-semibold -translate-y-0.5'
-                        : 'bg-white text-slate-900 hover:bg-amber-50'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <span className="w-7 h-7 shrink-0 bg-slate-900 text-amber-300 font-pixel text-xs flex items-center justify-center">
-                        {optKey}
-                      </span>
-                      <span className="font-sans text-sm">{text}</span>
-                    </div>
-                    <kbd className="px-1.5 py-0.5 text-[10px] font-mono bg-slate-100 text-slate-700 border border-slate-900">
-                      {idx + 1}
-                    </kbd>
-                  </button>
-                );
-              })}
+                  return (
+                    <button
+                      key={choice.displayKey}
+                      type="button"
+                      onClick={() =>
+                        handleSelectAnswer(
+                          currentQuestion.id,
+                          choice.displayKey,
+                          currentQuestion.part,
+                        )
+                      }
+                      className={`p-3.5 text-left border-2 border-slate-900 shadow-arcade-sm flex items-center justify-between gap-2 transition-all ${
+                        isSelected
+                          ? 'bg-amber-400 text-slate-950 font-semibold -translate-y-0.5'
+                          : 'bg-white text-slate-900 hover:bg-amber-50'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <span className="w-7 h-7 shrink-0 bg-slate-900 text-amber-300 font-pixel text-xs flex items-center justify-center">
+                          {choice.displayKey}
+                        </span>
+                        <span className="font-sans text-sm">{choice.text}</span>
+                      </div>
+                      <kbd className="px-1.5 py-0.5 text-[10px] font-mono bg-slate-100 text-slate-700 border border-slate-900">
+                        {idx + 1}
+                      </kbd>
+                    </button>
+                  );
+                });
+              })()}
             </div>
 
             <div className="flex items-center justify-between pt-3 border-t border-slate-200">

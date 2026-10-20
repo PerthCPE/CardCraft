@@ -34,6 +34,10 @@ import BossSurvivalModal from '@/components/BossSurvivalModal';
 import CollocationRushModal from '@/components/CollocationRushModal';
 import { CardSet, getStoredActiveSet } from '@/utils/card-sets';
 import { useAuth } from '@/context/AuthContext';
+import {
+  buildShuffledQuestionsMap,
+  ShuffledQuestionWrapper,
+} from '@/utils/question-shuffle.util';
 
 type DrillPart = 1 | 2 | 5 | 7;
 
@@ -42,6 +46,9 @@ export default function PracticeDrillsPage() {
   const [questions, setQuestions] = useState<QuestionItem[]>([]);
   const [cards, setCards] = useState<FlashcardItem[]>([]);
   const [activeSet, setActiveSet] = useState<CardSet | null>(null);
+  const [shuffledMap, setShuffledMap] = useState<Map<string, ShuffledQuestionWrapper>>(
+    new Map(),
+  );
 
   // Real-Time and Special Game Modal States
   const [realTimeExamType, setRealTimeExamType] = useState<RealTimeExamType | null>(null);
@@ -62,6 +69,7 @@ export default function PracticeDrillsPage() {
   useEffect(() => {
     fetchQuestions().then((data) => {
       setQuestions(data);
+      setShuffledMap(buildShuffledQuestionsMap(data));
     });
     fetchFlashcards(undefined, authUser?.id).then((data) => {
       setCards(data);
@@ -69,6 +77,20 @@ export default function PracticeDrillsPage() {
       setActiveSet(stored);
     });
   }, [authUser?.id]);
+
+  // Real-time synchronization for active card set
+  useEffect(() => {
+    const handleActiveSet = (e: Event) => {
+      const custom = e as CustomEvent<CardSet>;
+      if (custom.detail) {
+        setActiveSet(custom.detail);
+      }
+    };
+    window.addEventListener('cardcraft:active-set-changed', handleActiveSet);
+    return () => {
+      window.removeEventListener('cardcraft:active-set-changed', handleActiveSet);
+    };
+  }, []);
 
   const partQuestions = useMemo(() => {
     return questions.filter((q) => q.part === selectedPart);
@@ -116,23 +138,37 @@ export default function PracticeDrillsPage() {
       }
 
       window.speechSynthesis.cancel();
+      const wrap = shuffledMap.get(question.id);
       const scriptParts: string[] = [];
 
       if (question.part === 1) {
-        scriptParts.push(
-          'Look at the photograph. Listen to the four statements.',
-          `Statement A: ${question.optionA}`,
-          `Statement B: ${question.optionB}`,
-          `Statement C: ${question.optionC}`,
-          `Statement D: ${question.optionD || ''}`,
-        );
+        scriptParts.push('Look at the photograph. Listen to the four statements.');
+        if (wrap) {
+          wrap.choices.forEach((c) => {
+            scriptParts.push(`Statement ${c.displayKey}: ${c.text}`);
+          });
+        } else {
+          scriptParts.push(
+            `Statement A: ${question.optionA}`,
+            `Statement B: ${question.optionB}`,
+            `Statement C: ${question.optionC}`,
+            `Statement D: ${question.optionD || ''}`,
+          );
+        }
       } else if (question.part === 2) {
-        scriptParts.push(
-          `Question: ${question.questionText}`,
-          `Option A: ${question.optionA}`,
-          `Option B: ${question.optionB}`,
-          `Option C: ${question.optionC}`,
-        );
+        scriptParts.push(`Question: ${question.questionText}`);
+        if (wrap) {
+          wrap.choices.forEach((c) => {
+            scriptParts.push(`Option ${c.displayKey}: ${c.text}`);
+          });
+        } else {
+          scriptParts.push(
+            `Option A: ${question.optionA}`,
+            `Option B: ${question.optionB}`,
+            `Option C: ${question.optionC}`,
+            `Option D: ${question.optionD || ''}`,
+          );
+        }
       }
 
       const utterance = new SpeechSynthesisUtterance(scriptParts.join(' ... '));
@@ -144,7 +180,7 @@ export default function PracticeDrillsPage() {
       setIsPlayingAudio(true);
       window.speechSynthesis.speak(utterance);
     },
-    [isPlayingAudio],
+    [isPlayingAudio, shuffledMap],
   );
 
   const handleSelectOption = useCallback(
@@ -156,24 +192,25 @@ export default function PracticeDrillsPage() {
         );
         return;
       }
-      if (question.part === 2 && optionKey === 'D') return;
       setSelectedAnswers((prev) => ({
         ...prev,
         [question.id]: optionKey,
       }));
 
-      // บันทึก AnswerLog สำหรับ Single Drill (Task A)
+      // บันทึก AnswerLog สำหรับ Single Drill (Task A) แมปกลับเป็น option ดั้งเดิมใน DB
       if (authUser?.id) {
+        const wrap = shuffledMap.get(question.id);
+        const originalOption = wrap ? wrap.displayToOriginalMap[optionKey] : optionKey;
         logSingleAnswer({
           userId: authUser.id,
           questionId: question.id,
           part: question.part,
           mode: `P${question.part}_DRILL`,
-          selectedOption: optionKey,
+          selectedOption: originalOption,
         });
       }
     },
-    [authUser, requireAuth],
+    [authUser, requireAuth, shuffledMap],
   );
 
   useEffect(() => {
@@ -189,7 +226,7 @@ export default function PracticeDrillsPage() {
         handleSelectOption(currentQuestion, 'B');
       } else if (key === '3' || key === 'C') {
         handleSelectOption(currentQuestion, 'C');
-      } else if ((key === '4' || key === 'D') && currentQuestion.part !== 2) {
+      } else if (key === '4' || key === 'D') {
         handleSelectOption(currentQuestion, 'D');
       }
     };
@@ -561,74 +598,81 @@ export default function PracticeDrillsPage() {
 
           {/* Options Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-            {(['A', 'B', 'C', 'D'] as const).map((optKey, idx) => {
-              if (currentQuestion.part === 2 && optKey === 'D') {
-                return null;
-              }
+            {(() => {
+              const wrap = currentQuestion ? shuffledMap.get(currentQuestion.id) : null;
+              const choiceList = wrap
+                ? wrap.choices
+                : (['A', 'B', 'C', 'D'] as const).map((optKey) => ({
+                    displayKey: optKey,
+                    originalKey: optKey,
+                    text:
+                      optKey === 'A'
+                        ? currentQuestion?.optionA
+                        : optKey === 'B'
+                          ? currentQuestion?.optionB
+                          : optKey === 'C'
+                            ? currentQuestion?.optionC
+                            : currentQuestion?.optionD,
+                  }));
 
-              const rawText =
-                optKey === 'A'
-                  ? currentQuestion.optionA
-                  : optKey === 'B'
-                    ? currentQuestion.optionB
-                    : optKey === 'C'
-                      ? currentQuestion.optionC
-                      : currentQuestion.optionD;
+              return choiceList.map((choice, idx) => {
+                if (!choice.text) return null;
 
-              if (!rawText) return null;
+                const isMaskedListening =
+                  (currentQuestion.part === 1 || currentQuestion.part === 2) &&
+                  !isAnswered;
 
-              const isMaskedListening =
-                (currentQuestion.part === 1 || currentQuestion.part === 2) &&
-                !isAnswered;
+                const isUserSelected = userChoice === choice.displayKey;
+                const isCorrectOption = wrap
+                  ? wrap.displayCorrectOption === choice.displayKey
+                  : currentQuestion.correctOption === choice.displayKey;
 
-              const isUserSelected = userChoice === optKey;
-              const isCorrectOption = currentQuestion.correctOption === optKey;
-
-              let buttonStyle =
-                'bg-white text-slate-900 hover:bg-amber-50 border-slate-900';
-              if (isAnswered) {
-                if (isCorrectOption) {
-                  buttonStyle =
-                    'bg-emerald-400 text-slate-950 border-slate-950 font-semibold';
-                } else if (isUserSelected && !isCorrectOption) {
-                  buttonStyle = 'bg-rose-500 text-white border-slate-950';
-                } else {
-                  buttonStyle = 'bg-slate-100 text-slate-600 border-slate-300';
+                let buttonStyle =
+                  'bg-white text-slate-900 hover:bg-amber-50 border-slate-900';
+                if (isAnswered) {
+                  if (isCorrectOption) {
+                    buttonStyle =
+                      'bg-emerald-400 text-slate-950 border-slate-950 font-semibold';
+                  } else if (isUserSelected && !isCorrectOption) {
+                    buttonStyle = 'bg-rose-500 text-white border-slate-950';
+                  } else {
+                    buttonStyle = 'bg-slate-100 text-slate-600 border-slate-300';
+                  }
                 }
-              }
 
-              return (
-                <button
-                  key={optKey}
-                  type="button"
-                  onClick={() => handleSelectOption(currentQuestion, optKey)}
-                  className={`p-4 text-left border-2 shadow-arcade active:translate-x-[2px] active:translate-y-[2px] active:shadow-arcade-sm transition-all flex items-center justify-between gap-3 ${buttonStyle}`}
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="w-7 h-7 shrink-0 bg-slate-900 text-amber-300 font-pixel text-xs flex items-center justify-center">
-                      {optKey}
-                    </span>
-                    <span className="font-sans text-sm sm:text-base">
-                      {isMaskedListening
-                        ? `เลือกตัวเลือก (${optKey}) จากเสียงที่ได้ยิน`
-                        : rawText}
-                    </span>
-                  </div>
+                return (
+                  <button
+                    key={choice.displayKey}
+                    type="button"
+                    onClick={() => handleSelectOption(currentQuestion, choice.displayKey)}
+                    className={`p-4 text-left border-2 shadow-arcade active:translate-x-[2px] active:translate-y-[2px] active:shadow-arcade-sm transition-all flex items-center justify-between gap-3 ${buttonStyle}`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="w-7 h-7 shrink-0 bg-slate-900 text-amber-300 font-pixel text-xs flex items-center justify-center">
+                        {choice.displayKey}
+                      </span>
+                      <span className="font-sans text-sm sm:text-base">
+                        {isMaskedListening
+                          ? `เลือกตัวเลือก (${choice.displayKey}) จากเสียงที่ได้ยิน`
+                          : choice.text}
+                      </span>
+                    </div>
 
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    {isAnswered && isCorrectOption && (
-                      <CheckCircle2 className="w-4 h-4 text-slate-950" />
-                    )}
-                    {isAnswered && isUserSelected && !isCorrectOption && (
-                      <XCircle className="w-4 h-4 text-white" />
-                    )}
-                    <kbd className="px-1.5 py-0.5 text-[10px] font-mono bg-slate-100 text-slate-700 border border-slate-900">
-                      {idx + 1}
-                    </kbd>
-                  </div>
-                </button>
-              );
-            })}
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {isAnswered && isCorrectOption && (
+                        <CheckCircle2 className="w-4 h-4 text-slate-950" />
+                      )}
+                      {isAnswered && isUserSelected && !isCorrectOption && (
+                        <XCircle className="w-4 h-4 text-white" />
+                      )}
+                      <kbd className="px-1.5 py-0.5 text-[10px] font-mono bg-slate-100 text-slate-700 border border-slate-900">
+                        {idx + 1}
+                      </kbd>
+                    </div>
+                  </button>
+                );
+              });
+            })()}
           </div>
 
           {/* Thai Explanation */}
