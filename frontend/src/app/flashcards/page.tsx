@@ -306,7 +306,7 @@ export default function FlashcardsPage() {
       isSwipingRef.current = true;
       lastSwipeTimeRef.current = Date.now();
 
-      const flyTargetX = isKnown ? 580 : -580;
+      const flyTargetX = isKnown ? 600 : -600;
 
       // แสดง Feedback Badge ทันที
       setSwipeFeedback({
@@ -314,9 +314,9 @@ export default function FlashcardsPage() {
         word: activeCard.word,
       });
 
-      // แอนิเมชันบินออกนอกจอ (240ms) พร้อม fade-out
+      // แอนิเมชันบินออกนอกจอ (220ms) พร้อม fade-out
       animate(dragX, flyTargetX, {
-        duration: 0.24,
+        duration: 0.22,
         ease: 'easeOut',
         onComplete: async () => {
           const swipedCard = activeCard;
@@ -368,13 +368,13 @@ export default function FlashcardsPage() {
   ) => {
     if (isSwipingRef.current) return;
 
-    const threshold = 65;
+    const threshold = 60;
     const isSwipeRight =
       info.offset.x > threshold ||
-      (info.offset.x > 25 && info.velocity.x > 200);
+      (info.offset.x > 20 && info.velocity.x > 220);
     const isSwipeLeft =
       info.offset.x < -threshold ||
-      (info.offset.x < -25 && info.velocity.x < -220);
+      (info.offset.x < -20 && info.velocity.x < -220);
 
     // บันทึกเวลาเพื่อป้องกันไม่ให้ trailing click พลิกการ์ด
     lastSwipeTimeRef.current = Date.now();
@@ -385,7 +385,7 @@ export default function FlashcardsPage() {
       triggerSwipeAnimation(false);
     } else {
       // ไม่ถึงระยะที่กำหนด ให้เด้งกลับตรงกลางอย่างนุ่มนวล
-      animate(dragX, 0, { type: 'spring', stiffness: 500, damping: 32 });
+      animate(dragX, 0, { type: 'spring', stiffness: 500, damping: 30 });
     }
   };
 

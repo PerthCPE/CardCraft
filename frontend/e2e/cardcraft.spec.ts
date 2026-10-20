@@ -140,6 +140,22 @@ test.describe('CardCraft Full E2E & UI Quality Assurance Suite (CardCraft v2.0)'
     // Verify toast or card transition
     await page.waitForTimeout(500);
 
+    // 2.3b Test Mouse Click-and-Hold Drag-to-Swipe (Hold & Swipe Right)
+    const cardEl = page.locator('div.perspective-1000').first();
+    if (await cardEl.isVisible()) {
+      const box = await cardEl.boundingBox();
+      if (box) {
+        const startX = box.x + box.width / 2;
+        const startY = box.y + box.height / 2;
+        // Hold and drag right past threshold
+        await page.mouse.move(startX, startY);
+        await page.mouse.down();
+        await page.mouse.move(startX + 100, startY, { steps: 8 });
+        await page.mouse.up();
+        await page.waitForTimeout(500);
+      }
+    }
+
     // 2.4 Test Custom Deck Builder Modal
     const customDeckBtn = page.getByRole('button', { name: /จัดชุดการ์ดคำศัพท์|สร้างสำรับ/i }).first();
     if (await customDeckBtn.isVisible()) {

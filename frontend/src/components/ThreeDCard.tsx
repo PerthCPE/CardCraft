@@ -134,12 +134,8 @@ export default function ThreeDCard({
   const mouseX = useMotionValue(0);
   const mouseY = useMotionValue(0);
 
-  // สถานะล็อกการปัดบินออกนอกจอ เพื่อปลด constraints ขณะ fly-out
-  const [internalSwiping, setInternalSwiping] = useState(false);
-
-  useEffect(() => {
-    setInternalSwiping(false);
-  }, [card.id]);
+  // สถานะล็อกขณะกำลังลากการ์ด (Drag) เพื่อหยุด 3D Tilt ชั่วคราว ป้องกันการส่าย/กระตุก
+  const [isCardDragging, setIsCardDragging] = useState(false);
 
   const rotateXSpring = useSpring(useTransform(mouseY, [-0.5, 0.5], [7, -7]), {
     damping: 25,
@@ -158,7 +154,7 @@ export default function ThreeDCard({
   );
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!canHover) return;
+    if (!canHover || isCardDragging) return;
     const rect = e.currentTarget.getBoundingClientRect();
     const xPct = (e.clientX - rect.left) / rect.width - 0.5;
     const yPct = (e.clientY - rect.top) / rect.height - 0.5;
@@ -206,26 +202,36 @@ export default function ThreeDCard({
 
   const handleDragStart = () => {
     isDraggingRef.current = true;
+    setIsCardDragging(true);
+    mouseX.set(0);
+    mouseY.set(0);
   };
 
+  // จำกัด Range การลากการ์ดขณะกดค้างไว้ที่ 180px พร้อมแรงต้าน Elastic ที่นุ่มนวล
+  const MAX_DRAG_BOUND = 180;
   const handleDrag = (_event: any, info: PanInfo) => {
     isDraggingRef.current = true;
     const dist = Math.hypot(info.offset.x, info.offset.y);
     if (dist > dragDistanceRef.current) {
       dragDistanceRef.current = dist;
     }
+
+    if (dragX) {
+      const offset = info.offset.x;
+      if (offset > MAX_DRAG_BOUND) {
+        dragX.set(MAX_DRAG_BOUND + (offset - MAX_DRAG_BOUND) * 0.18);
+      } else if (offset < -MAX_DRAG_BOUND) {
+        dragX.set(-MAX_DRAG_BOUND + (offset + MAX_DRAG_BOUND) * 0.18);
+      } else {
+        dragX.set(offset);
+      }
+    }
   };
 
   const handleCustomDragEnd = (event: any, info: any) => {
     lastDragEndTimeRef.current = Date.now();
     isDraggingRef.current = true;
-
-    // ตรวจสอบว่าเป็นการปัดผ่านเกณฑ์หรือไม่ เพื่อปลด constraints ให้บินออกนอกจอได้อย่างอิสระ
-    const isSwipeRight = info.offset.x > 65 || info.velocity.x > 260;
-    const isSwipeLeft = info.offset.x < -65 || info.velocity.x < -260;
-    if (isSwipeRight || isSwipeLeft) {
-      setInternalSwiping(true);
-    }
+    setIsCardDragging(false);
 
     if (onDragEnd) {
       onDragEnd(event, info);
@@ -290,14 +296,11 @@ export default function ThreeDCard({
       onMouseLeave={handleMouseLeave}
     >
       {/* ===================================================================== */}
-      {/* LAYER 1: SWIPE & DRAG CONTAINER (รองรับการปัดซ้าย/ขวา พร้อมหมุนเอียงและบินออกนอกจอ) */}
-      {/* จำกัด Range การลากให้อยู่ในกรอบอย่างมีเสถียรภาพ และปลด constraints ขณะ fly-out */}
+      {/* LAYER 1: SWIPE & DRAG CONTAINER (รองรับการคลิกค้าง/กดค้างเพื่อปัดอย่างลื่นไหล 60 FPS) */}
+      {/* ปลดล็อก dragDirectionLock & dragConstraints เพื่อให้อนิเมชันบินออกนอกจอและการเด้งกลับลื่นไหล 100% */}
       {/* ===================================================================== */}
       <m.div
         drag="x"
-        dragDirectionLock={true}
-        dragConstraints={internalSwiping ? false : { left: -180, right: 180 }}
-        dragElastic={0.25}
         onDragStart={handleDragStart}
         onDrag={handleDrag}
         onDragEnd={handleCustomDragEnd}
@@ -320,7 +323,8 @@ export default function ThreeDCard({
             <img
               src="/icons/icon-swipe-known.png"
               alt=""
-              className="w-4 h-4 [image-rendering:pixelated]"
+              draggable={false}
+              className="w-4 h-4 [image-rendering:pixelated] pointer-events-none select-none"
             />
             จำแม่นแล้ว
           </m.div>
@@ -335,21 +339,22 @@ export default function ThreeDCard({
             <img
               src="/icons/icon-swipe-learning.png"
               alt=""
-              className="w-4 h-4 [image-rendering:pixelated]"
+              draggable={false}
+              className="w-4 h-4 [image-rendering:pixelated] pointer-events-none select-none"
             />
             ทบทวนซ้ำ
           </m.div>
         )}
 
         {/* =================================================================== */}
-        {/* LAYER 2: 3D MOUSE TILT CONTAINER (รับองศาเอียงตามเมาส์ แยกเด็ดขาดจาก Flip) */}
+        {/* LAYER 2: 3D MOUSE TILT CONTAINER (รับองศาเอียงตามเมาส์ แยกเด็ดขาดจาก Flip และ Drag) */}
         {/* =================================================================== */}
         <m.div
           style={{
             transformStyle: 'preserve-3d',
             WebkitTransformStyle: 'preserve-3d',
-            rotateX: canHover && isHovered ? rotateXSpring : 0,
-            rotateY: canHover && isHovered ? rotateYSpring : 0,
+            rotateX: canHover && isHovered && !isCardDragging ? rotateXSpring : 0,
+            rotateY: canHover && isHovered && !isCardDragging ? rotateYSpring : 0,
           }}
           className="relative w-full h-full preserve-3d"
         >
@@ -397,7 +402,8 @@ export default function ThreeDCard({
                       key={i}
                       src="/icons/icon-hud-mana.png"
                       alt=""
-                      className="w-3.5 h-3.5 sm:w-4 sm:h-4 [image-rendering:pixelated] drop-shadow-[0_0_4px_rgba(56,189,248,0.8)]"
+                      draggable={false}
+                      className="w-3.5 h-3.5 sm:w-4 sm:h-4 [image-rendering:pixelated] drop-shadow-[0_0_4px_rgba(56,189,248,0.8)] pointer-events-none select-none"
                     />
                   ))}
                 </div>
@@ -413,7 +419,8 @@ export default function ThreeDCard({
                   <img
                     src={cardArtSrc}
                     alt={card.category}
-                    className="w-full h-full object-contain [image-rendering:pixelated] drop-shadow-[0_4px_8px_rgba(0,0,0,0.8)]"
+                    draggable={false}
+                    className="w-full h-full object-contain [image-rendering:pixelated] drop-shadow-[0_4px_8px_rgba(0,0,0,0.8)] pointer-events-none select-none"
                   />
                 </div>
 
