@@ -428,7 +428,7 @@ export default function DashboardPage() {
                     สนามสอบจำลองจับเวลา (Mini Mock Test)
                   </h3>
                   <p className="text-sm text-slate-600 reading-measure">
-                    จำลองสอบจริง 15 ข้อ 15 นาที มีตัวนับถอยหลังพร้อมคำนวณคะแนนสเกล TOEIC ทันทีเพื่อประเมินระดับคลาส
+                    จำลองสอบจริงครบทั้งคลัง 56 ข้อ พร้อมคำนวณคะแนนสเกล TOEIC ทันทีเพื่อประเมินระดับคลาส
                   </p>
                 </div>
               </div>

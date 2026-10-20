@@ -478,7 +478,7 @@ export default function BossBattleMockTestPage() {
         {!authUser && (
           <div className="mt-4 pt-3 border-t border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs bg-slate-950/60 p-3 border border-amber-400/40">
             <span className="text-amber-200">
-              คุณกำลังอยู่ในโหมดทดลองเปิดดูข้อสอบ (Guest Mode) — เข้าสู่ระบบเพื่อเริ่มจับเวลาทำข้อสอบจริง 15 ข้อ และบันทึกคะแนนเพื่อเลื่อนระดับคลาส
+              คุณกำลังอยู่ในโหมดทดลองเปิดดูข้อสอบ (Guest Mode) — เข้าสู่ระบบเพื่อเริ่มจับเวลาทำข้อสอบจริง 56 ข้อ และบันทึกคะแนนเพื่อเลื่อนระดับคลาส
             </span>
             <button
               type="button"

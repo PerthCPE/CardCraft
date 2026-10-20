@@ -226,7 +226,7 @@ export default function AuthModal() {
                   <input
                     type="text"
                     required
-                    placeholder="เช่น user1, perth_hero"
+                    placeholder="เช่น username"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     className="w-full pl-9 pr-3 py-2 border-2 border-slate-900 text-sm font-body focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white"
@@ -261,7 +261,7 @@ export default function AuthModal() {
                     </label>
                     <input
                       type="text"
-                      placeholder="เช่น Rune Knight Perth"
+                      placeholder="เช่น Rune Knight"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       className="w-full px-3 py-2 border-2 border-slate-900 text-sm font-body focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white"
