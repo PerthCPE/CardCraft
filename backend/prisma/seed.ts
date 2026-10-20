@@ -8,10 +8,15 @@
 // ============================================================================
 
 import { PrismaClient } from '@prisma/client';
+import * as crypto from 'crypto';
 
 const prisma = new PrismaClient();
 
 export const DEMO_USER_ID = 'demo-hero-1';
+
+export function hashPassword(password: string): string {
+  return crypto.createHash('sha256').update(password).digest('hex');
+}
 
 async function main() {
   console.log('Starting CardCraft Database Seeding...');
@@ -28,6 +33,8 @@ async function main() {
   const demoUser = await prisma.user.create({
     data: {
       id: DEMO_USER_ID,
+      username: 'hero',
+      password: hashPassword('123456'),
       email: 'hero@cardcraft.dev',
       name: 'Alden the Rune Challenger',
       targetScore: 700,

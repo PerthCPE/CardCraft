@@ -10,6 +10,8 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { User } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
 
 interface NavItem {
   href: string;
@@ -47,10 +49,11 @@ const NAV_ITEMS: NavItem[] = [
 
 export function Navbar() {
   const pathname = usePathname();
+  const { user, openAuthModal } = useAuth();
 
   return (
     <header className="sticky top-0 z-40 bg-slate-900 text-amber-50 border-b-2 border-slate-950">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-3">
         {/* Brand Identity */}
         <Link
           href="/"
@@ -101,6 +104,37 @@ export function Navbar() {
             );
           })}
         </nav>
+
+        {/* User Account / Login Pill */}
+        <div className="flex items-center shrink-0">
+          {user ? (
+            <button
+              type="button"
+              onClick={openAuthModal}
+              className="inline-flex items-center gap-2 px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-amber-300 border-2 border-slate-950 font-display text-xs font-bold shadow-pixel-sm transition-all"
+              title="คลิกเพื่อดูข้อมูลผู้เล่น / สลับบัญชี"
+            >
+              <div className="w-5 h-5 rounded-full bg-amber-400 text-slate-950 flex items-center justify-center font-pixel text-[10px]">
+                {user.username ? user.username[0].toUpperCase() : 'H'}
+              </div>
+              <span className="max-w-[100px] truncate hidden md:inline">
+                {user.name}
+              </span>
+              <span className="font-pixel text-[10px] bg-slate-900 px-1 py-0.5 text-emerald-400 rounded">
+                {user.currentEstimatedScore}p
+              </span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={openAuthModal}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-400 hover:bg-amber-300 text-slate-950 border-2 border-slate-950 font-display text-xs font-bold shadow-pixel-sm active:translate-x-[1px] active:translate-y-[1px] transition-all"
+            >
+              <User className="w-3.5 h-3.5" />
+              <span>เข้าสู่ระบบ</span>
+            </button>
+          )}
+        </div>
       </div>
     </header>
   );

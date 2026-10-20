@@ -25,6 +25,7 @@ import {
 } from '@/lib/api';
 import { PixelCharacterAvatar } from '@/components/PixelCharacterAvatar';
 import { getCharacterEvolution } from '@/utils/character-evolution.util';
+import { useAuth } from '@/context/AuthContext';
 
 const DEMO_SCORE_PRESETS = [
   { label: '180', score: 180 },
@@ -37,21 +38,25 @@ const DEMO_SCORE_PRESETS = [
 ];
 
 export default function DashboardPage() {
+  const { user: authUser, refreshUser } = useAuth();
   const [dashboard, setDashboard] = useState<DashboardSummaryResponse | null>(
     null,
   );
   const [isSimulating, setIsSimulating] = useState(false);
 
   useEffect(() => {
-    fetchDashboardSummary().then(setDashboard);
-  }, []);
+    fetchDashboardSummary(authUser?.id).then(setDashboard);
+  }, [authUser?.id]);
 
   const handleSimulateScore = async (newScore: number) => {
     if (!dashboard) return;
     setIsSimulating(true);
-    const updated = await updateHeroProfile({
-      currentEstimatedScore: newScore,
-    });
+    const updated = await updateHeroProfile(
+      {
+        currentEstimatedScore: newScore,
+      },
+      authUser?.id,
+    );
     setDashboard({
       ...dashboard,
       user: updated.user,
@@ -60,6 +65,7 @@ export default function DashboardPage() {
         updated.user.targetScore,
       ),
     });
+    await refreshUser();
     setIsSimulating(false);
   };
 

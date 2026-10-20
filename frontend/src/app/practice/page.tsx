@@ -33,10 +33,12 @@ import VocabBlitzGame from '@/components/VocabBlitzGame';
 import BossSurvivalModal from '@/components/BossSurvivalModal';
 import CollocationRushModal from '@/components/CollocationRushModal';
 import { CardSet, getStoredActiveSet } from '@/utils/card-sets';
+import { useAuth } from '@/context/AuthContext';
 
 type DrillPart = 1 | 2 | 5 | 7;
 
 export default function PracticeDrillsPage() {
+  const { user: authUser } = useAuth();
   const [questions, setQuestions] = useState<QuestionItem[]>([]);
   const [cards, setCards] = useState<FlashcardItem[]>([]);
   const [activeSet, setActiveSet] = useState<CardSet | null>(null);
@@ -61,12 +63,12 @@ export default function PracticeDrillsPage() {
     fetchQuestions().then((data) => {
       setQuestions(data);
     });
-    fetchFlashcards().then((data) => {
+    fetchFlashcards(undefined, authUser?.id).then((data) => {
       setCards(data);
       const stored = getStoredActiveSet(data);
       setActiveSet(stored);
     });
-  }, []);
+  }, [authUser?.id]);
 
   const partQuestions = useMemo(() => {
     return questions.filter((q) => q.part === selectedPart);

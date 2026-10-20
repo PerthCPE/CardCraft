@@ -28,10 +28,12 @@ import {
 } from '@/lib/api';
 import { PixelCharacterAvatar } from '@/components/PixelCharacterAvatar';
 import RealTimeExamModal from '@/components/RealTimeExamModal';
+import { useAuth } from '@/context/AuthContext';
 
 const EXAM_DURATION_SECONDS = 15 * 60;
 
 export default function BossBattleMockTestPage() {
+  const { user: authUser } = useAuth();
   const [questions, setQuestions] = useState<QuestionItem[]>([]);
   const [isRealTimeMultiPartOpen, setIsRealTimeMultiPartOpen] = useState<boolean>(false);
   const [currentIdx, setCurrentIdx] = useState<number>(0);
@@ -131,6 +133,7 @@ export default function BossBattleMockTestPage() {
     );
 
     const response = await submitExamAttempt({
+      userId: authUser?.id,
       mode: 'MINI_MOCK',
       listeningCorrect,
       listeningTotal: listeningQuestions.length,

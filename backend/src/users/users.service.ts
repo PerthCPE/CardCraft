@@ -29,10 +29,12 @@ export class UsersService {
     }
 
     return this.prisma.user.upsert({
-      where: { email: 'hero@cardcraft.dev' },
+      where: { username: 'hero' },
       update: {},
       create: {
         id: userId,
+        username: 'hero',
+        password: '8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918', // sha256 of '123456'
         email: 'hero@cardcraft.dev',
         name: 'Alden the Rune Challenger',
         targetScore: 700,

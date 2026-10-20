@@ -39,8 +39,10 @@ import { fetchFlashcards, recordCardSwipe } from '@/lib/api';
 import CardSetSelectorModal from '@/components/CardSetSelectorModal';
 import VocabBlitzGame from '@/components/VocabBlitzGame';
 import { CardSet, getStoredActiveSet } from '@/utils/card-sets';
+import { useAuth } from '@/context/AuthContext';
 
 export default function FlashcardsPage() {
+  const { user: authUser } = useAuth();
   const [cards, setCards] = useState<FlashcardItem[]>([]);
   const [activeSet, setActiveSet] = useState<CardSet | null>(null);
   const [isSetModalOpen, setIsSetModalOpen] = useState<boolean>(false);
@@ -69,13 +71,13 @@ export default function FlashcardsPage() {
   const leftBadgeOpacity = useTransform(dragX, [-110, -25], [1, 0]);
 
   useEffect(() => {
-    fetchFlashcards().then((data) => {
+    fetchFlashcards(undefined, authUser?.id).then((data) => {
       setCards(data);
       const stored = getStoredActiveSet(data);
       setActiveSet(stored);
       setCurrentIndex(0);
     });
-  }, []);
+  }, [authUser?.id]);
 
   const filteredCards = useMemo(() => {
     // หากอยู่ในโหมด SWIPE_DECK และมี activeSet ให้คงลำดับการ์ดตาม cardIds ของชุดนั้น
@@ -174,13 +176,13 @@ export default function FlashcardsPage() {
       );
 
       setCurrentIndex((prev) => prev + 1);
-      await recordCardSwipe(swipedCard.id, isKnown);
+      await recordCardSwipe(swipedCard.id, isKnown, authUser?.id);
 
       setTimeout(() => {
         setSwipeFeedback(null);
       }, 1000);
     },
-    [activeCard, dragX],
+    [activeCard, dragX, authUser?.id],
   );
 
   const handleDragEnd = (
@@ -907,7 +909,7 @@ export default function FlashcardsPage() {
                               : c,
                           ),
                         );
-                        await recordCardSwipe(card.id, nextState);
+                        await recordCardSwipe(card.id, nextState, authUser?.id);
                       }}
                       className={`inline-flex items-center gap-1 px-2.5 py-1 font-medium border border-slate-900 ${
                         isMastered

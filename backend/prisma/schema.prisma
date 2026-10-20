@@ -18,7 +18,9 @@ datasource db {
 // 1. User Model — ข้อมูลผู้เล่น (Hero Profile) และคะแนนประเมิน TOEIC ปัจจุบัน
 model User {
   id                     String         @id @default(uuid())
-  email                  String         @unique
+  username               String         @unique @default(uuid())
+  password               String         @default("8c6976e5b5410415bde908bd4dee15dfb167a9c873fc4bb8a81f6f2ab448a918") // sha256 of '123456'
+  email                  String?        @unique
   name                   String
   targetScore            Int            @default(700) // เป้าหมายหลักของโปรเจกต์คือ TOEIC 700+
   currentEstimatedScore  Int            @default(350) // คะแนนประเมินเริ่มต้น (0-990)
