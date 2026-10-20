@@ -3,21 +3,20 @@
 // ============================================================================
 // frontend/src/components/ThreeDCard.tsx
 // 3D Trading Card Flip Component (Yu-Gi-Oh / Magic Spell Style)
-// ปรับปรุงระบบ Gesture และ Design ตามหลัก frontend-design & cardcraft-pixel-ui:
-// 1. การปัดการ์ด (Swipe): สำหรับเลือกซ้าย (ทบทวน) / ขวา (จำแม่นแล้ว) ในทุก device
-//    - การปัดขยับ (เคลื่อนที่ > 6px) ห้ามทำให้การ์ดพลิกโดยเด็ดขาด 100%
-//    - มี Swipe Active Shield (400ms) ป้องกันไม่ให้การปล่อยนิ้วหลังปัดไปทริกเกอร์การพลิก
-// 2. การกดปุ่มออกเสียงข้อความ (Audio Button):
-//    - Shield ทุก Pointer/Touch/Click Event และ closest('button') ห้ามทำให้การ์ดพลิกโดยเด็ดขาด
-// 3. การพลิกการ์ด (Flip):
-//    - เกิดขึ้นเฉพาะการแตะ/คลิกอยู่กับที่ (เคลื่อนที่ไม่เกิน 6px) หรือปุ่ม Space / พลิกดูคำแปล
-// 4. แก้ปัญหาหน้า-หลังทับซ้อนกันบนมือถือ (Mobile 3D Overlap):
-//    - สลับการเรนเดอร์ด้วย display: none / flex ที่มุม 90 องศา (200ms)
-//    - translateZ(1px) แยกมิติความลึก ป้องกัน WebKit Composite Bleed-through
+// ปรับปรุงระบบ Gesture, Animation และ Shadow ตามหลัก frontend-design & cardcraft-pixel-ui:
+// 1. การปัดการ์ด (Swipe):
+//    - ปัดซ้าย (ทบทวนซ้ำ) / ปัดขวา (จำแม่นแล้ว)
+//    - การปัดขยับ (drag > 5px) ห้ามทำให้การ์ดพลิกเด็ดขาด 100% พร้อมระบบ Drag Shield ป้องกัน Synthetic Click
+// 2. การพลิกการ์ด (Flip):
+//    - แยก 3D Tilt Container (รับการขยับเมาส์บน PC) ออกจาก 3D Flip Container (รับ 0/180 องศา)
+//    - แก้บั๊กการ์ดหายบน PC 100%: เมื่อพลิกหน้าการ์ดแล้วขยับเมาส์ การ์ดจะไม่หายหรือถูก override ค่า rotateY
+// 3. ปรับ Shadow ของการ์ด (Tactile Neo-Brutalist Shadow):
+//    - ขอบคมชัด มีมิติความลึก หนักแน่น สอดคล้องกับธีม Paper & Arcade
+// 4. รองรับปุ่มออกเสียง (Audio Button) โดยไม่มีการพลิกการ์ด
 // ============================================================================
 
 import React, { useState, useEffect, useRef } from 'react';
-import { m, useMotionValue, useSpring, useTransform } from 'framer-motion';
+import { m, useMotionValue, useSpring, useTransform, PanInfo } from 'framer-motion';
 import { Volume2, RotateCcw } from 'lucide-react';
 import type { FlashcardItem } from '@/data/toeic-types';
 
@@ -116,7 +115,7 @@ export default function ThreeDCard({
   rightBadgeOpacity,
   leftBadgeOpacity,
 }: ThreeDCardProps) {
-  // Check if device supports true hover (Desktop PC with mouse, not touch devices)
+  // ตรวจสอบว่าอุปกรณ์รองรับการ Hover หรือไม่ (Desktop PC with fine mouse pointer)
   const [canHover, setCanHover] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
 
@@ -130,16 +129,17 @@ export default function ThreeDCard({
     }
   }, []);
 
+  // Motion Values สำหรับการเอียงตามตำแหน่งเมาส์ (3D Mouse Tilt)
   const mouseX = useMotionValue(0);
   const mouseY = useMotionValue(0);
 
-  const rotateXSpring = useSpring(useTransform(mouseY, [-0.5, 0.5], [10, -10]), {
-    damping: 20,
-    stiffness: 250,
+  const rotateXSpring = useSpring(useTransform(mouseY, [-0.5, 0.5], [7, -7]), {
+    damping: 25,
+    stiffness: 280,
   });
-  const rotateYSpring = useSpring(useTransform(mouseX, [-0.5, 0.5], [-10, 10]), {
-    damping: 20,
-    stiffness: 250,
+  const rotateYSpring = useSpring(useTransform(mouseX, [-0.5, 0.5], [-7, 7]), {
+    damping: 25,
+    stiffness: 280,
   });
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -161,22 +161,23 @@ export default function ThreeDCard({
   const theme = CATEGORY_THEMES[card.category] || DEFAULT_THEME;
   const cardArtSrc = CATEGORY_CARD_ARTS[card.category] || '/icons/card-back.png';
 
-  // Toggle front/back face rendering at the 90-degree flip edge (200ms)
-  // This completely solves the mobile WebKit/Android bug where front and back overlap
+  // สลับการแสดงผลหน้า/หลังที่จุดกึ่งกลางของการพลิก (180ms) เพื่อป้องกัน WebKit Bleed-through
   const [showBackFace, setShowBackFace] = useState(isFlipped);
 
   useEffect(() => {
     const timer = setTimeout(() => {
       setShowBackFace(isFlipped);
-    }, 200);
+    }, 180);
     return () => clearTimeout(timer);
   }, [isFlipped]);
 
   // =========================================================================
-  // GESTURE ISOLATION ENGINE (STRICT SEPARATION OF SWIPE VS FLIP VS AUDIO):
+  // GESTURE ISOLATION ENGINE (แยกการปัดกับการพลิกอย่างเด็ดขาด 100%):
   // =========================================================================
   const pointerStartPosRef = useRef<{ x: number; y: number } | null>(null);
-  const isSwipeActiveRef = useRef(false);
+  const isDraggingRef = useRef(false);
+  const dragDistanceRef = useRef(0);
+  const lastDragEndTimeRef = useRef(0);
   const lastFlipTimeRef = useRef(0);
 
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
@@ -184,62 +185,78 @@ export default function ThreeDCard({
       return;
     }
     pointerStartPosRef.current = { x: e.clientX, y: e.clientY };
-    isSwipeActiveRef.current = false;
+    isDraggingRef.current = false;
+    dragDistanceRef.current = 0;
   };
 
   const handleDragStart = () => {
-    isSwipeActiveRef.current = true;
+    isDraggingRef.current = true;
   };
 
-  const handleDrag = () => {
-    isSwipeActiveRef.current = true;
+  const handleDrag = (_event: any, info: PanInfo) => {
+    isDraggingRef.current = true;
+    const dist = Math.hypot(info.offset.x, info.offset.y);
+    if (dist > dragDistanceRef.current) {
+      dragDistanceRef.current = dist;
+    }
   };
 
   const handleCustomDragEnd = (event: any, info: any) => {
-    const dx = Math.abs(info.offset.x);
-    const dy = Math.abs(info.offset.y);
-    const wasRealDrag = dx > 8 || dy > 8;
+    const dist = Math.hypot(info.offset.x, info.offset.y);
+    const wasRealDrag = dist > 6;
 
-    if (wasRealDrag) {
-      isSwipeActiveRef.current = true;
-      if (onDragEnd) {
-        onDragEnd(event, info);
-      }
+    lastDragEndTimeRef.current = Date.now();
+    isDraggingRef.current = true;
+
+    if (wasRealDrag && onDragEnd) {
+      onDragEnd(event, info);
     }
 
-    // Keep isSwipeActiveRef = true for 400ms to block any synthetic click/tap after a drag
+    // Shield ป้องกัน Synthetic Click หรือ Touch Tap หลัง Drag ปล่อยนิ้ว (500ms)
     setTimeout(() => {
-      isSwipeActiveRef.current = false;
-    }, 400);
+      isDraggingRef.current = false;
+      dragDistanceRef.current = 0;
+    }, 500);
   };
 
   const handleCardClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    // 1. If clicked inside any button (e.g. sound button), NEVER FLIP!
+    // 1. ถ้าคลิกโดนปุ่มภายใน (เช่น ปุ่มฟังเสียงอ่าน) ห้ามพลิกเด็ดขาด
     if ((e.target as HTMLElement).closest('button')) {
       return;
     }
 
-    // 2. If a drag/swipe gesture is active or recently occurred, NEVER FLIP!
-    if (isSwipeActiveRef.current) {
+    // 2. ถ้าอยู่ระหว่างการปัด (Dragging) ห้ามพลิกเด็ดขาด
+    if (isDraggingRef.current) {
       return;
     }
 
-    // 3. If pointer moved > 6px since pointerdown, it was a drag, NEVER FLIP!
+    // 3. ถ้าเพิ่งปัดเสร็จภายใน 500ms ห้ามพลิกเด็ดขาด (ป้องกัน trailing click)
+    if (Date.now() - lastDragEndTimeRef.current < 500) {
+      return;
+    }
+
+    // 4. ถ้าระยะลากมากกว่า 5px ห้ามพลิกเด็ดขาด
+    if (dragDistanceRef.current > 5) {
+      return;
+    }
+
+    // 5. ถ้าพิกัด pointermove ขยับเกิน 5px จากจุดเริ่มต้น ห้ามพลิกเด็ดขาด
     if (pointerStartPosRef.current) {
       const dx = Math.abs(e.clientX - pointerStartPosRef.current.x);
       const dy = Math.abs(e.clientY - pointerStartPosRef.current.y);
-      if (dx > 6 || dy > 6) {
+      if (dx > 5 || dy > 5) {
         return;
       }
     }
 
-    // 4. Debounce to prevent rapid double-clicks
+    // 6. Debounce ป้องกันการกดเบิ้ลเร็วเกินไป
     const now = Date.now();
     if (now - lastFlipTimeRef.current < 250) {
       return;
     }
     lastFlipTimeRef.current = now;
 
+    // พลิกการ์ดเมื่อเป็นการแตะ/คลิกอยู่กับที่อย่างแท้จริง
     onFlip();
   };
 
@@ -253,10 +270,13 @@ export default function ThreeDCard({
       }}
       onMouseLeave={handleMouseLeave}
     >
+      {/* ===================================================================== */}
+      {/* LAYER 1: SWIPE & DRAG CONTAINER (รองรับการปัดซ้าย/ขวา พร้อมหมุนเอียงเล็กน้อย) */}
+      {/* ===================================================================== */}
       <m.div
         drag="x"
         dragConstraints={{ left: 0, right: 0 }}
-        dragElastic={0.8}
+        dragElastic={0.75}
         onDragStart={handleDragStart}
         onDrag={handleDrag}
         onDragEnd={handleCustomDragEnd}
@@ -268,11 +288,11 @@ export default function ThreeDCard({
         }}
         className="w-full h-full cursor-grab active:cursor-grabbing select-none"
       >
-        {/* Swipe Feedback Badges */}
+        {/* ป้ายแสดง Feedback ขณะปัดขวา: จำแม่นแล้ว */}
         {rightBadgeOpacity && (
           <m.div
             style={{ opacity: rightBadgeOpacity }}
-            className="pointer-events-none absolute top-4 right-4 z-30 px-3 py-1 bg-emerald-400 text-slate-950 font-display font-bold text-xs border-2 border-slate-900 shadow-arcade-sm flex items-center gap-1.5"
+            className="pointer-events-none absolute top-4 right-4 z-30 px-3.5 py-1.5 bg-emerald-400 text-slate-950 font-display font-bold text-xs border-2 border-slate-900 shadow-[3px_3px_0px_0px_#0f172a] flex items-center gap-1.5"
           >
             <img
               src="/icons/icon-swipe-known.png"
@@ -283,10 +303,11 @@ export default function ThreeDCard({
           </m.div>
         )}
 
+        {/* ป้ายแสดง Feedback ขณะปัดซ้าย: ทบทวนซ้ำ */}
         {leftBadgeOpacity && (
           <m.div
             style={{ opacity: leftBadgeOpacity }}
-            className="pointer-events-none absolute top-4 left-4 z-30 px-3 py-1 bg-rose-500 text-white font-display font-bold text-xs border-2 border-slate-900 shadow-arcade-sm flex items-center gap-1.5"
+            className="pointer-events-none absolute top-4 left-4 z-30 px-3.5 py-1.5 bg-rose-500 text-white font-display font-bold text-xs border-2 border-slate-900 shadow-[3px_3px_0px_0px_#0f172a] flex items-center gap-1.5"
           >
             <img
               src="/icons/icon-swipe-learning.png"
@@ -297,10 +318,10 @@ export default function ThreeDCard({
           </m.div>
         )}
 
-        {/* 3D Flipping Card Container */}
+        {/* =================================================================== */}
+        {/* LAYER 2: 3D MOUSE TILT CONTAINER (รับองศาเอียงตามเมาส์ แยกเด็ดขาดจาก Flip) */}
+        {/* =================================================================== */}
         <m.div
-          animate={{ rotateY: isFlipped ? 180 : 0 }}
-          transition={{ duration: 0.5, ease: [0.23, 1, 0.32, 1] }}
           style={{
             transformStyle: 'preserve-3d',
             WebkitTransformStyle: 'preserve-3d',
@@ -309,71 +330,140 @@ export default function ThreeDCard({
           }}
           className="relative w-full h-full preserve-3d"
         >
-          {/* ========================================================================= */}
-          {/* FRONT OF 3D TRADING CARD */}
-          {/* ========================================================================= */}
-          <div
+          {/* ================================================================= */}
+          {/* LAYER 3: 3D FLIP CONTAINER (ควบคุมเฉพาะการพลิก 0 หรือ 180 องศา) */}
+          {/* ไม่ทับซ้อนกับ rotateY ของเมาส์ แก้บั๊กการ์ดหายบน PC 100% */}
+          {/* ================================================================= */}
+          <m.div
+            animate={{ rotateY: isFlipped ? 180 : 0 }}
+            transition={{ duration: 0.45, ease: [0.23, 1, 0.32, 1] }}
             style={{
-              backfaceVisibility: 'hidden',
-              WebkitBackfaceVisibility: 'hidden',
-              transform: 'rotateY(0deg) translateZ(1px)',
-              WebkitTransform: 'rotateY(0deg) translateZ(1px)',
-              display: showBackFace ? 'none' : 'flex',
+              transformStyle: 'preserve-3d',
+              WebkitTransformStyle: 'preserve-3d',
             }}
-            className="absolute inset-0 w-full h-full rounded-xl bg-gradient-to-b from-[#2a1b40] via-[#161226] to-[#0c0914] p-3 sm:p-3.5 border-4 border-amber-400 shadow-[0_20px_40px_rgba(0,0,0,0.6),0_0_0_2px_#020617,inset_0_0_12px_rgba(251,191,36,0.3)] flex-col justify-between select-none"
+            className="relative w-full h-full preserve-3d"
           >
-            {/* Holographic Sheen Overlay on Hover (Desktop only) */}
-            {canHover && isHovered && (
-              <div className="pointer-events-none absolute inset-0 rounded-lg bg-gradient-to-tr from-transparent via-white/10 to-amber-200/20 mix-blend-overlay transition-opacity" />
-            )}
+            {/* --------------------------------------------------------------- */}
+            {/* FRONT FACE: ด้านหน้าของการ์ดคำศัพท์ (ภาษาอังกฤษ) */}
+            {/* --------------------------------------------------------------- */}
+            <div
+              style={{
+                backfaceVisibility: 'hidden',
+                WebkitBackfaceVisibility: 'hidden',
+                transform: 'rotateY(0deg) translateZ(1px)',
+                WebkitTransform: 'rotateY(0deg) translateZ(1px)',
+                display: showBackFace ? 'none' : 'flex',
+              }}
+              className="absolute inset-0 w-full h-full rounded-2xl bg-gradient-to-b from-[#241738] via-[#140f22] to-[#0a0712] p-3 sm:p-4 border-[3px] border-amber-400 shadow-[6px_8px_0px_0px_#0F172A,0_16px_32px_rgba(15,23,42,0.3)] ring-1 ring-amber-300/30 flex-col justify-between select-none"
+            >
+              {/* Holographic Sheen Overlay on Hover (Desktop PC only) */}
+              {canHover && isHovered && (
+                <div className="pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-tr from-transparent via-white/10 to-amber-200/20 mix-blend-overlay transition-opacity" />
+              )}
 
-            {/* Top Bar: Category Banner & Mana Cost */}
-            <div className="relative z-10 flex items-center justify-between bg-slate-950/80 border-2 border-amber-400/60 px-3 py-1.5 rounded shadow-sm">
-              <span
-                className={`px-2 py-0.5 text-[10px] sm:text-[11px] font-bold tracking-wide border border-slate-900 ${theme.ribbon}`}
-              >
-                {card.category}
-              </span>
-              <div className="flex items-center gap-1">
-                {Array.from({ length: card.manaCost }).map((_, i) => (
-                  <img
-                    key={i}
-                    src="/icons/icon-hud-mana.png"
-                    alt=""
-                    className="w-3.5 h-3.5 sm:w-4 sm:h-4 [image-rendering:pixelated] drop-shadow-[0_0_4px_rgba(56,189,248,0.8)]"
-                  />
-                ))}
-              </div>
-            </div>
-
-            {/* Middle: 3D Pixel Illustration Frame */}
-            <div className="relative my-2 flex-1 rounded-lg border-2 border-amber-300/70 bg-gradient-to-b from-slate-900/90 to-slate-950 p-2.5 flex flex-col items-center justify-center overflow-hidden shadow-inner">
-              {/* Background Glow */}
-              <div className={`absolute inset-0 bg-gradient-to-b ${theme.glow} opacity-60`} />
-
-              {/* 3D Illustration Pixel Art Frame */}
-              <div className="relative z-10 w-24 h-24 sm:w-28 sm:h-28 rounded-lg bg-slate-950/80 border-2 border-amber-400 p-1.5 shadow-[0_8px_16px_rgba(0,0,0,0.7),inset_0_0_8px_rgba(251,191,36,0.4)] flex items-center justify-center transform transition-transform group-hover:scale-105">
-                <img
-                  src={cardArtSrc}
-                  alt={card.category}
-                  className="w-full h-full object-contain [image-rendering:pixelated] drop-shadow-[0_4px_8px_rgba(0,0,0,0.8)]"
-                />
-              </div>
-
-              {/* Word & Part of Speech */}
-              <div className="relative z-10 mt-2 text-center">
-                <div className="flex items-baseline justify-center gap-2">
-                  <h2 className="font-sans text-2xl sm:text-3xl font-extrabold text-amber-200 tracking-tight drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
-                    {card.word}
-                  </h2>
-                  <span className="text-xs font-mono font-semibold text-amber-400/80">
-                    {card.partOfSpeech}
-                  </span>
+              {/* Top Bar: Category Ribbon & Mana Cost */}
+              <div className="relative z-10 flex items-center justify-between bg-slate-950/85 border-2 border-amber-400/60 px-3 py-1.5 rounded-lg shadow-sm">
+                <span
+                  className={`px-2 py-0.5 text-[10px] sm:text-[11px] font-bold tracking-wide border border-slate-900 rounded ${theme.ribbon}`}
+                >
+                  {card.category}
+                </span>
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: card.manaCost }).map((_, i) => (
+                    <img
+                      key={i}
+                      src="/icons/icon-hud-mana.png"
+                      alt=""
+                      className="w-3.5 h-3.5 sm:w-4 sm:h-4 [image-rendering:pixelated] drop-shadow-[0_0_4px_rgba(56,189,248,0.8)]"
+                    />
+                  ))}
                 </div>
               </div>
 
-              {/* Pronunciation Button (Shielded against card flip) */}
-              <div className="relative z-10 mt-2">
+              {/* Middle Frame: 3D Pixel Illustration Frame */}
+              <div className="relative my-2 flex-1 rounded-xl border-2 border-amber-300/60 bg-gradient-to-b from-slate-900/90 to-slate-950 p-2.5 flex flex-col items-center justify-center overflow-hidden shadow-inner">
+                {/* Background Glow */}
+                <div className={`absolute inset-0 bg-gradient-to-b ${theme.glow} opacity-60`} />
+
+                {/* Pixel Art Frame */}
+                <div className="relative z-10 w-24 h-24 sm:w-28 sm:h-28 rounded-xl bg-slate-950/80 border-2 border-amber-400 p-1.5 shadow-[0_8px_16px_rgba(0,0,0,0.7),inset_0_0_8px_rgba(251,191,36,0.4)] flex items-center justify-center transform transition-transform group-hover:scale-105">
+                  <img
+                    src={cardArtSrc}
+                    alt={card.category}
+                    className="w-full h-full object-contain [image-rendering:pixelated] drop-shadow-[0_4px_8px_rgba(0,0,0,0.8)]"
+                  />
+                </div>
+
+                {/* Word & Part of Speech */}
+                <div className="relative z-10 mt-2.5 text-center">
+                  <div className="flex items-baseline justify-center gap-2">
+                    <h2 className="font-sans text-2xl sm:text-3xl font-extrabold text-amber-200 tracking-tight drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]">
+                      {card.word}
+                    </h2>
+                    <span className="text-xs font-mono font-semibold text-amber-400/80">
+                      {card.partOfSpeech}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Pronunciation Button (Shielded against card flip) */}
+                <div className="relative z-10 mt-2">
+                  <button
+                    type="button"
+                    onPointerDown={(e) => e.stopPropagation()}
+                    onPointerUp={(e) => e.stopPropagation()}
+                    onTouchStart={(e) => e.stopPropagation()}
+                    onTouchEnd={(e) => e.stopPropagation()}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onMouseUp={(e) => e.stopPropagation()}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      onSpeak(card.word, e);
+                    }}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-sky-500 hover:bg-sky-400 text-white text-xs font-bold rounded border border-sky-300 shadow-[0_2px_4px_rgba(0,0,0,0.5)] active:translate-x-[1px] active:translate-y-[1px] transition-all cursor-pointer"
+                  >
+                    <Volume2 className="w-3.5 h-3.5" />
+                    ฟังเสียงอ่าน
+                  </button>
+                </div>
+              </div>
+
+              {/* Bottom Card Footer: Explicit flip signpost */}
+              <div className="relative z-10 bg-slate-950/90 border border-amber-400/40 rounded-lg px-3 py-1.5 flex items-center justify-between text-xs text-amber-200/80 cursor-pointer hover:bg-slate-900 transition-colors">
+                <span className="inline-flex items-center gap-1.5 text-[11px]">
+                  <RotateCcw className="w-3.5 h-3.5 text-amber-400" />
+                  แตะหรือคลิกเพื่อพลิกดูคำแปล
+                </span>
+                <kbd className="px-1.5 py-0.5 text-[10px] font-mono font-bold bg-amber-400 text-slate-950 rounded border border-amber-200 shadow-sm">
+                  SPACE
+                </kbd>
+              </div>
+            </div>
+
+            {/* --------------------------------------------------------------- */}
+            {/* BACK FACE: ด้านหลังของการ์ดคำศัพท์ (คำแปลภาษาไทยและบริบท) */}
+            {/* --------------------------------------------------------------- */}
+            <div
+              style={{
+                backfaceVisibility: 'hidden',
+                WebkitBackfaceVisibility: 'hidden',
+                transform: 'rotateY(180deg) translateZ(1px)',
+                WebkitTransform: 'rotateY(180deg) translateZ(1px)',
+                display: showBackFace ? 'flex' : 'none',
+              }}
+              className="absolute inset-0 w-full h-full rounded-2xl bg-gradient-to-b from-[#1a1126] via-[#0f0b18] to-[#07050d] p-3 sm:p-4 border-[3px] border-amber-400 shadow-[6px_8px_0px_0px_#0F172A,0_16px_32px_rgba(15,23,42,0.3)] ring-1 ring-amber-300/30 flex-col justify-between select-none"
+            >
+              {/* Top Bar: Word Header & Speech Button (Shielded against card flip) */}
+              <div className="flex items-center justify-between bg-slate-950/85 border-2 border-amber-400/60 px-3 py-1.5 rounded-lg shadow-sm">
+                <div className="flex items-baseline gap-2">
+                  <span className="font-sans text-lg sm:text-xl font-bold text-amber-300">
+                    {card.word}
+                  </span>
+                  <span className="text-xs font-mono text-slate-400">
+                    {card.partOfSpeech}
+                  </span>
+                </div>
                 <button
                   type="button"
                   onPointerDown={(e) => e.stopPropagation()}
@@ -385,97 +475,42 @@ export default function ThreeDCard({
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    onSpeak(card.word, e);
+                    onSpeak(`${card.word}. ${card.exampleEn}`, e);
                   }}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-sky-500 hover:bg-sky-400 text-white text-xs font-bold rounded border border-sky-300 shadow-[0_2px_4px_rgba(0,0,0,0.5)] active:translate-x-[1px] active:translate-y-[1px] transition-all cursor-pointer"
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-800 hover:bg-slate-750 text-amber-300 text-xs font-bold rounded border border-amber-400/40 active:translate-x-[1px] active:translate-y-[1px] transition-all cursor-pointer"
                 >
                   <Volume2 className="w-3.5 h-3.5" />
-                  ฟังเสียงอ่าน
+                  ฟังประโยค
                 </button>
               </div>
-            </div>
 
-            {/* Bottom Card Footer: Explicit flip signpost */}
-            <div className="relative z-10 bg-slate-950/90 border border-amber-400/40 rounded px-2.5 py-1.5 flex items-center justify-between text-xs text-amber-200/80 cursor-pointer hover:bg-slate-900 transition-colors">
-              <span className="inline-flex items-center gap-1.5 text-[11px]">
-                <RotateCcw className="w-3.5 h-3.5 text-amber-400" />
-                แตะหรือคลิกเพื่อพลิกดูคำแปล
-              </span>
-              <kbd className="px-1.5 py-0.5 text-[10px] font-mono font-bold bg-amber-400 text-slate-950 rounded border border-amber-200 shadow-sm">
-                SPACE
-              </kbd>
-            </div>
-          </div>
-
-          {/* ========================================================================= */}
-          {/* BACK OF 3D TRADING CARD (Rotated 180deg) */}
-          {/* ========================================================================= */}
-          <div
-            style={{
-              backfaceVisibility: 'hidden',
-              WebkitBackfaceVisibility: 'hidden',
-              transform: 'rotateY(180deg) translateZ(1px)',
-              WebkitTransform: 'rotateY(180deg) translateZ(1px)',
-              display: showBackFace ? 'flex' : 'none',
-            }}
-            className="absolute inset-0 w-full h-full rounded-xl bg-gradient-to-b from-[#1c132b] via-[#100d1c] to-[#08050e] p-3 sm:p-3.5 border-4 border-amber-400 shadow-[0_20px_40px_rgba(0,0,0,0.6),0_0_0_2px_#020617,inset_0_0_12px_rgba(251,191,36,0.3)] flex-col justify-between select-none"
-          >
-            {/* Top Bar: Word Header & Speech Button (Shielded against card flip) */}
-            <div className="flex items-center justify-between bg-slate-950/80 border-2 border-amber-400/60 px-3 py-1.5 rounded shadow-sm">
-              <div className="flex items-baseline gap-2">
-                <span className="font-sans text-lg sm:text-xl font-bold text-amber-300">
-                  {card.word}
-                </span>
-                <span className="text-xs font-mono text-slate-400">
-                  {card.partOfSpeech}
-                </span>
-              </div>
-              <button
-                type="button"
-                onPointerDown={(e) => e.stopPropagation()}
-                onPointerUp={(e) => e.stopPropagation()}
-                onTouchStart={(e) => e.stopPropagation()}
-                onTouchEnd={(e) => e.stopPropagation()}
-                onMouseDown={(e) => e.stopPropagation()}
-                onMouseUp={(e) => e.stopPropagation()}
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  onSpeak(`${card.word}. ${card.exampleEn}`, e);
-                }}
-                className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-slate-800 hover:bg-slate-750 text-amber-300 text-xs font-bold rounded border border-amber-400/40 active:translate-x-[1px] active:translate-y-[1px] transition-all cursor-pointer"
-              >
-                <Volume2 className="w-3.5 h-3.5" />
-                ฟังประโยค
-              </button>
-            </div>
-
-            {/* Middle: Thai Meaning & TOEIC Sentence Context */}
-            <div className="my-auto space-y-3 px-2 py-1">
-              <div className="bg-slate-900/80 border-2 border-amber-300/40 rounded-lg p-3 sm:p-4 text-center shadow-inner">
-                <div className="text-[11px] text-amber-300 font-medium mb-1">
-                  ความหมายภาษาไทย
+              {/* Middle Frame: Thai Meaning & TOEIC Sentence Context */}
+              <div className="my-auto space-y-3 px-1 py-1">
+                <div className="bg-slate-900/85 border-2 border-amber-300/40 rounded-xl p-3 sm:p-4 text-center shadow-inner">
+                  <div className="text-[11px] text-amber-300 font-medium mb-1">
+                    ความหมายภาษาไทย
+                  </div>
+                  <p className="text-xl sm:text-2xl font-bold text-white leading-snug">
+                    {card.meaningTh}
+                  </p>
                 </div>
-                <p className="text-xl sm:text-2xl font-bold text-white leading-snug">
-                  {card.meaningTh}
-                </p>
+
+                <div className="bg-slate-900/60 border-l-4 border-amber-400 rounded-r-xl p-3 text-slate-200 text-xs sm:text-sm leading-relaxed italic shadow-sm">
+                  &ldquo;{card.exampleEn}&rdquo;
+                </div>
               </div>
 
-              <div className="bg-slate-900/60 border-l-4 border-amber-400 rounded-r-lg p-3 text-slate-200 text-xs sm:text-sm leading-relaxed italic shadow-sm">
-                &ldquo;{card.exampleEn}&rdquo;
+              {/* Bottom: Swipe Guidance & Flip Signpost */}
+              <div className="bg-slate-950/90 border border-amber-400/40 rounded-lg px-3 py-1.5 flex items-center justify-between text-xs text-slate-400 cursor-pointer hover:bg-slate-900 transition-colors">
+                <span className="text-[11px] text-amber-200/90">
+                  ปัดขวาเมื่อจำได้ หรือปัดซ้ายเพื่อทบทวน
+                </span>
+                <kbd className="px-1.5 py-0.5 text-[10px] font-mono bg-slate-800 text-amber-300 rounded border border-slate-700">
+                  SPACE
+                </kbd>
               </div>
             </div>
-
-            {/* Bottom: Swipe Guidance & Flip Signpost */}
-            <div className="bg-slate-950/90 border border-amber-400/40 rounded px-2.5 py-1.5 flex items-center justify-between text-xs text-slate-400 cursor-pointer hover:bg-slate-900 transition-colors">
-              <span className="text-[11px] text-amber-200/90">
-                ปัดขวาเมื่อจำได้ หรือปัดซ้ายเพื่อทบทวน
-              </span>
-              <kbd className="px-1.5 py-0.5 text-[10px] font-mono bg-slate-800 text-amber-300 rounded border border-slate-700">
-                SPACE
-              </kbd>
-            </div>
-          </div>
+          </m.div>
         </m.div>
       </m.div>
     </div>

@@ -120,9 +120,12 @@ export default function FlashcardsPage() {
 
   // Framer Motion Drag values
   const dragX = useMotionValue(0);
-  const rotateZ = useTransform(dragX, [-240, 0, 240], [-10, 0, 10]);
-  const rightBadgeOpacity = useTransform(dragX, [25, 110], [0, 1]);
-  const leftBadgeOpacity = useTransform(dragX, [-110, -25], [1, 0]);
+  const rotateZ = useTransform(dragX, [-220, 0, 220], [-10, 0, 10]);
+  const rightBadgeOpacity = useTransform(dragX, [20, 80], [0, 1]);
+  const leftBadgeOpacity = useTransform(dragX, [-80, -20], [1, 0]);
+
+  // Ref สำหรับบันทึก timestamp การปัดการ์ด เพื่อป้องกันไม่ให้การปัดกลายเป็นการพลิกการ์ด (Shield synthetic clicks)
+  const lastSwipeTimeRef = React.useRef<number>(0);
 
   const { data: flashcardsData } = useFlashcards(undefined, authUser?.id);
   const { invalidateDashboard } = useCardCraftQueryHelpers();
@@ -285,9 +288,18 @@ export default function FlashcardsPage() {
     speakEnglish(text, { rate: 0.85 });
   }, []);
 
+  // ฟังก์ชันพลิกการ์ด (มี Shield ป้องกันไม่ให้การปัดกลายเป็นการพลิกการ์ดเด็ดขาด)
+  const handleFlip = useCallback(() => {
+    if (Date.now() - lastSwipeTimeRef.current < 600) {
+      return;
+    }
+    setIsFlipped((prev) => !prev);
+  }, []);
+
   // ฟังก์ชันการปัดการ์ด (ซ้าย = ทบทวนซ้ำ, ขวา = จำแม่นแล้ว)
   const handleSwipe = useCallback(
     async (isKnown: boolean) => {
+      lastSwipeTimeRef.current = Date.now();
       if (!authUser) {
         dragX.set(0);
         requireAuth(
@@ -342,13 +354,16 @@ export default function FlashcardsPage() {
     _event: MouseEvent | TouchEvent | PointerEvent,
     info: PanInfo,
   ) => {
-    const threshold = 75;
+    const threshold = 65;
     const isSwipeRight =
       info.offset.x > threshold ||
-      (info.offset.x > 30 && info.velocity.x > 280);
+      (info.offset.x > 25 && info.velocity.x > 220);
     const isSwipeLeft =
       info.offset.x < -threshold ||
-      (info.offset.x < -30 && info.velocity.x < -280);
+      (info.offset.x < -25 && info.velocity.x < -220);
+
+    // บันทึกเวลาเพื่อป้องกันไม่ให้ trailing click พลิกการ์ด
+    lastSwipeTimeRef.current = Date.now();
 
     if (isSwipeRight) {
       handleSwipe(true);
@@ -812,68 +827,73 @@ export default function FlashcardsPage() {
                     </AnimatePresence>
                   </div>
 
-                  {/* 3D Spell Card */}
-                  <ThreeDCard
-                    key={activeCard.id + '-' + currentIndex}
-                    card={activeCard}
-                    isFlipped={isFlipped}
-                    onFlip={() => setIsFlipped((prev) => !prev)}
-                    onSpeak={speakText}
-                    dragX={dragX}
-                    rotateZ={rotateZ}
-                    onDragEnd={handleDragEnd}
-                    rightBadgeOpacity={rightBadgeOpacity}
-                    leftBadgeOpacity={leftBadgeOpacity}
-                  />
-
-                  {/* 3 Physical Tactile Control Buttons */}
-                  <div className="grid grid-cols-3 gap-2 sm:gap-3">
-                    <button
-                      type="button"
-                      onClick={() => handleSwipe(false)}
-                      className="min-h-[44px] py-2.5 px-2 sm:px-3 bg-white text-slate-900 border-2 border-slate-900 shadow-arcade hover:bg-rose-50 active:translate-x-[2px] active:translate-y-[2px] active:shadow-arcade-sm transition-all flex items-center justify-between cursor-pointer"
-                    >
-                      <span className="inline-flex items-center gap-1 sm:gap-1.5 font-display font-bold text-[11px] sm:text-xs text-rose-700">
-                        <ArrowLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
-                        ทบทวนซ้ำ
-                      </span>
-                      <kbd className="hidden sm:inline-block px-1.5 py-0.5 text-[10px] font-mono bg-slate-100 border border-slate-900">
-                        ←
-                      </kbd>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setIsFlipped((prev) => !prev)}
-                      className="min-h-[44px] py-2.5 px-2 sm:px-3 bg-amber-400 text-slate-950 border-2 border-slate-900 shadow-arcade hover:bg-amber-300 active:translate-x-[2px] active:translate-y-[2px] active:shadow-arcade-sm transition-all flex items-center justify-center sm:justify-between cursor-pointer"
-                    >
-                      <span className="font-display font-bold text-[11px] sm:text-xs truncate">
-                        พลิกดูคำแปล
-                      </span>
-                      <kbd className="hidden sm:inline-block px-1.5 py-0.5 text-[10px] font-mono bg-white border border-slate-900">
-                        SPACE
-                      </kbd>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => handleSwipe(true)}
-                      className="min-h-[44px] py-2.5 px-2 sm:px-3 bg-emerald-400 text-slate-950 border-2 border-slate-900 shadow-arcade hover:bg-emerald-300 active:translate-x-[2px] active:translate-y-[2px] active:shadow-arcade-sm transition-all flex items-center justify-between cursor-pointer"
-                    >
-                      <span className="inline-flex items-center gap-1 sm:gap-1.5 font-display font-bold text-[11px] sm:text-xs text-slate-950">
-                        จำแม่นแล้ว
-                        <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
-                      </span>
-                      <kbd className="hidden sm:inline-block px-1.5 py-0.5 text-[10px] font-mono bg-white border border-slate-900">
-                        →
-                      </kbd>
-                    </button>
+                  {/* 3D Spell Card Wrapper */}
+                  <div className="w-full">
+                    <ThreeDCard
+                      key={activeCard.id + '-' + currentIndex}
+                      card={activeCard}
+                      isFlipped={isFlipped}
+                      onFlip={handleFlip}
+                      onSpeak={speakText}
+                      dragX={dragX}
+                      rotateZ={rotateZ}
+                      onDragEnd={handleDragEnd}
+                      rightBadgeOpacity={rightBadgeOpacity}
+                      leftBadgeOpacity={leftBadgeOpacity}
+                    />
                   </div>
 
-                  {/* Clean Keyboard Shortcuts Helper */}
-                  <p className="text-center text-[11px] text-slate-500 font-sans">
-                    กด <kbd className="px-1 py-0.5 bg-slate-100 border border-slate-400 rounded text-[10px] font-mono">SPACE</kbd> เพื่อพลิกดูคำแปล • กดลูกศร <kbd className="px-1 py-0.5 bg-slate-100 border border-slate-400 rounded text-[10px] font-mono">←</kbd> / <kbd className="px-1 py-0.5 bg-slate-100 border border-slate-400 rounded text-[10px] font-mono">→</kbd> เพื่อปัดการ์ด
-                  </p>
+                  {/* Under Space: เว้นระยะห่างสบายตาและไม่ชิดเกินไปตามคำสั่งผู้ใช้ */}
+                  <div className="pt-6 sm:pt-8 space-y-3.5">
+                    {/* 3 Physical Tactile Control Buttons */}
+                    <div className="grid grid-cols-3 gap-2.5 sm:gap-4">
+                      <button
+                        type="button"
+                        onClick={() => handleSwipe(false)}
+                        className="min-h-[48px] py-3 px-2 sm:px-3.5 bg-white text-slate-900 border-2 border-slate-900 shadow-[3px_3px_0px_0px_#0f172a] hover:bg-rose-50 active:translate-x-[2px] active:translate-y-[2px] active:shadow-[1px_1px_0px_0px_#0f172a] transition-all flex items-center justify-between cursor-pointer"
+                      >
+                        <span className="inline-flex items-center gap-1 sm:gap-1.5 font-display font-bold text-[11px] sm:text-xs text-rose-700">
+                          <ArrowLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+                          ทบทวนซ้ำ
+                        </span>
+                        <kbd className="hidden sm:inline-block px-1.5 py-0.5 text-[10px] font-mono bg-slate-100 border border-slate-900">
+                          ←
+                        </kbd>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleFlip()}
+                        className="min-h-[48px] py-3 px-2 sm:px-3.5 bg-amber-400 text-slate-950 border-2 border-slate-900 shadow-[3px_3px_0px_0px_#0f172a] hover:bg-amber-300 active:translate-x-[2px] active:translate-y-[2px] active:shadow-[1px_1px_0px_0px_#0f172a] transition-all flex items-center justify-center sm:justify-between cursor-pointer"
+                      >
+                        <span className="font-display font-bold text-[11px] sm:text-xs truncate">
+                          พลิกดูคำแปล
+                        </span>
+                        <kbd className="hidden sm:inline-block px-1.5 py-0.5 text-[10px] font-mono bg-white border border-slate-900">
+                          SPACE
+                        </kbd>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleSwipe(true)}
+                        className="min-h-[48px] py-3 px-2 sm:px-3.5 bg-emerald-400 text-slate-950 border-2 border-slate-900 shadow-[3px_3px_0px_0px_#0f172a] hover:bg-emerald-300 active:translate-x-[2px] active:translate-y-[2px] active:shadow-[1px_1px_0px_0px_#0f172a] transition-all flex items-center justify-between cursor-pointer"
+                      >
+                        <span className="inline-flex items-center gap-1 sm:gap-1.5 font-display font-bold text-[11px] sm:text-xs text-slate-950">
+                          จำแม่นแล้ว
+                          <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
+                        </span>
+                        <kbd className="hidden sm:inline-block px-1.5 py-0.5 text-[10px] font-mono bg-white border border-slate-900">
+                          →
+                        </kbd>
+                      </button>
+                    </div>
+
+                    {/* Clean Keyboard Shortcuts Helper */}
+                    <p className="text-center text-[11px] text-slate-500 font-sans">
+                      กด <kbd className="px-1 py-0.5 bg-slate-100 border border-slate-400 rounded text-[10px] font-mono">SPACE</kbd> เพื่อพลิกดูคำแปล • กดลูกศร <kbd className="px-1 py-0.5 bg-slate-100 border border-slate-400 rounded text-[10px] font-mono">←</kbd> / <kbd className="px-1 py-0.5 bg-slate-100 border border-slate-400 rounded text-[10px] font-mono">→</kbd> เพื่อปัดการ์ด
+                    </p>
+                  </div>
                 </div>
               ) : (
                 /* Empty state */
