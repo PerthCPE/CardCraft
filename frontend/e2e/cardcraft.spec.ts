@@ -171,7 +171,29 @@ test.describe('CardCraft Full E2E & UI Quality Assurance Suite (CardCraft v2.0)'
         // Verify card did NOT accidentally flip to back face
         const isBackFlipped = await page.getByText(/ความหมายภาษาไทย/i).first().isVisible();
         expect(isBackFlipped).toBe(false);
+
+        // 2.3c Test Previous Card Button (ย้อนใบก่อนหน้า)
+        const prevCardBtn = page.getByRole('button', { name: /ย้อนใบก่อนหน้า/i });
+        if (await prevCardBtn.isVisible()) {
+          await prevCardBtn.click();
+          await page.waitForTimeout(400);
+          expect((await wordHeader.textContent())?.trim()).toBe(initialWord);
+        }
       }
+    }
+
+    // 2.3d Test Queue Drawer Pagination (< and >)
+    const queuePageText = page.locator('span:has-text("หน้า"):has(strong)').first();
+    const nextQueueBtn = page.getByRole('button', { name: /เปลี่ยนหน้าถัดไป/i });
+    const prevQueueBtn = page.getByRole('button', { name: /ย้อนหน้าก่อนหน้า/i });
+    if ((await nextQueueBtn.isVisible()) && (await queuePageText.isVisible())) {
+      await nextQueueBtn.click();
+      await page.waitForTimeout(400);
+      expect(await queuePageText.textContent()).toContain('2');
+
+      await prevQueueBtn.click();
+      await page.waitForTimeout(400);
+      expect(await queuePageText.textContent()).toContain('1');
     }
 
     // 2.4 Test Custom Deck Builder Modal
