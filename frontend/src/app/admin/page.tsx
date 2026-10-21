@@ -250,8 +250,8 @@ export default function AdminGuildCrudPage() {
         <div className="w-12 h-12 bg-rose-500 border-2 border-slate-900 mx-auto flex items-center justify-center shadow-pixel-sm">
           <Wrench className="w-6 h-6 text-white" />
         </div>
-        <div className="inline-block px-2.5 py-0.5 bg-rose-100 text-rose-800 text-xs font-bold font-mono border border-rose-300">
-          RESTRICTED AREA • ADMIN ONLY
+        <div className="inline-block px-2.5 py-0.5 bg-rose-100 text-rose-800 text-xs font-semibold border border-rose-300">
+          พื้นที่สงวนสิทธิ์เฉพาะผู้ดูแลระบบ (Restricted Area • Admin Only)
         </div>
         <h1 className="text-xl font-bold font-display text-slate-900">
           ไม่มีสิทธิ์เข้าถึงหน้านี้ (Admin Only)

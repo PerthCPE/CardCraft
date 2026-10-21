@@ -674,7 +674,7 @@ export default function RealTimeExamModal({
             {/* Evolution Tier Card */}
             <div className="p-3 sm:p-4 bg-amber-50 border-2 border-slate-900 flex items-center justify-between gap-2">
               <div>
-                <span className="text-[11px] sm:text-xs font-bold text-slate-600 uppercase">
+                <span className="text-[11px] sm:text-xs font-semibold text-slate-600">
                   คลาสฮีโร่ที่ปลดล็อก:
                 </span>
                 <div className="text-sm sm:text-lg font-bold font-display text-slate-900">
@@ -682,7 +682,7 @@ export default function RealTimeExamModal({
                 </div>
                 <div className="text-xs text-slate-600 mt-0.5">
                   {results.evolution.isPassedTarget
-                    ? '🎯 บรรลุเป้าหมาย TOEIC 700+ เรียบร้อยแล้ว!'
+                    ? 'บรรลุเป้าหมาย TOEIC 700+ เรียบร้อยแล้ว!'
                     : `ขาดอีก ${formatDecimal(results.evolution.pointsToTarget700)} คะแนนเพื่อบรรลุเป้าหมาย 700+`}
                 </div>
               </div>
@@ -738,7 +738,7 @@ export default function RealTimeExamModal({
                       </div>
 
                       <p className="text-slate-700 bg-white p-2 border border-slate-200 rounded leading-relaxed text-[11px] sm:text-xs">
-                        💡 {q.explanationTh}
+                        {q.explanationTh}
                       </p>
                     </div>
                   );

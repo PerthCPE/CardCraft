@@ -811,8 +811,8 @@ export default function PracticeHubPage() {
         <div className="bg-[#FFFDF7] border-2 border-slate-900 shadow-[6px_6px_0px_0px_#0f172a] max-w-lg w-full p-6 space-y-6">
           <div className="flex items-center justify-between pb-3 border-b-2 border-slate-900">
             <div>
-              <span className="text-xs font-pixel text-sky-600 font-bold">
-                VOCAB ARCADE SETTINGS
+              <span className="text-xs font-pixel text-sky-700 font-bold">
+                ตั้งค่ามินิเกมคำศัพท์
               </span>
               <h2 className="text-xl font-bold font-thai text-slate-900">
                 ตั้งค่า {meta?.titleTh}

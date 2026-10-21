@@ -173,8 +173,8 @@ export default function DashboardPage() {
                   priority={true}
                 />
               </div>
-              <span className="text-[10px] font-pixel text-slate-600 mt-1 uppercase tracking-wider">
-                TIER {evolution.unlockedTier} OF 7
+              <span className="text-[10px] font-pixel text-slate-600 mt-1">
+                Tier {evolution.unlockedTier} / 7
               </span>
             </div>
 
@@ -246,8 +246,8 @@ export default function DashboardPage() {
           {/* Right Column (5 cols): Numeric Score Readout & Target Gap */}
           <div className="lg:col-span-5 bg-slate-950 border-2 border-slate-800 p-5 sm:p-6 space-y-4 shadow-inner">
             <div className="flex items-baseline justify-between border-b border-slate-800 pb-3">
-              <span className="text-[11px] font-mono uppercase tracking-wider text-slate-400">
-                คะแนนทางการ (Official Estimated Score)
+              <span className="text-[11px] font-mono tracking-wider text-slate-400">
+                คะแนนทางการ (Official Score)
               </span>
               <span className="text-xs text-amber-300 font-semibold">
                 เป้าหมาย {currentTargetScore} คะแนน
@@ -280,20 +280,20 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <div className="flex items-center justify-between text-xs text-slate-300 pt-1">
-              <div className="flex items-center gap-1.5">
+            <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-300 pt-1">
+              <div className="flex items-center gap-1.5 min-w-0">
                 {isTargetAchieved ? (
                   <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
                 ) : (
                   <Crosshair className="w-4 h-4 text-amber-400 shrink-0" />
                 )}
-                <span className="font-sans">
+                <span className="font-sans truncate">
                   {isTargetAchieved
                     ? `ผ่านเกณฑ์เป้าหมาย ${currentTargetScore}+ แล้ว`
                     : `ห่างจากเป้าหมาย ${currentTargetScore} คะแนนอีก ${formatDecimal(pointsToTarget)} คะแนน`}
                 </span>
               </div>
-              <span className="font-pixel text-[11px] text-amber-300">
+              <span className="font-pixel text-[11px] text-amber-300 shrink-0">
                 {currentTargetScore}
               </span>
             </div>
@@ -416,9 +416,9 @@ export default function DashboardPage() {
       <section className="bg-[#FFFDF7] border-2 border-slate-900 shadow-arcade p-5 sm:p-7 space-y-6">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5 border-b border-slate-200 pb-5">
           <div className="space-y-1.5">
-            <div className="inline-flex items-center gap-2 px-3 py-1 bg-sky-100 text-sky-950 border border-sky-400 text-xs font-display font-bold">
-              <Compass className="w-4 h-4 text-sky-700" />
-              TOEIC READINESS FORECAST (คาดการณ์ความพร้อมแยก 7 พาร์ท)
+            <div className="inline-flex items-center gap-2 px-2.5 py-1 bg-sky-100 text-sky-950 border border-sky-400 text-xs font-semibold">
+              <Compass className="w-3.5 h-3.5 text-sky-700" />
+              <span>การประเมินความพร้อม (TOEIC Readiness Forecast)</span>
             </div>
             <h2 className="text-xl sm:text-2xl font-bold font-thai text-slate-950">
               คะแนนคาดการณ์จากการฝึกซ้อมรายพาร์ท
@@ -429,10 +429,10 @@ export default function DashboardPage() {
           </div>
 
           {/* Summed Forecast Score Display */}
-          <div className="bg-gradient-to-br from-slate-900 to-slate-950 text-white border-2 border-slate-900 p-4 shadow-[4px_4px_0px_0px_#020617] min-w-[280px]">
+          <div className="w-full lg:w-auto min-w-0 sm:min-w-[280px] bg-gradient-to-br from-slate-900 to-slate-950 text-white border-2 border-slate-900 p-4 shadow-[4px_4px_0px_0px_#020617]">
             <div className="flex items-center justify-between text-xs text-sky-300 mb-1">
               <span className="font-semibold">คะแนนคาดการณ์รวม</span>
-              <span className="font-pixel text-[10px] text-slate-400">ESTIMATED TOTAL</span>
+              <span className="text-[11px] text-slate-400 font-sans">รวม 7 พาร์ท</span>
             </div>
             <div className="flex items-baseline justify-between">
               <span className="font-pixel text-3xl sm:text-4xl text-sky-300 font-bold">
@@ -869,8 +869,8 @@ export default function DashboardPage() {
           {user && (user.username === 'admin' || user.email?.includes('admin')) && (
             <div className="bg-slate-900 text-slate-100 border-2 border-slate-950 shadow-arcade p-5 flex items-center justify-between gap-4">
               <div className="space-y-1">
-                <div className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-amber-400 text-slate-950 text-[10px] font-bold font-mono">
-                  ADMIN ONLY
+                <div className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-amber-400 text-slate-950 text-[10px] font-bold">
+                  เฉพาะผู้ดูแลระบบ
                 </div>
                 <h3 className="font-bold text-sm text-amber-400 font-thai">
                   ระบบจัดการฐานข้อมูล (CRUD Manager)

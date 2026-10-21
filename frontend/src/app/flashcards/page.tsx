@@ -1066,7 +1066,7 @@ export default function FlashcardsPage() {
               </div>
 
               {/* Quick Jump Buttons */}
-              <div className="flex items-center gap-1.5 text-xs">
+              <div className="flex flex-wrap items-center gap-1.5 text-xs">
                 <button
                   type="button"
                   disabled={dictPage <= 1}

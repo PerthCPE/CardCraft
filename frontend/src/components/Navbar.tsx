@@ -203,9 +203,7 @@ export function Navbar() {
                   <span>{item.label}</span>
                 </div>
                 {isActive && (
-                  <span className="font-pixel text-[10px] bg-slate-950 text-amber-300 px-1.5 py-0.5">
-                    ACTIVE
-                  </span>
+                  <span className="w-2 h-2 rounded-full bg-slate-950 border border-amber-300" />
                 )}
               </Link>
             );

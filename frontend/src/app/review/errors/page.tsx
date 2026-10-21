@@ -215,7 +215,7 @@ export default function ErrorReviewPage() {
         <section className="space-y-6">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="bg-white border-2 border-slate-900 p-4 shadow-arcade-sm space-y-1">
-              <span className="text-xs font-bold text-slate-500 uppercase tracking-wide">
+              <span className="text-xs font-semibold text-slate-600 font-sans">
                 ข้อสอบที่ทำทั้งหมด
               </span>
               <div className="font-pixel text-2xl sm:text-3xl text-slate-900">
@@ -225,7 +225,7 @@ export default function ErrorReviewPage() {
             </div>
 
             <div className="bg-white border-2 border-slate-900 p-4 shadow-arcade-sm space-y-1">
-              <span className="text-xs font-bold text-emerald-600 uppercase tracking-wide">
+              <span className="text-xs font-semibold text-emerald-700 font-sans">
                 ตอบถูกทั้งหมด
               </span>
               <div className="font-pixel text-2xl sm:text-3xl text-emerald-600">
@@ -235,17 +235,17 @@ export default function ErrorReviewPage() {
             </div>
 
             <div className="bg-white border-2 border-slate-900 p-4 shadow-arcade-sm space-y-1">
-              <span className="text-xs font-bold text-red-600 uppercase tracking-wide">
+              <span className="text-xs font-semibold text-rose-700 font-sans">
                 ตอบผิดทั้งหมด
               </span>
-              <div className="font-pixel text-2xl sm:text-3xl text-red-600">
+              <div className="font-pixel text-2xl sm:text-3xl text-rose-600">
                 {analytics.totalWrong}
               </div>
               <span className="text-[11px] text-slate-500">บันทึกใน AnswerLog</span>
             </div>
 
             <div className="bg-white border-2 border-slate-900 p-4 shadow-arcade-sm space-y-1">
-              <span className="text-xs font-bold text-indigo-600 uppercase tracking-wide">
+              <span className="text-xs font-semibold text-indigo-700 font-sans">
                 จุดอ่อนหลักอันดับ 1
               </span>
               <div className="font-display font-bold text-base sm:text-lg text-indigo-900 truncate">
