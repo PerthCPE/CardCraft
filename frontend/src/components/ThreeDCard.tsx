@@ -17,7 +17,14 @@
 // ============================================================================
 
 import React, { useState, useEffect, useRef } from 'react';
-import { m, useMotionValue, useSpring, useTransform, PanInfo } from 'framer-motion';
+import {
+  m,
+  useMotionValue,
+  useSpring,
+  useTransform,
+  useDragControls,
+  PanInfo,
+} from 'framer-motion';
 import { Volume2, RotateCcw } from 'lucide-react';
 import type { FlashcardItem } from '@/data/toeic-types';
 
@@ -185,6 +192,7 @@ export default function ThreeDCard({
   // =========================================================================
   // GESTURE ISOLATION ENGINE (แยกการปัดกับการพลิกอย่างเด็ดขาด 100%):
   // =========================================================================
+  const dragControls = useDragControls();
   const pointerStartPosRef = useRef<{ x: number; y: number } | null>(null);
   const isDraggingRef = useRef(false);
   const dragDistanceRef = useRef(0);
@@ -192,12 +200,16 @@ export default function ThreeDCard({
   const lastFlipTimeRef = useRef(0);
 
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    // 1. ถ้าคลิกโดนปุ่มภายใน (เช่น ปุ่มฟังเสียงอ่าน) ห้ามเริ่ม Drag และห้ามพลิกเด็ดขาด
     if ((e.target as HTMLElement).closest('button')) {
       return;
     }
     pointerStartPosRef.current = { x: e.clientX, y: e.clientY };
     isDraggingRef.current = false;
     dragDistanceRef.current = 0;
+
+    // เริ่มการ Drag เฉพาะเมื่อไม่ได้สัมผัส/คลิกบนปุ่ม
+    dragControls.start(e);
   };
 
   const handleDragStart = () => {
@@ -301,6 +313,8 @@ export default function ThreeDCard({
       {/* ===================================================================== */}
       <m.div
         drag="x"
+        dragControls={dragControls}
+        dragListener={false}
         dragMomentum={false}
         dragDirectionLock
         onDragStart={handleDragStart}
@@ -442,12 +456,14 @@ export default function ThreeDCard({
                 <div className="relative z-10 mt-2">
                   <button
                     type="button"
-                    onPointerDown={(e) => e.stopPropagation()}
-                    onPointerUp={(e) => e.stopPropagation()}
-                    onTouchStart={(e) => e.stopPropagation()}
-                    onTouchEnd={(e) => e.stopPropagation()}
-                    onMouseDown={(e) => e.stopPropagation()}
-                    onMouseUp={(e) => e.stopPropagation()}
+                    onPointerDown={(e) => {
+                      e.stopPropagation();
+                      e.nativeEvent.stopImmediatePropagation();
+                    }}
+                    onPointerUp={(e) => {
+                      e.stopPropagation();
+                      e.nativeEvent.stopImmediatePropagation();
+                    }}
                     onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
@@ -498,12 +514,14 @@ export default function ThreeDCard({
                 </div>
                 <button
                   type="button"
-                  onPointerDown={(e) => e.stopPropagation()}
-                  onPointerUp={(e) => e.stopPropagation()}
-                  onTouchStart={(e) => e.stopPropagation()}
-                  onTouchEnd={(e) => e.stopPropagation()}
-                  onMouseDown={(e) => e.stopPropagation()}
-                  onMouseUp={(e) => e.stopPropagation()}
+                  onPointerDown={(e) => {
+                    e.stopPropagation();
+                    e.nativeEvent.stopImmediatePropagation();
+                  }}
+                  onPointerUp={(e) => {
+                    e.stopPropagation();
+                    e.nativeEvent.stopImmediatePropagation();
+                  }}
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();

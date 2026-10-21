@@ -121,13 +121,19 @@ test.describe('CardCraft Full E2E & UI Quality Assurance Suite (CardCraft v2.0)'
     // After flip, Thai meaning or sentence speech button should be visible
     await expect(page.getByText(/ความหมายภาษาไทย|ฟังประโยค/i).first()).toBeVisible({ timeout: 5000 });
 
-    // 2.2 Test Audio Non-Flip Guarantee
-    // Clicking the audio icon button must speak audio but NOT flip the card back
+    // 2.2 Test Audio Non-Flip Guarantee & No Drag-Holding Attachment
+    // Clicking the audio icon button must speak audio, NOT flip the card, and NOT attach the card to cursor
     const audioBtn = page.locator('button:has(svg.lucide-volume2)').first();
     if (await audioBtn.isVisible()) {
       await audioBtn.click();
       // Card should still be showing the back
       await expect(page.getByText(/ความหมายภาษาไทย|ฟังประโยค/i).first()).toBeVisible();
+
+      // Ensure card did NOT start dragging or get stuck to cursor
+      const cardDragContainer = page.locator('div.perspective-1000 > div').first();
+      await page.mouse.move(600, 300);
+      const styleAfterMove = await cardDragContainer.getAttribute('style');
+      expect(styleAfterMove).not.toContain('translateX');
     }
 
     // 2.3 Test Swipe Buttons (จำแม่นแล้ว / ทบทวนซ้ำ)
