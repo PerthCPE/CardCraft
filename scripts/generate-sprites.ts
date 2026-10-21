@@ -4,7 +4,7 @@ import * as path from 'path';
 
 // PixelLab API Configuration
 const PIXELLAB_BASE_URL = process.env.PIXELLAB_BASE_URL || 'https://api.pixellab.ai/v2';
-const PIXELLAB_API_KEY = process.env.PIXELLAB_API_KEY || 'dfc3fbff-e5b9-4f95-8c96-e08b43832b08';
+const PIXELLAB_API_KEY = process.env.PIXELLAB_API_KEY || '123a5bcc-2996-4583-a502-d45ca0a0734c';
 const OUTPUT_DIR = path.resolve(__dirname, '../frontend/public/sprites');
 
 interface CharacterTierConfig {
