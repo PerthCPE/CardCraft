@@ -48,6 +48,7 @@ import type { FlashcardItem } from '@/data/toeic-types';
 import { TOEIC_CATEGORIES } from '@/data/toeic-types';
 import dynamic from 'next/dynamic';
 import { recordCardSwipe } from '@/lib/api';
+import DeckMasteryVisualizer from '@/components/flashcards/DeckMasteryVisualizer';
 import { formatDecimal } from '@/utils/number-format.util';
 import { useFlashcards } from '@/hooks/useFlashcardsQuery';
 import { useCardCraftQueryHelpers } from '@/hooks/useDashboardQueries';
@@ -114,6 +115,7 @@ export default function FlashcardsPage() {
   // การแบ่งหน้าสำหรับพจนานุกรมและคิวการ์ด
   const [dictPage, setDictPage] = useState<number>(1);
   const [queuePage, setQueuePage] = useState<number>(1);
+  const [sessionSwipes, setSessionSwipes] = useState<boolean[]>([]);
 
   // บันทึกการ์ดที่ถูกปัดในเซสชันนี้ เพื่อป้องกัน race condition จากเซิร์ฟเวอร์
   const locallySwipedCardsRef = React.useRef<
@@ -345,6 +347,7 @@ export default function FlashcardsPage() {
           );
 
           setCurrentIndex((prev) => prev + 1);
+          setSessionSwipes((prev) => [...prev.slice(-14), isKnown]);
           isSwipingRef.current = false;
           lastSwipeTimeRef.current = Date.now();
 
@@ -720,7 +723,16 @@ export default function FlashcardsPage() {
         {/* 3A. SWIPE_DECK MODE: การ์ด 3D เป็นพระเอกตรงกลาง + คิวการ์ดด้านข้าง */}
         {/* ==================================================================== */}
         {viewMode === 'SWIPE_DECK' && (
-          <section className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          <div className="space-y-6">
+            {/* กราฟแอนิเมชันวัดสัดส่วนการจำคำศัพท์ & Sparkline จังหวะความแม่นยำ */}
+            <DeckMasteryVisualizer
+              totalCards={filteredCards.length > 0 ? filteredCards.length : cards.length}
+              masteredCount={statusCounts.mastered}
+              learningCount={statusCounts.learning + statusCounts.due}
+              recentSwipes={sessionSwipes}
+            />
+
+            <section className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
             {/* Center Stage: Hero 3D Card Deck (7 columns on desktop) */}
             <div className="lg:col-span-7 flex flex-col items-center">
               {isDeckCompleted ? (
@@ -1089,7 +1101,8 @@ export default function FlashcardsPage() {
               )}
             </div>
           </section>
-        )}
+        </div>
+      )}
 
         {/* ==================================================================== */}
         {/* 3B. DICTIONARY MODE: พจนานุกรมคำศัพท์ธุรกิจ 3,093 คำ จัดหน้าละ 24 คำ */}

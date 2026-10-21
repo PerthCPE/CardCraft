@@ -43,6 +43,7 @@ import {
 import { speakEnglish, cancelSpeech } from '@/utils/speech-synthesis.util';
 import { formatDecimal } from '@/utils/number-format.util';
 import { Part1ImagePreview } from '@/components/Part1ImageZoom';
+import WeaknessAnalyticsCharts from '@/components/review/WeaknessAnalyticsCharts';
 
 const ERROR_TYPE_LABELS: Record<string, { label: string; desc: string; color: string }> = {
   part_of_speech: {
@@ -262,103 +263,11 @@ export default function ErrorReviewPage() {
             </div>
           </div>
 
-          {/* Top 5 จุดอ่อน + อัตราผิดแยกตาม Part */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Top 5 Weaknesses */}
-            <div className="bg-white border-2 border-slate-900 p-6 shadow-arcade-md space-y-4">
-              <div className="flex items-center justify-between border-b-2 border-slate-100 pb-3">
-                <h3 className="font-display font-bold text-base text-slate-900 flex items-center gap-2">
-                  <Target className="w-5 h-5 text-red-600" />
-                  Top 5 จุดอ่อนที่ต้องระวังเป็นพิเศษ
-                </h3>
-                <span className="text-xs font-bold text-slate-500">
-                  {analytics.topWeaknesses.length} หมวด
-                </span>
-              </div>
-
-              {analytics.topWeaknesses.length === 0 ? (
-                <div className="py-8 text-center text-sm text-slate-500">
-                  ยินดีด้วย! ยังไม่มีประวัติข้อสอบที่ตอบผิดในระบบ
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {analytics.topWeaknesses.map((item, idx) => {
-                    const meta = ERROR_TYPE_LABELS[item.errorType] || {
-                      label: item.errorType,
-                      desc: '',
-                      color: 'bg-slate-100 text-slate-900',
-                    };
-                    return (
-                      <div key={item.errorType} className="space-y-1">
-                        <div className="flex items-center justify-between text-xs font-bold">
-                          <span className="text-slate-800 flex items-center gap-1.5">
-                            <span className="w-5 h-5 rounded-full bg-slate-900 text-white inline-flex items-center justify-center font-pixel text-[10px]">
-                              {idx + 1}
-                            </span>
-                            {meta.label}
-                            <span className="font-normal text-slate-500">({meta.desc})</span>
-                          </span>
-                          <span className="text-red-600 font-pixel">
-                            {item.count} ข้อ ({formatDecimal(item.percentage)}%)
-                          </span>
-                        </div>
-                        {/* Progress Bar */}
-                        <div className="w-full h-2.5 bg-slate-100 border border-slate-300 overflow-hidden">
-                          <div
-                            className="h-full bg-red-500 transition-all duration-500"
-                            style={{ width: `${Math.min(100, item.percentage)}%` }}
-                          />
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-
-            {/* Error Distribution by Part */}
-            <div className="bg-white border-2 border-slate-900 p-6 shadow-arcade-md space-y-4">
-              <div className="flex items-center justify-between border-b-2 border-slate-100 pb-3">
-                <h3 className="font-display font-bold text-base text-slate-900 flex items-center gap-2">
-                  <Layers className="w-5 h-5 text-indigo-600" />
-                  อัตราการตอบผิดแยกตาม Part
-                </h3>
-                <span className="text-xs font-bold text-slate-500">Listening & Reading</span>
-              </div>
-
-              {analytics.byPart.length === 0 ? (
-                <div className="py-8 text-center text-sm text-slate-500">
-                  ยังไม่มีประวัติการทำข้อสอบ
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {analytics.byPart.map((p) => {
-                    const isHigh = p.errorRate >= 50;
-                    return (
-                      <div key={p.part} className="space-y-1">
-                        <div className="flex items-center justify-between text-xs font-bold">
-                          <span className="text-slate-800">
-                            Part {p.part} {p.part <= 4 ? '(Listening)' : '(Reading)'}
-                          </span>
-                          <span className={isHigh ? 'text-red-600 font-pixel' : 'text-slate-700 font-pixel'}>
-                            ผิด {p.wrong} / {p.total} ข้อ (อัตราผิด {formatDecimal(p.errorRate)}%)
-                          </span>
-                        </div>
-                        <div className="w-full h-2.5 bg-slate-100 border border-slate-300 overflow-hidden">
-                          <div
-                            className={`h-full transition-all duration-500 ${
-                              isHigh ? 'bg-red-500' : 'bg-amber-400'
-                            }`}
-                            style={{ width: `${Math.min(100, p.errorRate)}%` }}
-                          />
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          </div>
+          {/* กราฟแอนิเมชันวิเคราะห์จุดอ่อน 10 หมวดหมู่ & Dual-Arch Donut เปรียบเทียบฟัง/อ่าน */}
+          <WeaknessAnalyticsCharts
+            analytics={analytics}
+            errorTypeLabels={ERROR_TYPE_LABELS}
+          />
         </section>
       )}
 

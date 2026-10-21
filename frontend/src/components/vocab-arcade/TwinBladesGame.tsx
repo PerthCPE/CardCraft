@@ -11,6 +11,7 @@ import React, { useEffect, useState } from 'react';
 import { ArrowLeft, Clock, Sparkles, CheckCircle2, XCircle, RotateCcw, Swords, Flame, Volume2 } from 'lucide-react';
 import { FlashcardItem } from '@/data/toeic-dictionary';
 import { speakEnglish } from '@/utils/speech-synthesis.util';
+import ArcadePerformanceRadar from '@/components/vocab-arcade/ArcadePerformanceRadar';
 import {
   getEnglishSynonym,
   hasEnglishSynonym,
@@ -276,7 +277,7 @@ export default function TwinBladesGame({
         </div>
       ) : (
         /* Results Screen */
-        <div className="bg-[#F8F5EC] border-2 border-slate-900 p-8 text-center space-y-5">
+        <div className="bg-[#F8F5EC] border-2 border-slate-900 p-6 sm:p-8 text-center space-y-6">
           <div className="w-14 h-14 bg-rose-500 text-white border-2 border-slate-900 shadow-arcade-sm mx-auto flex items-center justify-center">
             <Swords className="w-7 h-7" />
           </div>
@@ -294,6 +295,24 @@ export default function TwinBladesGame({
               <span className="font-bold text-amber-600 font-pixel">{maxCombo}x</span>
             </p>
           </div>
+
+          {/* Animated 5-Axis Spider Radar Chart */}
+          <ArcadePerformanceRadar
+            stats={{
+              accuracy:
+                questions.length > 0
+                  ? Math.round((score / questions.length) * 100)
+                  : 0,
+              speedWpm: Math.round(
+                (score / Math.max(1, timeLimitSeconds - timeLeft)) * 60,
+              ),
+              maxStreak: maxCombo,
+              score: score,
+              totalItems: questions.length,
+              timeSpentSeconds: timeLimitSeconds - timeLeft,
+              gameTitle: 'ศึกดวลคำพ้องความหมาย (Twin Blades)',
+            }}
+          />
 
           <div className="flex justify-center gap-3 pt-2">
             <button

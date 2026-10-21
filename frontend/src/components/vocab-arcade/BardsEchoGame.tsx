@@ -11,6 +11,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { ArrowLeft, Clock, Volume2, Sparkles, CheckCircle2, XCircle, RotateCcw } from 'lucide-react';
 import { FlashcardItem } from '@/data/toeic-dictionary';
 import { speakEnglish } from '@/utils/speech-synthesis.util';
+import ArcadePerformanceRadar from '@/components/vocab-arcade/ArcadePerformanceRadar';
 
 interface BardsEchoGameProps {
   cards: FlashcardItem[];
@@ -267,7 +268,7 @@ export default function BardsEchoGame({
         </div>
       ) : (
         /* Results Screen */
-        <div className="bg-[#F8F5EC] border-2 border-slate-900 p-8 text-center space-y-5">
+        <div className="bg-[#F8F5EC] border-2 border-slate-900 p-6 sm:p-8 text-center space-y-6">
           <div className="w-14 h-14 bg-sky-400 border-2 border-slate-900 shadow-arcade-sm mx-auto flex items-center justify-center">
             <Volume2 className="w-7 h-7 text-slate-950" />
           </div>
@@ -284,6 +285,24 @@ export default function BardsEchoGame({
               จากทั้งหมด {questions.length} คำ
             </p>
           </div>
+
+          {/* Animated 5-Axis Spider Radar Chart */}
+          <ArcadePerformanceRadar
+            stats={{
+              accuracy:
+                questions.length > 0
+                  ? Math.round((score / questions.length) * 100)
+                  : 0,
+              speedWpm: Math.round(
+                (score / Math.max(1, timeLimitSeconds - timeLeft)) * 60,
+              ),
+              maxStreak: score,
+              score: score,
+              totalItems: questions.length,
+              timeSpentSeconds: timeLimitSeconds - timeLeft,
+              gameTitle: "เสียงสะท้อนแห่งกวี (Bard's Echo)",
+            }}
+          />
 
           <div className="flex justify-center gap-3 pt-2">
             <button

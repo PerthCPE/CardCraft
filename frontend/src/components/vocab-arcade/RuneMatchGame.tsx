@@ -12,6 +12,9 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { ArrowLeft, Clock, Sparkles, CheckCircle2, RotateCcw } from 'lucide-react';
 import { FlashcardItem } from '@/data/toeic-dictionary';
 import { speakEnglish } from '@/utils/speech-synthesis.util';
+import ArcadePerformanceRadar, {
+  ArcadePerformanceStats,
+} from '@/components/vocab-arcade/ArcadePerformanceRadar';
 
 interface RuneTile {
   id: string; // e.g., "en-card-01" or "th-card-01"
@@ -41,6 +44,9 @@ export default function RuneMatchGame({
   const [selectedTileId, setSelectedTileId] = useState<string | null>(null);
   const [matchedPairsCount, setMatchedPairsCount] = useState<number>(0);
   const [totalPairsMatched, setTotalPairsMatched] = useState<number>(0);
+  const [wrongAttempts, setWrongAttempts] = useState<number>(0);
+  const [currentStreak, setCurrentStreak] = useState<number>(0);
+  const [maxStreak, setMaxStreak] = useState<number>(0);
   const [timeLeft, setTimeLeft] = useState<number>(timeLimitSeconds);
   const [isGameOver, setIsGameOver] = useState<boolean>(false);
   const [wrongPairIds, setWrongPairIds] = useState<[string, string] | null>(null);
@@ -87,6 +93,9 @@ export default function RuneMatchGame({
     setTimeLeft(timeLimitSeconds);
     setIsGameOver(false);
     setTotalPairsMatched(0);
+    setWrongAttempts(0);
+    setCurrentStreak(0);
+    setMaxStreak(0);
   }, [cards, category, timeLimitSeconds]);
 
   // Timer
@@ -137,6 +146,11 @@ export default function RuneMatchGame({
         ),
       );
       setSelectedTileId(null);
+      setCurrentStreak((prev) => {
+        const next = prev + 1;
+        setMaxStreak((ms) => Math.max(ms, next));
+        return next;
+      });
       setMatchedPairsCount((prev) => {
         const next = prev + 1;
         setTotalPairsMatched((tp) => tp + 1);
@@ -154,6 +168,8 @@ export default function RuneMatchGame({
       });
     } else {
       // WRONG PAIR
+      setWrongAttempts((prev) => prev + 1);
+      setCurrentStreak(0);
       setWrongPairIds([selectedTileId, tile.id]);
       setTimeout(() => {
         setWrongPairIds(null);
@@ -258,7 +274,7 @@ export default function RuneMatchGame({
         </div>
       ) : (
         /* Results Screen */
-        <div className="bg-[#F8F5EC] border-2 border-slate-900 p-8 text-center space-y-5">
+        <div className="bg-[#F8F5EC] border-2 border-slate-900 p-6 sm:p-8 text-center space-y-6">
           <div className="w-14 h-14 bg-amber-400 border-2 border-slate-900 shadow-arcade-sm mx-auto flex items-center justify-center">
             <Sparkles className="w-7 h-7 text-slate-950" />
           </div>
@@ -269,9 +285,34 @@ export default function RuneMatchGame({
             </h3>
             <p className="text-sm text-slate-600">
               คุณสามารถจับคู่คำศัพท์ได้ทั้งหมด{' '}
-              <span className="font-bold text-amber-600">{totalPairsMatched}</span> คู่
+              <span className="font-bold text-amber-600 font-pixel text-base">{totalPairsMatched}</span> คู่
+              {wrongAttempts > 0 && (
+                <span className="text-slate-500 text-xs ml-2">
+                  (จับผิดพลาด {wrongAttempts} ครั้ง)
+                </span>
+              )}
             </p>
           </div>
+
+          {/* Animated 5-Axis Spider Radar Chart */}
+          <ArcadePerformanceRadar
+            stats={{
+              accuracy:
+                totalPairsMatched + wrongAttempts > 0
+                  ? Math.round(
+                      (totalPairsMatched / (totalPairsMatched + wrongAttempts)) * 100,
+                    )
+                  : 0,
+              speedWpm: Math.round(
+                (totalPairsMatched / Math.max(1, timeLimitSeconds - timeLeft)) * 60,
+              ),
+              maxStreak: maxStreak,
+              score: totalPairsMatched,
+              totalItems: totalPairsMatched + wrongAttempts,
+              timeSpentSeconds: timeLimitSeconds - timeLeft,
+              gameTitle: 'กระดานจับคู่ศิลาคำศัพท์ (Rune Match)',
+            }}
+          />
 
           <div className="flex justify-center gap-3 pt-2">
             <button
@@ -285,6 +326,9 @@ export default function RuneMatchGame({
                 setTimeLeft(timeLimitSeconds);
                 setIsGameOver(false);
                 setTotalPairsMatched(0);
+                setWrongAttempts(0);
+                setCurrentStreak(0);
+                setMaxStreak(0);
               }}
               className="inline-flex items-center gap-2 px-5 py-2.5 bg-amber-400 hover:bg-amber-300 text-slate-950 font-display font-bold text-sm border-2 border-slate-900 shadow-pixel active:translate-x-[1px] active:translate-y-[1px]"
             >

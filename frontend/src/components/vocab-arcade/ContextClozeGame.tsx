@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { FlashcardItem } from '@/data/toeic-dictionary';
 import { speakEnglish } from '@/utils/speech-synthesis.util';
+import ArcadePerformanceRadar from '@/components/vocab-arcade/ArcadePerformanceRadar';
 
 interface ContextClozeGameProps {
   cards: FlashcardItem[];
@@ -275,7 +276,7 @@ export default function ContextClozeGame({
         </div>
       ) : (
         /* Results Screen */
-        <div className="bg-[#F8F5EC] border-2 border-slate-900 p-8 text-center space-y-5">
+        <div className="bg-[#F8F5EC] border-2 border-slate-900 p-6 sm:p-8 text-center space-y-6">
           <div className="w-14 h-14 bg-teal-400 border-2 border-slate-900 shadow-arcade-sm mx-auto flex items-center justify-center">
             <FileText className="w-7 h-7 text-slate-950" />
           </div>
@@ -292,6 +293,24 @@ export default function ContextClozeGame({
               จากทั้งหมด {questions.length} ข้อ
             </p>
           </div>
+
+          {/* Animated 5-Axis Spider Radar Chart */}
+          <ArcadePerformanceRadar
+            stats={{
+              accuracy:
+                questions.length > 0
+                  ? Math.round((score / questions.length) * 100)
+                  : 0,
+              speedWpm: Math.round(
+                (score / Math.max(1, timeLimitSeconds - timeLeft)) * 60,
+              ),
+              maxStreak: score,
+              score: score,
+              totalItems: questions.length,
+              timeSpentSeconds: timeLimitSeconds - timeLeft,
+              gameTitle: 'เติมคำตามบริบทธุรกิจ (Context Cloze)',
+            }}
+          />
 
           <div className="flex justify-center gap-3 pt-2">
             <button

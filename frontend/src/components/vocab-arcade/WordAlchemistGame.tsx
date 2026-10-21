@@ -14,6 +14,7 @@ import { ArrowLeft, Clock, Sparkles, CheckCircle2, XCircle, RotateCcw, Zap, Help
 import { FlashcardItem } from '@/data/toeic-dictionary';
 import { buildAlchemistChoices } from '@/utils/word-alchemist.util';
 import { speakEnglish } from '@/utils/speech-synthesis.util';
+import ArcadePerformanceRadar from '@/components/vocab-arcade/ArcadePerformanceRadar';
 
 interface WordAlchemistGameProps {
   cards: FlashcardItem[];
@@ -322,7 +323,7 @@ export default function WordAlchemistGame({
         </div>
       ) : (
         /* Results Screen */
-        <div className="bg-[#F8F5EC] border-2 border-slate-900 p-8 text-center space-y-5">
+        <div className="bg-[#F8F5EC] border-2 border-slate-900 p-6 sm:p-8 text-center space-y-6">
           <div className="w-14 h-14 bg-purple-400 border-2 border-slate-900 shadow-arcade-sm mx-auto flex items-center justify-center">
             <Zap className="w-7 h-7 text-slate-950" />
           </div>
@@ -339,6 +340,24 @@ export default function WordAlchemistGame({
               ข้อ
             </p>
           </div>
+
+          {/* Animated 5-Axis Spider Radar Chart */}
+          <ArcadePerformanceRadar
+            stats={{
+              accuracy:
+                items.length > 0
+                  ? Math.round((score / items.length) * 100)
+                  : 0,
+              speedWpm: Math.round(
+                (score / Math.max(1, timeLimitSeconds - timeLeft)) * 60,
+              ),
+              maxStreak: score,
+              score: score,
+              totalItems: items.length,
+              timeSpentSeconds: timeLimitSeconds - timeLeft,
+              gameTitle: 'แปรธาตุชนิดของคำ (Word Alchemist)',
+            }}
+          />
 
           <div className="pt-2 flex justify-center gap-3">
             <button
