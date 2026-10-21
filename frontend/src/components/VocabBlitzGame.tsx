@@ -10,7 +10,7 @@
 // - รายงานผลพร้อมจัดอันดับ RPG Rank และสรุปคำที่ตอบผิดเพื่อนำไปทบทวน
 // ============================================================================
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertTriangle,
   Award,
@@ -165,6 +165,19 @@ export default function VocabBlitzGame({
     return () => clearInterval(timer);
   }, [gameState]);
 
+  const transitionTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // เลื่อนไปข้อถัดไปทันที (ใช้เมื่อครบเวลาหน่วง หรือผู้ใช้กด Space/Enter/คลิกข้าม)
+  const advanceToNextQuestion = useCallback(() => {
+    if (transitionTimerRef.current) {
+      clearTimeout(transitionTimerRef.current);
+      transitionTimerRef.current = null;
+    }
+    const nextIdx = questionIndex + 1;
+    setQuestionIndex(nextIdx);
+    prepareNewQuestion(nextIdx, questionPool);
+  }, [questionIndex, questionPool, prepareNewQuestion]);
+
   const handleSelectChoice = useCallback(
     (choiceIdx: number) => {
       if (gameState !== 'PLAYING' || isAnswerLocked) return;
@@ -188,12 +201,16 @@ export default function VocabBlitzGame({
         setMissedList((prev) => [...prev, currentCard]);
       }
 
-      // หน่วงเวลา 350ms เพื่อให้เห็นสีเฉลย แล้วเปลี่ยนข้อทันที
-      setTimeout(() => {
-        const nextIdx = questionIndex + 1;
-        setQuestionIndex(nextIdx);
-        prepareNewQuestion(nextIdx, questionPool);
-      }, 350);
+      // เพิ่มเวลาหน่วงในการเปลี่ยนข้อ: ตอบถูก 1,100ms / ตอบผิด 2,200ms เพื่อให้ผู้ใช้มีเวลาดูและจดจำคำตอบที่ถูกต้อง
+      // (ผู้ใช้สามารถกด Space/Enter หรือคลิกปุ่มเพื่อข้ามไปข้อถัดไปได้ทันที)
+      const delayMs = isCorrect ? 1100 : 2200;
+
+      if (transitionTimerRef.current) {
+        clearTimeout(transitionTimerRef.current);
+      }
+      transitionTimerRef.current = setTimeout(() => {
+        advanceToNextQuestion();
+      }, delayMs);
     },
     [
       gameState,
@@ -202,15 +219,23 @@ export default function VocabBlitzGame({
       questionIndex,
       correctChoiceIndex,
       maxStreak,
-      prepareNewQuestion,
+      advanceToNextQuestion,
     ],
   );
 
-  // Keyboard Shortcuts (1-4 หรือ A-D)
+  // Keyboard Shortcuts (1-4 หรือ A-D ตอบคำถาม, และ Space/Enter เพื่อข้ามการหน่วงเวลา)
   useEffect(() => {
     if (gameState !== 'PLAYING') return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (isAnswerLocked) {
+        if (e.code === 'Space' || e.code === 'Enter') {
+          e.preventDefault();
+          advanceToNextQuestion();
+        }
+        return;
+      }
+
       if (e.key === '1' || e.key.toLowerCase() === 'a') {
         handleSelectChoice(0);
       } else if (e.key === '2' || e.key.toLowerCase() === 'b') {
@@ -224,11 +249,14 @@ export default function VocabBlitzGame({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [gameState, handleSelectChoice]);
+  }, [gameState, isAnswerLocked, handleSelectChoice, advanceToNextQuestion]);
 
   useEffect(() => {
     return () => {
       cancelSpeech();
+      if (transitionTimerRef.current) {
+        clearTimeout(transitionTimerRef.current);
+      }
     };
   }, []);
 
@@ -502,10 +530,13 @@ export default function VocabBlitzGame({
                 if (isAnswerLocked) {
                   if (isCorrect) {
                     btnStyle =
-                      'border-emerald-700 bg-emerald-100 text-emerald-900 font-bold';
+                      'border-emerald-700 bg-emerald-100 text-emerald-950 font-bold ring-2 ring-emerald-500 shadow-pixel';
                   } else if (isSelected && !isCorrect) {
                     btnStyle =
-                      'border-red-700 bg-red-100 text-red-900 line-through';
+                      'border-rose-700 bg-rose-100 text-rose-950 line-through opacity-90';
+                  } else {
+                    btnStyle =
+                      'border-slate-300 bg-slate-50 text-slate-400 opacity-60';
                   }
                 }
 
@@ -519,16 +550,82 @@ export default function VocabBlitzGame({
                     onClick={() => handleSelectChoice(idx)}
                     className={`p-4 border-2 text-left font-body text-sm transition-all flex items-start gap-3 active:translate-x-[2px] active:translate-y-[2px] ${btnStyle}`}
                   >
-                    <span className="inline-block px-1.5 py-0.5 text-[10px] font-pixel font-bold bg-slate-200 border border-slate-700 rounded text-slate-800">
+                    <span className="inline-block px-1.5 py-0.5 text-[10px] font-pixel font-bold bg-slate-200 border border-slate-700 rounded text-slate-800 shrink-0">
                       {keyLabels[idx]}
                     </span>
                     <span className="flex-1 font-medium leading-snug">
                       {choice}
                     </span>
+                    {isAnswerLocked && isCorrect && (
+                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-800 bg-emerald-200 px-2 py-0.5 rounded border border-emerald-500 shrink-0">
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-700" />
+                        คำตอบที่ถูก
+                      </span>
+                    )}
+                    {isAnswerLocked && isSelected && !isCorrect && (
+                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-rose-800 bg-rose-200 px-2 py-0.5 rounded border border-rose-500 shrink-0">
+                        <XCircle className="w-3.5 h-3.5 text-rose-700" />
+                        คุณเลือกข้อนี้
+                      </span>
+                    )}
                   </button>
                 );
               })}
             </div>
+
+            {/* Answer Feedback Banner during transition pause */}
+            {isAnswerLocked && (
+              <div
+                onClick={advanceToNextQuestion}
+                className={`p-3.5 border-2 border-slate-900 shadow-pixel-sm flex flex-col sm:flex-row items-center justify-between gap-2.5 cursor-pointer transition-all ${
+                  selectedAnswer === correctChoiceIndex
+                    ? 'bg-emerald-100 text-emerald-950 border-emerald-800'
+                    : 'bg-rose-100 text-rose-950 border-rose-800'
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  {selectedAnswer === correctChoiceIndex ? (
+                    <>
+                      <CheckCircle2 className="w-5 h-5 text-emerald-700 shrink-0" />
+                      <span className="font-bold text-sm">
+                        ถูกต้อง! เยี่ยมมาก (+1 คอมโบ)
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <XCircle className="w-5 h-5 text-rose-700 shrink-0" />
+                      <div>
+                        <span className="font-bold text-sm block">
+                          ตอบผิด! คำตอบที่ถูกต้องคือ:
+                        </span>
+                        <span className="text-xs text-rose-900 font-semibold">
+                          &ldquo;{choices[correctChoiceIndex]}&rdquo;
+                        </span>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] text-slate-600 font-sans hidden sm:inline">
+                    กำลังไปข้อถัดไป...
+                  </span>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      advanceToNextQuestion();
+                    }}
+                    className="px-2.5 py-1 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded shadow-sm flex items-center gap-1 active:translate-x-[1px] active:translate-y-[1px]"
+                  >
+                    <span>ข้อถัดไป</span>
+                    <kbd className="px-1 py-0.2 bg-slate-700 text-amber-300 text-[10px] font-mono rounded">
+                      SPACE
+                    </kbd>
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
