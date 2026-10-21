@@ -42,6 +42,7 @@ import {
 } from '@/lib/api';
 import { speakEnglish, cancelSpeech } from '@/utils/speech-synthesis.util';
 import { formatDecimal } from '@/utils/number-format.util';
+import { Part1ImagePreview } from '@/components/Part1ImageZoom';
 
 const ERROR_TYPE_LABELS: Record<string, { label: string; desc: string; color: string }> = {
   part_of_speech: {
@@ -497,14 +498,12 @@ export default function ErrorReviewPage() {
 
                   {/* Question Content */}
                   <div className="space-y-2">
-                    {/* Part 1 Image preview if any */}
+                    {/* Part 1 Image preview with Lightbox Zoom Pop-up */}
                     {q?.imageUrl && (
-                      <div className="max-w-md border-2 border-slate-900 overflow-hidden mb-3">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
+                      <div className="max-w-md mb-3">
+                        <Part1ImagePreview
                           src={q.imageUrl}
-                          alt="Part 1 Photograph"
-                          className="w-full h-auto object-cover"
+                          alt={`Part 1 Photograph - ${q?.questionText || ''}`}
                         />
                       </div>
                     )}

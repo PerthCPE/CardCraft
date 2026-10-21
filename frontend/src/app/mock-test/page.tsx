@@ -63,6 +63,7 @@ import {
   ShuffledQuestionWrapper,
 } from '@/utils/question-shuffle.util';
 import { speakEnglish, cancelSpeech } from '@/utils/speech-synthesis.util';
+import { Part1ImagePreview } from '@/components/Part1ImageZoom';
 import { getCharacterEvolution } from '@/utils/character-evolution.util';
 import { formatDecimal } from '@/utils/number-format.util';
 
@@ -1158,13 +1159,10 @@ export default function BossBattleMockTestPage() {
                 </div>
 
                 {currentQuestion.imageUrl && (
-                  <div className="bg-white border-2 border-slate-900 p-3">
-                    <img
+                  <div className="max-w-md mx-auto">
+                    <Part1ImagePreview
                       src={currentQuestion.imageUrl}
-                      alt="Part 1 Photograph"
-                      loading="eager"
-                      fetchPriority="high"
-                      className="w-full h-64 object-contain select-none"
+                      alt={`Part 1 Photograph - ${currentQuestion.questionText}`}
                     />
                   </div>
                 )}

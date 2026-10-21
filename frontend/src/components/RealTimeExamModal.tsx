@@ -33,6 +33,7 @@ import {
   buildShuffledQuestionsMap,
   ShuffledQuestionWrapper,
 } from '@/utils/question-shuffle.util';
+import { Part1ImagePreview } from './Part1ImageZoom';
 import { speakEnglish, cancelSpeech } from '@/utils/speech-synthesis.util';
 import { formatDecimal } from '@/utils/number-format.util';
 
@@ -389,6 +390,16 @@ export default function RealTimeExamModal({
                     <Volume2 className="w-3.5 h-3.5" />
                     {isPlayingAudio ? 'กำลังเล่นเสียง...' : 'ฟังเสียงข้อสอบ (Play Audio)'}
                   </button>
+                </div>
+              )}
+
+              {/* Part 1 Photograph Preview with Zoom Modal */}
+              {currentQ.part === 1 && currentQ.imageUrl && (
+                <div className="max-w-md mx-auto">
+                  <Part1ImagePreview
+                    src={currentQ.imageUrl}
+                    alt={`Part 1 Photograph - ${currentQ.questionText}`}
+                  />
                 </div>
               )}
 

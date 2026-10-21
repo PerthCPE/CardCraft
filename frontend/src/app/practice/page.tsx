@@ -54,6 +54,7 @@ import {
 } from '@/utils/character-evolution.util';
 import { formatDecimal, formatAccuracyPercent } from '@/utils/number-format.util';
 import { speakEnglish, cancelSpeech } from '@/utils/speech-synthesis.util';
+import { Part1ImagePreview } from '@/components/Part1ImageZoom';
 
 import dynamic from 'next/dynamic';
 
@@ -1067,15 +1068,12 @@ export default function PracticeHubPage() {
         {/* Question Canvas */}
         {currentQ && wrapper && (
           <div className="bg-[#FFFDF7] border-2 border-slate-900 shadow-[6px_6px_0px_0px_#0f172a] p-6 space-y-6">
-            {/* Part 1: Image View */}
+            {/* Part 1: Image View with Lightbox Inspection Pop-up */}
             {currentQ.part === 1 && currentQ.imageUrl && (
-              <div className="max-w-md mx-auto border-2 border-slate-900 bg-white p-2 shadow-arcade-sm">
-                <img
+              <div className="max-w-md mx-auto">
+                <Part1ImagePreview
                   src={currentQ.imageUrl}
-                  alt="Part 1 Photograph"
-                  loading="eager"
-                  fetchPriority="high"
-                  className="w-full h-auto aspect-video object-contain [image-rendering:pixelated] select-none"
+                  alt={`Part 1 Photograph - ${currentQ.questionText}`}
                 />
               </div>
             )}

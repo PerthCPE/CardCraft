@@ -284,6 +284,32 @@ test.describe('CardCraft Full E2E & UI Quality Assurance Suite (CardCraft v2.0)'
     await page.getByRole('button', { name: /กลับสู่ Arcade Hub/i }).click();
     await expect(page.getByText(/ลานฝึกซ้อมและอาร์เคดคำศัพท์|Practice & Vocab Arcade/i)).toBeVisible();
 
+    // 3.7 Test Part 1 Photograph Inspection Lightbox / Zoom Pop-up
+    await page.getByRole('button', { name: /ฝึกแยก 7 พาร์ท/i }).click();
+    await page.getByRole('button', { name: /ตั้งค่าการฝึกซ้อม Part 1/i }).click();
+    await page.getByRole('button', { name: /เริ่มทำโจทย์ Part 1/i }).click();
+
+    // Verify Part 1 Photograph is rendered and has zoom trigger
+    const part1Img = page.locator('div[role="button"][aria-label*="คลิกเพื่อขยายดูรูปภาพ"]').first();
+    await expect(part1Img).toBeVisible({ timeout: 10000 });
+    await part1Img.click();
+
+    // Verify ImageZoomModal / Pop-up opened
+    const zoomDialog = page.locator('div[role="dialog"][aria-label*="ขยายรูปภาพ Part 1"]');
+    await expect(zoomDialog).toBeVisible();
+    await expect(page.getByText(/ภาพประกอบข้อสอบ Part 1: Photographs/i)).toBeVisible();
+    await expect(page.getByText(/SCENE ZOOM/i)).toBeVisible();
+
+    // Test Zoom 175% button toggle
+    const zoomToggleBtn = page.getByRole('button', { name: /ซูมเจาะลึก 175%|ขนาดพอดีจอ/i });
+    await expect(zoomToggleBtn).toBeVisible();
+    await zoomToggleBtn.click();
+    await expect(page.getByText(/ขนาดพอดีจอ/i)).toBeVisible();
+
+    // Close modal via Escape key
+    await page.keyboard.press('Escape');
+    await expect(zoomDialog).not.toBeVisible();
+
     expect(consoleErrors).toEqual([]);
   });
 
