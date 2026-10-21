@@ -19,7 +19,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   AnimatePresence,
   LazyMotion,
-  domAnimation,
+  domMax,
   m,
   PanInfo,
   animate,
@@ -346,6 +346,7 @@ export default function FlashcardsPage() {
 
           setCurrentIndex((prev) => prev + 1);
           isSwipingRef.current = false;
+          lastSwipeTimeRef.current = Date.now();
 
           // บันทึกลงเซิร์ฟเวอร์ (Guest ใช้งานได้ทันที หากล็อกอินจะบันทึกขึ้น Cloud)
           await recordCardSwipe(swipedCard.id, isKnown, authUser?.id);
@@ -368,13 +369,13 @@ export default function FlashcardsPage() {
   ) => {
     if (isSwipingRef.current) return;
 
-    const threshold = 60;
+    const threshold = 70;
     const isSwipeRight =
       info.offset.x > threshold ||
-      (info.offset.x > 20 && info.velocity.x > 220);
+      (info.offset.x > 45 && info.velocity.x > 450);
     const isSwipeLeft =
       info.offset.x < -threshold ||
-      (info.offset.x < -20 && info.velocity.x < -220);
+      (info.offset.x < -45 && info.velocity.x < -450);
 
     // บันทึกเวลาเพื่อป้องกันไม่ให้ trailing click พลิกการ์ด
     lastSwipeTimeRef.current = Date.now();
@@ -447,7 +448,7 @@ export default function FlashcardsPage() {
     cards.length > 0 ? Math.round((masteredTotal / cards.length) * 100) : 0;
 
   return (
-    <LazyMotion features={domAnimation}>
+    <LazyMotion features={domMax}>
       <div className="space-y-6 max-w-7xl mx-auto pb-12">
         {/* ==================================================================== */}
         {/* 1. UNIFIED COMMAND HUB: สะอาด ชัดเจน และตัดความรกออกทั้งหมด */}

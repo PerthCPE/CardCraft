@@ -143,16 +143,28 @@ test.describe('CardCraft Full E2E & UI Quality Assurance Suite (CardCraft v2.0)'
     // 2.3b Test Mouse Click-and-Hold Drag-to-Swipe (Hold & Swipe Right)
     const cardEl = page.locator('div.perspective-1000').first();
     if (await cardEl.isVisible()) {
+      await cardEl.scrollIntoViewIfNeeded();
+      const wordHeader = page.locator('h2.font-sans').first();
+      const initialWord = (await wordHeader.textContent())?.trim();
       const box = await cardEl.boundingBox();
       if (box) {
         const startX = box.x + box.width / 2;
-        const startY = box.y + box.height / 2;
-        // Hold and drag right past threshold
+        const startY = box.y + 60;
+        // Hold and drag right past threshold (70px)
         await page.mouse.move(startX, startY);
         await page.mouse.down();
-        await page.mouse.move(startX + 100, startY, { steps: 8 });
+        for (let i = 1; i <= 8; i++) {
+          await page.mouse.move(startX + i * 18, startY);
+          await page.waitForTimeout(15);
+        }
         await page.mouse.up();
-        await page.waitForTimeout(500);
+        await page.waitForTimeout(600);
+
+        const nextWord = (await wordHeader.textContent())?.trim();
+        expect(nextWord).not.toBe(initialWord);
+        // Verify card did NOT accidentally flip to back face
+        const isBackFlipped = await page.getByText(/ความหมายภาษาไทย/i).first().isVisible();
+        expect(isBackFlipped).toBe(false);
       }
     }
 

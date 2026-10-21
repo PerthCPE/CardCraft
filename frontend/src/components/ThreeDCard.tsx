@@ -301,6 +301,8 @@ export default function ThreeDCard({
       {/* ===================================================================== */}
       <m.div
         drag="x"
+        dragMomentum={false}
+        dragDirectionLock
         onDragStart={handleDragStart}
         onDrag={handleDrag}
         onDragEnd={handleCustomDragEnd}
